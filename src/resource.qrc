@@ -1,0 +1,35 @@
+<RCC>
+    <qresource prefix="/">
+    <file>resource/audio/mainmenu.mp3</file>
+    <file>resource/image/mainmenuBg.png</file>
+    <file>resource/image/edPage.png</file>
+    <file>resource/image/flame.png</file>
+    <file>resource/image/flamePhantom.png</file>
+    <file>resource/image/flamePhantomBase.png</file>
+    <file>resource/image/flamePhantomDrop.png</file>
+    <file>resource/image/flameWave.png</file>
+    <file>resource/image/fog.png</file>
+    <file>resource/image/helpPage.png</file>
+    <file>resource/image/king.png</file>
+    <file>resource/image/kingWave.png</file>
+    <file>resource/image/lurkPhantom.png</file>
+    <file>resource/image/lurkPhantomBase.png</file>
+    <file>resource/image/lurkPhantomDrop.png</file>
+    <file>resource/image/lurkWave.png</file>
+    <file>resource/image/mazeExit.png</file>
+    <file>resource/image/PhantomGenesis.ico</file>
+    <file>resource/image/playerBurned.png</file>
+    <file>resource/image/playerLowHp.png</file>
+    <file>resource/image/playerNormal.png</file>
+    <file>resource/image/playerBullet.png</file>
+    <file>resource/image/portalStart.png</file>
+    <file>resource/image/ruins.png</file>
+    <file>resource/image/saveAndLoadPage.png</file>
+    <file>resource/image/settingsPage.png</file>
+    <file>resource/image/startPage.gif</file>
+    <file>resource/image/portalEnd.png</file>
+    <file>resource/audio/gameViewBgm/fight.mp3</file>
+    <file>resource/audio/SoundEffect/playerBullet.wav</file>
+    <file>resource/audio/SoundEffect/playerLaser.wav</file>
+    </qresource>
+</RCC>
