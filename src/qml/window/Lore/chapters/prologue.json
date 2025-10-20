@@ -1,0 +1,66 @@
+{
+  "meta": {
+    "chapterId": "prologue",
+    "title": "序章",
+    "startNode": "start"
+  },
+  "nodes": {
+    "start": {
+      "contents": [
+        {
+          "type": "text",
+          "text": "好黑..."
+        }
+      ],
+      "nextNode": "awake"
+    },
+    "awake": {
+      "contents": [
+        {
+          "type": "text",
+          "text": "你醒来，发现自己身处陌生的房间。"
+        }
+      ],
+      "nextNode": "sound"
+    },
+    "sound": {
+      "contents": [
+        {
+          "type": "text",
+          "text": "低沉的风声穿过门缝。"
+        }
+      ],
+      "nextNode": "approach"
+    },
+    "approach": {
+      "contents": [
+        {
+          "type": "text",
+          "text": "门外传来不明的脚步声。"
+        }
+      ],
+      "nextNode": "closer"
+    },
+    "closer": {
+      "contents": [
+        {
+          "type": "text",
+          "text": "有人靠近。你感到一阵寒意掠过。"
+        }
+      ],
+      "nextNode": "toBattle"
+    },
+    "toBattle": {
+      "contents": [
+        {
+          "type": "text",
+          "text": "一声低吼，战斗即将爆发！"
+        }
+      ],
+      "action": "startBattle",
+      "actionParams": {
+        "battleId": "battle01"
+      }
+    }
+  }
+}

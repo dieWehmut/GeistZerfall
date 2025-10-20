@@ -1,0 +1,26 @@
+{
+  "meta": {
+    "chapterId": "chapter01",
+    "title": "第一章",
+    "startNode": "start"
+  },
+  "nodes": {
+    "start": {
+      "contents": [
+        {
+          "type": "text",
+          "text": "第一章开始..."
+        }
+      ],
+      "nextNode": "end"
+    },
+    "end": {
+      "contents": [
+        {
+          "type": "text",
+          "text": "待续..."
+        }
+      ]
+    }
+  }
+}

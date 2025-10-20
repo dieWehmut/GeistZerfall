@@ -153,16 +153,16 @@ Item {
                     Behavior on y { NumberAnimation { duration: 360; easing.type: Easing.OutQuad } }
                     Behavior on opacity { NumberAnimation { duration: 360; easing.type: Easing.OutQuad } }
                     onClicked: {
-                        // If an auto save already exists, remove it first (reset)
-                        try {
-                            if (typeof SaveLoadManager !== 'undefined' && SaveLoadManager && SaveLoadManager.autoExists) {
-                                var removed = SaveLoadManager.removeAuto("save");
-                                console.log("MainMenu: removeAuto returned", removed);
-                            }
-                        } catch (e) { console.log("MainMenu: removeAuto error", e); }
-                        // Indicate to GameView that this is a new game so it can compute center and create an auto save
-                        try { WindowState.setTargetMode("new"); } catch (e) { /* ignore if not available */ }
-                        window.pushSource("qml/window/GameView.qml")
+                        // 开始新游戏：进入序章
+                        console.log("MainMenu: Starting new game - entering prologue");
+                        if (typeof transitionManager !== 'undefined') {
+                            transitionManager.startLore("prologue");
+                        } else {
+                            // 备用方案
+                            window.currentChapter = "prologue";
+                            window.currentNode = "start";
+                            window.smoothReplaceSource("qml/window/Lore/LoreView.qml");
+                        }
                     }
                     Component.onCompleted: { if (buttonRow.buttonsEntered) { /* already triggered */ } }
                 }
