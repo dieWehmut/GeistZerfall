@@ -37,6 +37,13 @@ qt_add_qml_module(GeistZerfall
         QML_FILES src/qml/window/Splash.qml
         QML_FILES src/qml/Entity/PlayerBullet.qml src/qml/Entity/PlayerLaser.qml
         SOURCES src/cpp/Entity/Projectile/PlayerBullet.cpp src/cpp/Entity/Projectile/PlayerBullet.h src/cpp/Entity/Projectile/PlayerLaser.cpp src/cpp/Entity/Projectile/PlayerLaser.h src/cpp/Entity/Projectile/Projectile.cpp src/cpp/Entity/Projectile/Projectile.h
+        SOURCES src/cpp/Manager/EventManager/Transition.cpp src/cpp/Manager/EventManager/Transition.h
+        SOURCES src/cpp/Manager/FileReader.cpp src/cpp/Manager/FileReader.h
+        QML_FILES src/qml/window/Lore/loreState.js src/qml/window/Lore/LoreView.qml
+        QML_FILES src/qml/window/Lore/contentShow/Animation.qml src/qml/window/Lore/contentShow/Image.qml src/qml/window/Lore/contentShow/Text.qml
+        QML_FILES src/qml/window/Lore/components/ChoiceDialog.qml src/qml/window/Lore/components/ContentLoader.qml src/qml/window/Lore/components/DynamicCircle.qml
+        QML_FILES src/qml/window/Lore/chapters/chapter01.json src/qml/window/Lore/chapters/prologue.json
+        QML_FILES src/qml/window/Lore/battles/battle01.json src/qml/window/Lore/battles/battle02.json
 
 
 

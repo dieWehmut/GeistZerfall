@@ -25,6 +25,7 @@ public:
 
     Q_INVOKABLE int getTileType(int row, int col) const;
     Q_INVOKABLE void setTileType(int row, int col, int type);
+    Q_INVOKABLE void setMapData(const QVector<QVector<int>>& newMapData);
 
 signals:
     void curMapIdChanged();

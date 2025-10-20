@@ -15,6 +15,42 @@ Item {
 	// Whether the player is holding the snipe/space key in this view - used to lock sight while held
 	property bool snipeHeld: false
 
+	// 战斗数据相关
+	property string battleId: ""
+	property var battleData: null
+
+	// 在组件完成时加载战斗数据
+	Component.onCompleted: {
+		// 从 window 获取当前战斗 ID
+		if (typeof window !== 'undefined' && window.currentBattleId) {
+			battleId = window.currentBattleId;
+			loadBattleData(battleId);
+		}
+	}
+
+	// 加载战斗数据（使用 FileReader 读取 JSON）
+	function loadBattleData(id) {
+		console.log("GameView: loading battle data", id);
+		
+		// 构建 JSON 文件路径
+		var filePath = ":/qml/window/Lore/battles/" + id + ".json";
+		console.log("GameView: reading file", filePath);
+		
+		// 使用 fileReader 读取 JSON
+		var jsonObj = fileReader.readJsonFile(filePath);
+		
+		// 将 QJsonObject 转换为 JavaScript 对象
+		battleData = JSON.parse(JSON.stringify(jsonObj));
+		
+		if (battleData && battleData.mapData) {
+			console.log("GameView: loaded battle data", id);
+			// 设置地图数据
+			tileManager.setMapData(battleData.mapData);
+		} else {
+			console.log("GameView: failed to load battle", id);
+		}
+	}
+
 	// 右键点击跳转到设置界面
 	MouseArea {
 		anchors.fill: parent

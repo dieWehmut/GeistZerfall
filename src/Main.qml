@@ -126,4 +126,28 @@ Window {
     function gotoConfig() {
         pushSource("qml/window/Config.qml");
     }
+
+    // 监听 Transition 信号
+    Connections {
+        target: typeof transitionManager !== 'undefined' ? transitionManager : null
+        
+        function onSwitchToGameView(battleId) {
+            console.log("Main: switching to GameView with battle", battleId);
+            // 保存战斗 ID 供 GameView 使用
+            window.currentBattleId = battleId;
+            smoothReplaceSource("qml/window/GameView.qml");
+        }
+        
+        function onSwitchToLoreView(chapterId, nodeId) {
+            console.log("Main: switching to LoreView", chapterId, nodeId);
+            window.currentChapter = chapterId;
+            window.currentNode = nodeId;
+            smoothReplaceSource("qml/window/Lore/LoreView.qml");
+        }
+    }
+
+    // 存储当前战斗/章节信息
+    property string currentBattleId: ""
+    property string currentChapter: ""
+    property string currentNode: ""
 }
