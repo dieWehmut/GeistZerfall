@@ -40,27 +40,11 @@ Item {
             Repeater {
                 model: choices
 
-                Button {
+                AppButton {
                     text: modelData.text || ""
                     width: 360
                     height: 60
-                    font.pixelSize: 20
-
-                    background: Rectangle {
-                        color: parent.hovered ? "#AA0000" : "#660000"
-                        border.color: "#FF0000"
-                        border.width: 1
-                        radius: 5
-                    }
-
-                    contentItem: Text {
-                        text: parent.text
-                        color: "white"
-                        font: parent.font
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
-                    }
-
+                    fontPixelSize: 20
                     onClicked: {
                         console.log("ChoiceDialog: selected choice", index);
                         root.choiceSelected(index);

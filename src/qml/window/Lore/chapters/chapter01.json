@@ -2,10 +2,15 @@
   "meta": {
     "chapterId": "chapter01",
     "title": "第一章",
-    "startNode": "start"
+    "startNode": "start",
+    "mode": "scene"
   },
   "nodes": {
     "start": {
+      "background": "qrc:/resource/image/helpPage.png",
+      "characters": [
+        { "image": "qrc:/resource/image/king.png", "position": "center", "scale": 1.0 }
+      ],
       "contents": [
         {
           "type": "text",

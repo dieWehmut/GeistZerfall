@@ -2,59 +2,116 @@
   "meta": {
     "chapterId": "prologue",
     "title": "序章",
-    "startNode": "start"
+    "startNode": "title",
+    "mode": "scene"
   },
   "nodes": {
+    "title": {
+      "background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+      "contents": [
+        {
+          "type": "title",
+          "text": "序章",
+          "isTitle": true,
+          "mode": "scene",
+          "music": "qrc:/resource/audio/bgm/nervous.mp3",
+          "musicLoops": -1
+        }
+      ],
+      "nextNode": "start"
+    },
     "start": {
+      "characters": [
+        { "name": "南雲 京司", "position": "left", "scale": 1.0 }
+      ],
       "contents": [
         {
           "type": "text",
-          "text": "好黑..."
+          "text": "好黑...",
+          "mode": "circle",
+          "speaker": 0
         }
       ],
       "nextNode": "awake"
     },
     "awake": {
+      "background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+      "characters": [
+        { "name": "藤田 旦治", "position": "left", "scale": 1.0 },
+        { "name": "清原 凛", "position": "right", "scale": 1.0 }
+      ],
       "contents": [
         {
           "type": "text",
-          "text": "你醒来，发现自己身处陌生的房间。"
+          "text": "1",
+          "mode": "scene",
+          "speaker": 0
         }
       ],
       "nextNode": "sound"
     },
     "sound": {
+      "background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+      "characters": [
+        { "name": "折原 莲", "position": "left", "scale": 1.0 },
+        { "name": "东堂 南", "position": "right", "scale": 1.0 }
+      ],
       "contents": [
         {
           "type": "text",
-          "text": "低沉的风声穿过门缝。"
+          "text": "2。",
+          "mode": "scene",
+          "speaker": 0
         }
       ],
       "nextNode": "approach"
     },
     "approach": {
+      "background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+      "characters": [
+        { "name": "南雲 京司", "position": "left", "scale": 1.0 },
+        { "name": "常夏 航", "position": "right", "scale": 1.0 }
+      ],
       "contents": [
         {
           "type": "text",
-          "text": "门外传来不明的脚步声。"
+          "text": "3",
+          "mode": "scene",
+          "speaker": 0
         }
       ],
       "nextNode": "closer"
     },
     "closer": {
+      "background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+      "characters": [
+        { "name": "南雲 京司", "position": "left", "scale": 1.0 },
+        { "name": "清原 凛", "position": "right", "scale": 1.0 }
+      ],
       "contents": [
         {
           "type": "text",
-          "text": "有人靠近。你感到一阵寒意掠过。"
+          "text": "4",
+          "mode": "scene",
+          "speaker": 0
         }
       ],
       "nextNode": "toBattle"
     },
     "toBattle": {
+      "background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+      "characters": [
+        { "name": "南雲 京司", "position": "left", "scale": 1.0 },
+        { "name": "东堂 南", "position": "right", "scale": 1.0 }
+      ],
       "contents": [
         {
           "type": "text",
-          "text": "一声低吼，战斗即将爆发！"
+          "text": "5",
+          "mode": "scene",
+          "music": "qrc:/resource/audio/bgm/fight.mp3",
+          "musicLoops": -1,
+          "speaker": 0
         }
       ],
       "action": "startBattle",

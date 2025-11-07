@@ -1,0 +1,4 @@
+module components
+BottomButtonBar 1.0 BottomButtonBar.qml
+ConfirmDialog 1.0 ConfirmDialog.qml
+AppButton 1.0 AppButton.qml

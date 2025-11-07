@@ -42,6 +42,7 @@ qt_add_qml_module(GeistZerfall
         QML_FILES src/qml/window/Lore/loreState.js src/qml/window/Lore/LoreView.qml
         QML_FILES src/qml/window/Lore/contentShow/Animation.qml src/qml/window/Lore/contentShow/Image.qml src/qml/window/Lore/contentShow/Text.qml
         QML_FILES src/qml/window/Lore/components/ChoiceDialog.qml src/qml/window/Lore/components/ContentLoader.qml src/qml/window/Lore/components/DynamicCircle.qml
+        QML_FILES src/qml/window/Lore/components/VisualScene.qml src/qml/window/Lore/components/HistoryPanel.qml
         QML_FILES src/qml/window/Lore/chapters/chapter01.json src/qml/window/Lore/chapters/prologue.json
         QML_FILES src/qml/window/Lore/battles/battle01.json src/qml/window/Lore/battles/battle02.json
 

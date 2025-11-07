@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtMultimedia 6.5
+import "qrc:/qml/window/components"
 
 Item {
     anchors.fill: parent
@@ -11,7 +12,7 @@ Item {
         // 背景图
         Image {
             anchors.fill: parent
-            source: "qrc:/resource/image/mainmenuBg.png"
+            source: "qrc:/resource/image/bg/mainmenu.png"
             fillMode: Image.PreserveAspectCrop
         }
         // Global input helpers: right-click = BACK, Esc = exit fullscreen
@@ -84,7 +85,7 @@ Item {
                 console.log("MainMenu: Component.onCompleted, initial autoExists=", (typeof SaveLoadManager !== 'undefined' && SaveLoadManager) ? SaveLoadManager.autoExists : false);
             } catch (e) { console.log("MainMenu: init continueEnabled error", e); }
             if (typeof window.playMusic === 'function') {
-                window.playMusic("qrc:/resource/audio/mainmenu.mp3");
+                window.playMusic("qrc:/resource/audio/bgm/mainmenu.mp3");
             }
             // trigger title entrance a moment after component completed
             Qt.callLater(function() { titleEntered = true; });
@@ -143,11 +144,11 @@ Item {
                     Qt.callLater(function() { triggerButtonEntrance(); });
                 }
 
-                Button {
+                AppButton {
                     id: btnStart
                     text: "START"
                     width: 180; height: 60
-                    font.pixelSize: 22
+                    fontPixelSize: 22
                     y: buttonRow.buttonsEntered ? 0 : 12
                     opacity: buttonRow.buttonsEntered ? 1 : 0
                     Behavior on y { NumberAnimation { duration: 360; easing.type: Easing.OutQuad } }
@@ -158,20 +159,20 @@ Item {
                         if (typeof transitionManager !== 'undefined') {
                             transitionManager.startLore("prologue");
                         } else {
-                            // 备用方案
+                            // 备用方案：设置章节，节点留空让 LoreView 从 meta.startNode 读取
                             window.currentChapter = "prologue";
-                            window.currentNode = "start";
+                            window.currentNode = "";
                             window.smoothReplaceSource("qml/window/Lore/LoreView.qml");
                         }
                     }
                     Component.onCompleted: { if (buttonRow.buttonsEntered) { /* already triggered */ } }
                 }
 
-                Button {
+                AppButton {
                     id: btnContinue
                     text: "CONTINUE"
                     width: 180; height: 60
-                    font.pixelSize: 22
+                    fontPixelSize: 22
                     enabled: (typeof SaveLoadManager !== 'undefined' && SaveLoadManager) ? SaveLoadManager.autoExists : false
                     y: buttonRow.buttonsEntered ? 0 : 12
                     opacity: buttonRow.buttonsEntered ? 1 : 0
@@ -182,11 +183,11 @@ Item {
                     }
                 }
 
-                Button {
+                AppButton {
                     id: btnLoad
                     text: "LOAD"
                     width: 180; height: 60
-                    font.pixelSize: 22
+                    fontPixelSize: 22
                     y: buttonRow.buttonsEntered ? 0 : 12
                     opacity: buttonRow.buttonsEntered ? 1 : 0
                     Behavior on y { SequentialAnimation { PauseAnimation { duration: 120 } NumberAnimation { duration: 360; easing.type: Easing.OutQuad } } }
@@ -194,11 +195,11 @@ Item {
                     onClicked: window.pushSource("qml/window/SaveLoad.qml")
                 }
 
-                Button {
+                AppButton {
                     id: btnConfig
                     text: "CONFIG"
                     width: 180; height: 60
-                    font.pixelSize: 22
+                    fontPixelSize: 22
                     y: buttonRow.buttonsEntered ? 0 : 12
                     opacity: buttonRow.buttonsEntered ? 1 : 0
                     Behavior on y { SequentialAnimation { PauseAnimation { duration: 180 } NumberAnimation { duration: 360; easing.type: Easing.OutQuad } } }
@@ -206,11 +207,11 @@ Item {
                     onClicked: window.pushSource("qml/window/Config.qml")
                 }
 
-                Button {
+                AppButton {
                     id: btnExtra
                     text: "EXTRA"
                     width: 180; height: 60
-                    font.pixelSize: 22
+                    fontPixelSize: 22
                     y: buttonRow.buttonsEntered ? 0 : 12
                     opacity: buttonRow.buttonsEntered ? 1 : 0
                     Behavior on y { SequentialAnimation { PauseAnimation { duration: 240 } NumberAnimation { duration: 360; easing.type: Easing.OutQuad } } }
@@ -218,11 +219,11 @@ Item {
                     onClicked: window.pushSource("qml/window/Extra.qml")
                 }
 
-                Button {
+                AppButton {
                     id: btnExit
                     text: "EXIT"
                     width: 180; height: 60
-                    font.pixelSize: 22
+                    fontPixelSize: 22
                     y: buttonRow.buttonsEntered ? 0 : 12
                     opacity: buttonRow.buttonsEntered ? 1 : 0
                     Behavior on y { SequentialAnimation { PauseAnimation { duration: 300 } NumberAnimation { duration: 360; easing.type: Easing.OutQuad } } }
@@ -231,128 +232,12 @@ Item {
                 }
             }
         }
-        Item {
+        ConfirmDialog {
             id: confirmQuitDialog
-            visible: false
-            width: 360
-            height: 170
             anchors.centerIn: parent
-            z: 999
-            // 遮罩（最底层）
-            Rectangle {
-                anchors.fill: parent
-                color: "#80000000"
-                z: -1
-                visible: parent.visible
-                MouseArea { anchors.fill: parent; onClicked: { confirmQuitDialog.visible = false } }
-            }
-            // 伪阴影
-            Rectangle {
-                width: parent.width; height: parent.height
-                radius: 24
-                color: "#22000000"
-                anchors.horizontalCenter: parent.horizontalCenter
-                anchors.verticalCenter: parent.verticalCenter
-                anchors.verticalCenterOffset: 8
-                z: 0
-                visible: confirmQuitDialog.visible
-            }
-            // 主体
-            Rectangle {
-                id: dialogBg
-                width: parent.width
-                height: parent.height
-                radius: 24
-                color: "#f8f8f8"
-                border.width: 0
-                z: 1
-            }
-            // 右上角关闭按钮
-            Rectangle {
-                id: closeBtn
-                width: 32; height: 32
-                anchors.right: dialogBg.right
-                anchors.rightMargin: 12
-                anchors.top: dialogBg.top
-                anchors.topMargin: 12
-                radius: 16
-                color: closeBtnMouse.containsMouse ? "#e57373" : "transparent"
-                border.color: "#bbbbbb"
-                border.width: 1
-                z: 2
-                MouseArea {
-                    id: closeBtnMouse
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: confirmQuitDialog.visible = false
-                }
-                Text {
-                    text: "×"
-                    anchors.centerIn: parent
-                    font.pixelSize: 22
-                    color: "#222"
-                }
-            }
-            // 内容
-            Column {
-                anchors.centerIn: dialogBg
-                spacing: 28
-                width: dialogBg.width
-                z: 3
-                Text {
-                    text: "要结束游戏吗"
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    font.pixelSize: 28
-                    color: "#222"
-                    font.bold: true
-                }
-                Row {
-                    spacing: 36
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    // YES按钮
-                    Rectangle {
-                        width: 110; height: 48; radius: 8
-                        color: yesBtnMouse.containsMouse ? "#1976d2" : "#eeeeee"
-                        border.color: yesBtnMouse.containsMouse ? "#1976d2" : "#bbbbbb"
-                        border.width: 1
-                        MouseArea {
-                            id: yesBtnMouse
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: Qt.quit()
-                        }
-                        Text {
-                            text: "YES"
-                            anchors.centerIn: parent
-                            font.pixelSize: 22
-                            color: yesBtnMouse.containsMouse ? "white" : "#222"
-                            font.bold: true
-                        }
-                    }
-                    // NO按钮
-                    Rectangle {
-                        width: 110; height: 48; radius: 8
-                        color: noBtnMouse.containsMouse ? "#bdbdbd" : "#eeeeee"
-                        border.color: noBtnMouse.containsMouse ? "#bdbdbd" : "#bbbbbb"
-                        border.width: 1
-                        MouseArea {
-                            id: noBtnMouse
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: confirmQuitDialog.visible = false
-                        }
-                        Text {
-                            text: "NO"
-                            anchors.centerIn: parent
-                            font.pixelSize: 22
-                            color: noBtnMouse.containsMouse ? "white" : "#222"
-                            font.bold: true
-                        }
-                    }
-                }
+            title: "要结束游戏吗"
+            onYes: function() {
+                Qt.quit()
             }
         }
     }
