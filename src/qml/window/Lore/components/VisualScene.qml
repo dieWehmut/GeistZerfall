@@ -1,0 +1,265 @@
+import QtQuick
+
+// VisualScene.qml - 背景 + 立绘 + 底部文字框
+Item {
+    id: root
+    anchors.fill: parent
+
+    // 节点数据（可包含 background, characters[], textBoxImage 等）
+    property var nodeData: null
+    // 当前内容（通常为 { type: "text", text: "..." }）
+    property var contentData: null
+
+    // 背景
+    Image {
+        id: bg
+        anchors.fill: parent
+        fillMode: Image.PreserveAspectCrop
+        source: (root.nodeData && root.nodeData.background) ? root.nodeData.background : ""
+        visible: source !== ""
+    }
+
+    // 无背景时的降级底色
+    Rectangle {
+        anchors.fill: parent
+        color: "#101010"
+        visible: !bg.visible
+    }
+
+    // 立绘层（按 characters 数组渲染）
+    Repeater {
+        id: charRepeater
+        model: (root.nodeData && root.nodeData.characters) ? root.nodeData.characters : []
+        delegate: Item {
+            width: parent ? parent.width : 0
+            height: parent ? parent.height : 0
+            // 立绘图片
+            Image {
+                id: ch
+                source: root.getCharacterImage(modelData)
+                fillMode: Image.PreserveAspectFit
+                asynchronous: true
+                // 默认高度占屏幕高度的 ~80%
+                height: parent.height * 0.8
+                width: height * (implicitWidth > 0 ? implicitWidth/implicitHeight : 0.6)
+                anchors.verticalCenter: parent.verticalCenter
+
+                // 位置：left/center/right（可用 x/y 覆盖）
+                anchors.horizontalCenter: undefined
+                anchors.left: undefined
+                anchors.right: undefined
+                anchors.bottom: undefined
+
+                Component.onCompleted: {
+                    var pos = modelData && modelData.position ? modelData.position : "center";
+                    if (pos === "left") {
+                        anchors.left = parent.left
+                        anchors.margins = parent.width * 0.06
+                    } else if (pos === "right") {
+                        anchors.right = parent.right
+                        anchors.margins = parent.width * 0.06
+                    } else { // center
+                        anchors.horizontalCenter = parent.horizontalCenter
+                    }
+
+                    if (modelData && (modelData.x !== undefined)) ch.x = modelData.x
+                    if (modelData && (modelData.y !== undefined)) ch.y = modelData.y
+                    if (modelData && (modelData.scale !== undefined)) ch.scale = modelData.scale
+
+                    // 注册到 root 的实例数组，便于外部定位 name badge
+                    if (!root.characterInstances) root.characterInstances = [];
+                    root.characterInstances[index] = ch;
+                    // 尝试调整 badge 位置
+                    if (root.adjustBadgePosition) Qt.callLater(root.adjustBadgePosition);
+                }
+
+                Component.onDestruction: {
+                    if (root.characterInstances) root.characterInstances[index] = null;
+                }
+            }
+        }
+    }
+
+    // 存放立绘 image 实例的数组（由 delegate 填充）
+    property var characterInstances: []
+
+    // 角色名到图片路径的映射表
+    property var characterImageMap: ({
+        "南雲 京司": "qrc:/resource/image/characters/NagumoKyoji.png",
+        "东堂 南": "qrc:/resource/image/characters/TodoMinami.png",
+        "藤田 旦治": "qrc:/resource/image/characters/FujitaTanji.png",
+        "常夏 航": "qrc:/resource/image/characters/Tokonatsu.png",
+        "折原 莲": "qrc:/resource/image/characters/OriharaRen.png",
+        "清原 凛": "qrc:/resource/image/characters/KiyoharaRin.png"
+    })
+
+    // 根据角色定义获取图片路径（支持仅用 name 或完整定义）
+    function getCharacterImage(charData) {
+        if (!charData) return "";
+        // 优先使用显式 image
+        if (charData.image) return charData.image;
+        // 否则根据 name 查找映射表
+        if (charData.name && characterImageMap[charData.name]) {
+            return characterImageMap[charData.name];
+        }
+        return "";
+    }
+
+    // 调整 name badge 位置以更精确贴合角色立绘
+    function adjustBadgePosition() {
+        try {
+            if (!nameBadge.visible) return;
+            var pos = nameBadge.speakerPosition;
+            // 如果 content 指定 speaker 索引且该实例存在，则把 badge 对齐到角色图像边缘
+            if (root.contentData && root.contentData.speaker !== undefined) {
+                var si = root.contentData.speaker;
+                if (root.characterInstances && root.characterInstances.length > si && root.characterInstances[si]) {
+                    var inst = root.characterInstances[si];
+                    // mapToItem to get inst position relative to root
+                    var pt = inst.mapToItem(root, 0, 0);
+                    // align near the top of textBox and horizontally near the character image
+                    // place badge centered at the character image's center X by default
+                    var targetX = pt.x + inst.width/2 - nameBadge.width/2;
+                    // clamp to screen edges
+                    targetX = Math.max(8, Math.min(root.width - nameBadge.width - 8, targetX));
+                    nameBadge.x = targetX;
+                    return;
+                }
+            }
+
+            // fallback: previous anchor-based adjustPosition
+            nameBadge.adjustPosition();
+        } catch (e) { console.log("VisualScene.adjustBadgePosition error", e); }
+    }
+
+    // 底部文字框
+    Rectangle {
+        id: textBox
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        height: parent.height * 0.28
+        z: 100
+        visible: !(root.contentData && (root.contentData.type === "title" || root.contentData.isTitle))
+        
+        // 白色背景
+        color: "#F5F5F5"
+        border.color: "#CCCCCC"
+        border.width: 2
+        radius: 8
+
+        // 若提供图片，作为文字框背景覆盖白色背景
+        Image {
+            id: textBoxBgImg
+            anchors.fill: parent
+            fillMode: Image.PreserveAspectFit
+            source: (root.nodeData && root.nodeData.textBoxImage) ? root.nodeData.textBoxImage : ""
+            visible: source !== ""
+            z: 1
+        }
+
+        // 文本内容（左对齐名字标签，从 name badge 下方开始）
+        Text {
+            id: textContent
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.leftMargin: nameBadge.visible ? root.width * 0.15 : 24
+            anchors.rightMargin: 24
+            anchors.topMargin: nameBadge.visible ? 48 : 24
+            wrapMode: Text.Wrap
+            horizontalAlignment: Text.AlignLeft
+            verticalAlignment: Text.AlignTop
+            color: "#222222"
+            font.pixelSize: Math.max(20, parent.height * 0.11)
+            lineHeight: 1.3
+            text: (root.contentData && root.contentData.text) ? root.contentData.text : ""
+            z: 2
+        }
+    }
+
+    // 角色名标签（紧贴文字框上方，并根据说话角色靠左/居中/靠右）
+    Rectangle {
+        id: nameBadge
+        width: Math.min(parent.width * 0.35, 260)
+        height: 36
+        radius: 6
+        color: "#CC000000"
+        border.color: "#88FFFFFF"
+        border.width: 1
+        visible: root.contentData && (root.contentData.speakerName || root.contentData.speaker !== undefined)
+        anchors.bottom: textBox.top
+        anchors.bottomMargin: -6
+        y: textBox.y - height - 6
+        z: 80
+
+        // 动态水平定位：优先根据 speaker index -> nodeData.characters[position]
+        property string speakerPosition: {
+            var s = "center";
+            if (root.contentData) {
+                if (root.contentData.speakerName) s = (root.contentData.speakerPos ? root.contentData.speakerPos : s);
+                else if (root.contentData.speaker !== undefined && root.nodeData && root.nodeData.characters && root.nodeData.characters.length > root.contentData.speaker) {
+                    var ch = root.nodeData.characters[root.contentData.speaker];
+                    if (ch && ch.position) s = ch.position;
+                }
+            }
+            return s;
+        }
+
+        // 根据 speakerPosition 调整水平锚点
+        Component.onCompleted: adjustPosition();
+        onVisibleChanged: adjustPosition();
+        function adjustPosition() {
+            // clear anchors
+            anchors.left = undefined; anchors.right = undefined; anchors.horizontalCenter = undefined;
+            var pos = speakerPosition;
+            if (pos === "left") {
+                anchors.left = parent.left; anchors.leftMargin = parent.width * 0.15
+            } else if (pos === "right") {
+                anchors.right = parent.right; anchors.rightMargin = parent.width * 0.15
+            } else {
+                anchors.horizontalCenter = parent.horizontalCenter
+            }
+        }
+
+        Text {
+            id: nameText
+            anchors.centerIn: parent
+            color: "#FFFFFF"
+            font.bold: true
+            font.pixelSize: 16
+            text: (root.contentData && root.contentData.speakerName) ? root.contentData.speakerName : (root.contentData && root.contentData.speaker !== undefined && root.nodeData && root.nodeData.characters && root.nodeData.characters.length > root.contentData.speaker ? (root.nodeData.characters[root.contentData.speaker].name ? root.nodeData.characters[root.contentData.speaker].name : "") : "")
+            horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
+            z: 85
+        }
+    }
+
+    // 居中大标题（用于章节标题画面）
+    Item {
+        id: titleContainer
+        anchors.fill: parent
+        visible: root.contentData && (root.contentData.type === "title" || root.contentData.isTitle)
+        z: 60
+
+        // 半透明遮罩（可选）
+        Rectangle {
+            anchors.fill: parent
+            color: "#00000000"
+            visible: true
+        }
+
+        Text {
+            id: titleText
+            text: (root.contentData && root.contentData.text) ? root.contentData.text : (root.nodeData && root.nodeData.title ? root.nodeData.title : "")
+            anchors.centerIn: parent
+            color: "#FFFFFF"
+            font.pixelSize: Math.max(28, parent.height * 0.12)
+            font.bold: true
+            horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
+            wrapMode: Text.NoWrap
+            z: 70
+        }
+    }
+}

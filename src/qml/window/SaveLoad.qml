@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import "windowState.js" as WindowState
 import QtQuick.Layouts
+import "qrc:/qml/window/components"
 
 Item {
 	anchors.fill: parent
@@ -23,7 +24,7 @@ Item {
 	property real scaleFactor: Math.min(width / baseWidth, height / baseHeight)		// 背景
 		Image {
 			anchors.fill: parent
-			source: "qrc:/resource/image/mainmenuBg.png"
+			source: "qrc:/resource/image/bg/mainmenu.png"
 			fillMode: Image.PreserveAspectCrop
 		}
 
@@ -294,369 +295,98 @@ Item {
 			}
 		}
 
-		// 底部按钮栏（与 Config.qml 风格一致）
-		Rectangle {
-			width: parent.width
-			height: 120
-			color: "transparent"
+		// 底部按钮栏
+		BottomButtonBar {
 			anchors.horizontalCenter: parent.horizontalCenter
 			anchors.bottom: parent.bottom
 			anchors.bottomMargin: 40
-			z: 20
-
-			Row {
-				id: buttonRow
-				spacing: 40
-				anchors.centerIn: parent
-					// entrance animation controller
-					property bool buttonsEntered: false
-					function triggerButtonEntrance() { buttonsEntered = true }
-					Component.onCompleted: Qt.callLater(triggerButtonEntrance)
-
-				Button {
-					id: saveBtn
-					text: "SAVE"
-					width: 180; height: 60
-					font.pixelSize: 22
-					checkable: true
-					checked: mode === "save"
-					onClicked: mode = "save"
-					y: buttonRow.buttonsEntered ? 0 : 12
-					opacity: buttonRow.buttonsEntered ? 1 : 0
-					Behavior on y { SequentialAnimation { PauseAnimation { duration: 0 } NumberAnimation { duration: 360; easing.type: Easing.OutQuad } } }
-					Behavior on opacity { SequentialAnimation { PauseAnimation { duration: 0 } NumberAnimation { duration: 360; easing.type: Easing.OutQuad } } }
-				}
-				Button {
-					id: loadBtn
-					text: "LOAD"
-					width: 180; height: 60
-					font.pixelSize: 22
-					checkable: true
-					checked: mode === "load"
-					onClicked: mode = "load"
-					y: buttonRow.buttonsEntered ? 0 : 12
-					opacity: buttonRow.buttonsEntered ? 1 : 0
-					Behavior on y { SequentialAnimation { PauseAnimation { duration: 60 } NumberAnimation { duration: 360; easing.type: Easing.OutQuad } } }
-					Behavior on opacity { SequentialAnimation { PauseAnimation { duration: 60 } NumberAnimation { duration: 360; easing.type: Easing.OutQuad } } }
-				}
-				Button {
-					text: "EXTRA"
-					width: 180; height: 60
-					font.pixelSize: 22
-					onClicked: window.pushSource && window.pushSource("qml/window/Extra.qml")
-					y: buttonRow.buttonsEntered ? 0 : 12
-					opacity: buttonRow.buttonsEntered ? 1 : 0
-					Behavior on y { SequentialAnimation { PauseAnimation { duration: 120 } NumberAnimation { duration: 360; easing.type: Easing.OutQuad } } }
-					Behavior on opacity { SequentialAnimation { PauseAnimation { duration: 120 } NumberAnimation { duration: 360; easing.type: Easing.OutQuad } } }
-				}
-				Button {
-					text: "TITLE"
-					width: 180; height: 60
-					font.pixelSize: 22
-					onClicked: function() { confirmTitleDialog.visible = true }
-					y: buttonRow.buttonsEntered ? 0 : 12
-					opacity: buttonRow.buttonsEntered ? 1 : 0
-					Behavior on y { SequentialAnimation { PauseAnimation { duration: 180 } NumberAnimation { duration: 360; easing.type: Easing.OutQuad } } }
-					Behavior on opacity { SequentialAnimation { PauseAnimation { duration: 180 } NumberAnimation { duration: 360; easing.type: Easing.OutQuad } } }
-				}
-				Button {
-					text: "BACK"
-					width: 180; height: 60
-					font.pixelSize: 22
-					onClicked: window.goBack && window.goBack()
-					y: buttonRow.buttonsEntered ? 0 : 12
-					opacity: buttonRow.buttonsEntered ? 1 : 0
-					Behavior on y { SequentialAnimation { PauseAnimation { duration: 240 } NumberAnimation { duration: 360; easing.type: Easing.OutQuad } } }
-					Behavior on opacity { SequentialAnimation { PauseAnimation { duration: 240 } NumberAnimation { duration: 360; easing.type: Easing.OutQuad } } }
-				}
-				Button {
-					text: "QUIT"
-					width: 180; height: 60
-					font.pixelSize: 22
-					onClicked: function() { confirmQuitDialog.visible = true }
-					y: buttonRow.buttonsEntered ? 0 : 12
-					opacity: buttonRow.buttonsEntered ? 1 : 0
-					Behavior on y { SequentialAnimation { PauseAnimation { duration: 300 } NumberAnimation { duration: 360; easing.type: Easing.OutQuad } } }
-					Behavior on opacity { SequentialAnimation { PauseAnimation { duration: 300 } NumberAnimation { duration: 360; easing.type: Easing.OutQuad } } }
-				}
-			}
+			buttons: [
+				{text: "SAVE", action: function() { mode = "save" }, checkable: true, checked: mode === "save"},
+				{text: "LOAD", action: function() { mode = "load" }, checkable: true, checked: mode === "load"},
+				{text: "EXTRA", action: function() { window.pushSource && window.pushSource("qml/window/Extra.qml") }},
+				{text: "TITLE", action: function() { confirmTitleDialog.visible = true }},
+				{text: "BACK", action: function() { window.goBack && window.goBack() }},
+				{text: "QUIT", action: function() { confirmQuitDialog.visible = true }}
+			]
 		}
 
 		// TITLE确认弹窗
-		Item {
+		ConfirmDialog {
 			id: confirmTitleDialog
-			visible: false
-			width: 360
-			height: 170
 			anchors.centerIn: contentRoot
-			z: 999
-			// 遮罩
-			Rectangle { anchors.fill: parent; color: "#80000000"; z: -1; visible: parent.visible; MouseArea { anchors.fill: parent; onClicked: confirmTitleDialog.visible = false } }
-			// 伪阴影
-			Rectangle { width: parent.width; height: parent.height; radius: 24; color: "#22000000"; anchors.horizontalCenter: parent.horizontalCenter; anchors.verticalCenter: parent.verticalCenter; anchors.verticalCenterOffset: 8; z: 0; visible: confirmTitleDialog.visible }
-			// 主体
-			Rectangle { id: dialogBgTitle; width: parent.width; height: parent.height; radius: 24; color: "#f8f8f8"; border.width: 0; z: 1 }
-			// 右上角关闭按钮
-			Rectangle {
-				width: 32; height: 32
-				anchors.right: dialogBgTitle.right
-				anchors.rightMargin: 12
-				anchors.top: dialogBgTitle.top
-				anchors.topMargin: 12
-				radius: 16
-				color: closeTitleBtnMouse.containsMouse ? "#e57373" : "transparent"
-				border.color: "#bbbbbb"
-				border.width: 1
-				z: 2
-				MouseArea { id: closeTitleBtnMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: confirmTitleDialog.visible = false }
-				Text { text: "×"; anchors.centerIn: parent; font.pixelSize: 22; color: "#222" }
-			}
-			Column {
-				anchors.centerIn: dialogBgTitle
-				spacing: 28
-				width: dialogBgTitle.width
-				z: 3
-				Text { text: "返回主界面"; anchors.horizontalCenter: parent.horizontalCenter; font.pixelSize: 28; color: "#222"; font.bold: true }
-				Row { spacing: 36; anchors.horizontalCenter: parent.horizontalCenter
-					// YES按钮
-					Rectangle {
-						width: 110; height: 48; radius: 8
-						color: yesTitleBtnMouse.containsMouse ? "#1976d2" : "#eeeeee"
-						border.color: yesTitleBtnMouse.containsMouse ? "#1976d2" : "#bbbbbb"
-						border.width: 1
-						MouseArea { id: yesTitleBtnMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { window.pageHistory = []; window.replaceSource && window.replaceSource("qml/window/MainMenu.qml"); confirmTitleDialog.visible = false } }
-						Text { text: "YES"; anchors.centerIn: parent; font.pixelSize: 22; color: yesTitleBtnMouse.containsMouse ? "white" : "#222"; font.bold: true }
-					}
-					// NO按钮
-					Rectangle {
-						width: 110; height: 48; radius: 8
-						color: noTitleBtnMouse.containsMouse ? "#bdbdbd" : "#eeeeee"
-						border.color: noTitleBtnMouse.containsMouse ? "#bdbdbd" : "#bbbbbb"
-						border.width: 1
-						MouseArea { id: noTitleBtnMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: confirmTitleDialog.visible = false }
-						Text { text: "NO"; anchors.centerIn: parent; font.pixelSize: 22; color: noTitleBtnMouse.containsMouse ? "white" : "#222"; font.bold: true }
-					}
-				}
+			title: "返回主界面"
+			onYes: function() {
+				window.pageHistory = [];
+				window.replaceSource && window.replaceSource("qml/window/MainMenu.qml");
 			}
 		}
 
 		// QUIT确认弹窗
-		Item {
+		ConfirmDialog {
 			id: confirmQuitDialog
-			visible: false
-			width: 360
-			height: 170
 			anchors.centerIn: contentRoot
-			z: 999
-			// 遮罩
-			Rectangle { anchors.fill: parent; color: "#80000000"; z: -1; visible: parent.visible; MouseArea { anchors.fill: parent; onClicked: confirmQuitDialog.visible = false } }
-			// 伪阴影
-			Rectangle { width: parent.width; height: parent.height; radius: 24; color: "#22000000"; anchors.horizontalCenter: parent.horizontalCenter; anchors.verticalCenter: parent.verticalCenter; anchors.verticalCenterOffset: 8; z: 0; visible: confirmQuitDialog.visible }
-			// 主体
-			Rectangle { id: dialogBg; width: parent.width; height: parent.height; radius: 24; color: "#f8f8f8"; border.width: 0; z: 1 }
-			// 右上角关闭按钮
-			Rectangle {
-				width: 32; height: 32
-				anchors.right: dialogBg.right
-				anchors.rightMargin: 12
-				anchors.top: dialogBg.top
-				anchors.topMargin: 12
-				radius: 16
-				color: closeBtnMouse.containsMouse ? "#e57373" : "transparent"
-				border.color: "#bbbbbb"
-				border.width: 1
-				z: 2
-				MouseArea { id: closeBtnMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: confirmQuitDialog.visible = false }
-				Text { text: "×"; anchors.centerIn: parent; font.pixelSize: 22; color: "#222" }
-			}
-			Column {
-				anchors.centerIn: dialogBg
-				spacing: 28
-				width: dialogBg.width
-				z: 3
-				Text { text: "要结束游戏吗"; anchors.horizontalCenter: parent.horizontalCenter; font.pixelSize: 28; color: "#222"; font.bold: true }
-				Row { spacing: 36; anchors.horizontalCenter: parent.horizontalCenter
-					// YES按钮
-					Rectangle {
-						width: 110; height: 48; radius: 8
-						color: yesBtnMouse.containsMouse ? "#1976d2" : "#eeeeee"
-						border.color: yesBtnMouse.containsMouse ? "#1976d2" : "#bbbbbb"
-						border.width: 1
-						MouseArea { id: yesBtnMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: Qt.quit() }
-						Text { text: "YES"; anchors.centerIn: parent; font.pixelSize: 22; color: yesBtnMouse.containsMouse ? "white" : "#222"; font.bold: true }
-					}
-					// NO按钮
-					Rectangle {
-						width: 110; height: 48; radius: 8
-						color: noBtnMouse.containsMouse ? "#bdbdbd" : "#eeeeee"
-						border.color: noBtnMouse.containsMouse ? "#bdbdbd" : "#bbbbbb"
-						border.width: 1
-						MouseArea { id: noBtnMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: confirmQuitDialog.visible = false }
-						Text { text: "NO"; anchors.centerIn: parent; font.pixelSize: 22; color: noBtnMouse.containsMouse ? "white" : "#222"; font.bold: true }
-					}
-				}
+			title: "要结束游戏吗"
+			onYes: function() {
+				Qt.quit()
 			}
 		}
 
 		// OVERWRITE确认弹窗（保存时覆盖）
-		Item {
+		ConfirmDialog {
 			id: confirmOverwriteDialog
-			visible: false
-			property int saveIdx: -1
-			width: 360
-			height: 170
 			anchors.centerIn: contentRoot
-			z: 999
-			// 遮罩
-			Rectangle { anchors.fill: parent; color: "#80000000"; z: -1; visible: parent.visible; MouseArea { anchors.fill: parent; onClicked: confirmOverwriteDialog.visible = false } }
-			// 伪阴影
-			Rectangle { width: parent.width; height: parent.height; radius: 24; color: "#22000000"; anchors.horizontalCenter: parent.horizontalCenter; anchors.verticalCenter: parent.verticalCenter; anchors.verticalCenterOffset: 8; z: 0; visible: confirmOverwriteDialog.visible }
-			// 主体（样式与 QUIT/Title 一致）
-			Rectangle { id: dialogBgOverwrite; width: parent.width; height: parent.height; radius: 24; color: "#f8f8f8"; border.width: 0; z: 1 }
-			// 右上角关闭按钮
-			Rectangle {
-				width: 32; height: 32
-				anchors.right: dialogBgOverwrite.right
-				anchors.rightMargin: 12
-				anchors.top: dialogBgOverwrite.top
-				anchors.topMargin: 12
-				radius: 16
-				color: closeOverwriteBtnMouse.containsMouse ? "#e57373" : "transparent"
-				border.color: "#bbbbbb"
-				border.width: 1
-				z: 2
-				MouseArea { id: closeOverwriteBtnMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: confirmOverwriteDialog.visible = false }
-				Text { text: "×"; anchors.centerIn: parent; font.pixelSize: 22; color: "#222" }
-			}
-			Column {
-				anchors.centerIn: dialogBgOverwrite
-				spacing: 28
-				width: dialogBgOverwrite.width
-				z: 3
-				Text { text: "覆盖现有存档吗?"; anchors.horizontalCenter: parent.horizontalCenter; font.pixelSize: 24; color: "#222"; font.bold: true }
-				Row { spacing: 36; anchors.horizontalCenter: parent.horizontalCenter
-					// YES按钮（执行覆盖保存）
-					Rectangle {
-						width: 110; height: 48; radius: 8
-						color: yesOverwriteBtnMouse.containsMouse ? "#1976d2" : "#eeeeee"
-						border.color: yesOverwriteBtnMouse.containsMouse ? "#1976d2" : "#bbbbbb"
-						border.width: 1
-								MouseArea { id: yesOverwriteBtnMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: {
-									// perform actual save
-									var idx = confirmOverwriteDialog.saveIdx;
-									if (idx >= 0) {
-										try {
-											if (window && window.currentPlayer) {
-												SaveLoadManager.posX = window.currentPlayer.pos.x;
-												SaveLoadManager.posY = window.currentPlayer.pos.y;
-												SaveLoadManager.speed = window.currentPlayer.getSpeed ? window.currentPlayer.getSpeed() : 0;
-												SaveLoadManager.sight = window.currentPlayer.getSight ? window.currentPlayer.getSight() : 0;
-											}
-										} catch (e) { console.log(e) }
-										SaveLoadManager.saveSlot(idx, "save");
-										try {
-											var it = slotsRepeater.itemAt(idx);
-											if (it && it.refreshPreview) {
-												it.refreshPreview();
-											} else {
-												// fallback: refresh all
-												for (var i=0;i<slotsRepeater.count;i++) {
-													var it2 = slotsRepeater.itemAt(i);
-													if (it2 && it2.refreshPreview) it2.refreshPreview();
-												}
-											}
-										} catch (e) { console.log('refresh slot preview failed', e); }
-										confirmOverwriteDialog.visible = false;
-									}
-								} }
-						Text { text: "YES"; anchors.centerIn: parent; font.pixelSize: 22; color: yesOverwriteBtnMouse.containsMouse ? "white" : "#222"; font.bold: true }
-					}
-					// NO按钮（取消）
-					Rectangle {
-						width: 110; height: 48; radius: 8
-						color: noOverwriteBtnMouse.containsMouse ? "#bdbdbd" : "#eeeeee"
-						border.color: noOverwriteBtnMouse.containsMouse ? "#bdbdbd" : "#bbbbbb"
-						border.width: 1
-						MouseArea { id: noOverwriteBtnMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: confirmOverwriteDialog.visible = false }
-						Text { text: "NO"; anchors.centerIn: parent; font.pixelSize: 22; color: noOverwriteBtnMouse.containsMouse ? "white" : "#222"; font.bold: true }
-					}
+			title: "覆盖现有存档吗?"
+			property int saveIdx: -1
+			onYes: function() {
+				var idx = confirmOverwriteDialog.saveIdx;
+				if (idx >= 0) {
+					try {
+						if (window && window.currentPlayer) {
+							SaveLoadManager.posX = window.currentPlayer.pos.x;
+							SaveLoadManager.posY = window.currentPlayer.pos.y;
+							SaveLoadManager.speed = window.currentPlayer.getSpeed ? window.currentPlayer.getSpeed() : 0;
+							SaveLoadManager.sight = window.currentPlayer.getSight ? window.currentPlayer.getSight() : 0;
+						}
+					} catch (e) { console.log(e) }
+					SaveLoadManager.saveSlot(idx, "save");
+					try {
+						var it = slotsRepeater.itemAt(idx);
+						if (it && it.refreshPreview) {
+							it.refreshPreview();
+						} else {
+							// fallback: refresh all
+							for (var i=0;i<slotsRepeater.count;i++) {
+								var it2 = slotsRepeater.itemAt(i);
+								if (it2 && it2.refreshPreview) it2.refreshPreview();
+							}
+						}
+					} catch (e) { console.log('refresh slot preview failed', e); }
 				}
 			}
 		}
 
 		// DELETE确认弹窗（删除存档）
-		Item {
+		ConfirmDialog {
 			id: confirmDeleteDialog
-			visible: false
-			property int slotIdx: -1
-			width: 360
-			height: 170
 			anchors.centerIn: contentRoot
-			z: 999
-			// 遮罩
-			Rectangle { anchors.fill: parent; color: "#80000000"; z: -1; visible: parent.visible; MouseArea { anchors.fill: parent; onClicked: confirmDeleteDialog.visible = false } }
-			// 伪阴影
-			Rectangle { width: parent.width; height: parent.height; radius: 24; color: "#22000000"; anchors.horizontalCenter: parent.horizontalCenter; anchors.verticalCenter: parent.verticalCenter; anchors.verticalCenterOffset: 8; z: 0; visible: confirmDeleteDialog.visible }
-			// 主体
-			Rectangle { id: dialogBgDelete; width: parent.width; height: parent.height; radius: 24; color: "#f8f8f8"; border.width: 0; z: 1 }
-			// 右上角关闭按钮
-			Rectangle {
-				width: 32; height: 32
-				anchors.right: dialogBgDelete.right
-				anchors.rightMargin: 12
-				anchors.top: dialogBgDelete.top
-				anchors.topMargin: 12
-				radius: 16
-				color: closeDeleteBtnMouse.containsMouse ? "#e57373" : "transparent"
-				border.color: "#bbbbbb"
-				border.width: 1
-				z: 2
-				MouseArea { id: closeDeleteBtnMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: confirmDeleteDialog.visible = false }
-				Text { text: "×"; anchors.centerIn: parent; font.pixelSize: 22; color: "#222" }
-			}
-			Column {
-				anchors.centerIn: dialogBgDelete
-				spacing: 28
-				width: dialogBgDelete.width
-				z: 3
-				Text { text: "删除存档吗?"; anchors.horizontalCenter: parent.horizontalCenter; font.pixelSize: 28; color: "#222"; font.bold: true }
-				Row { spacing: 36; anchors.horizontalCenter: parent.horizontalCenter
-					// YES按钮
-					Rectangle {
-						width: 110; height: 48; radius: 8
-						color: yesDeleteBtnMouse.containsMouse ? "#1976d2" : "#eeeeee"
-						border.color: yesDeleteBtnMouse.containsMouse ? "#1976d2" : "#bbbbbb"
-						border.width: 1
-						MouseArea { id: yesDeleteBtnMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: {
-							var idx = confirmDeleteDialog.slotIdx;
-							if (idx >= 0) {
-								if (SaveLoadManager.removeSlot(idx, "save")) {
-									try {
-										var it = slotsRepeater.itemAt(idx);
-										if (it && it.refreshPreview) {
-											it.refreshPreview();
-										} else {
-											// fallback: refresh all
-											for (var i=0;i<slotsRepeater.count;i++) {
-												var it2 = slotsRepeater.itemAt(i);
-												if (it2 && it2.refreshPreview) it2.refreshPreview();
-											}
-										}
-									} catch (e) { console.log('refresh slot preview failed', e); }
+			title: "删除存档吗?"
+			property int slotIdx: -1
+			onYes: function() {
+				var idx = confirmDeleteDialog.slotIdx;
+				if (idx >= 0) {
+					if (SaveLoadManager.removeSlot(idx, "save")) {
+						try {
+							var it = slotsRepeater.itemAt(idx);
+							if (it && it.refreshPreview) {
+								it.refreshPreview();
+							} else {
+								// fallback: refresh all
+								for (var i=0;i<slotsRepeater.count;i++) {
+									var it2 = slotsRepeater.itemAt(i);
+									if (it2 && it2.refreshPreview) it2.refreshPreview();
 								}
-								confirmDeleteDialog.visible = false;
 							}
-						} }
-						Text { text: "YES"; anchors.centerIn: parent; font.pixelSize: 22; color: yesDeleteBtnMouse.containsMouse ? "white" : "#222"; font.bold: true }
-					}
-					// NO按钮
-					Rectangle {
-						width: 110; height: 48; radius: 8
-						color: noDeleteBtnMouse.containsMouse ? "#bdbdbd" : "#eeeeee"
-						border.color: noDeleteBtnMouse.containsMouse ? "#bdbdbd" : "#bbbbbb"
-						border.width: 1
-						MouseArea { id: noDeleteBtnMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: confirmDeleteDialog.visible = false }
-						Text { text: "NO"; anchors.centerIn: parent; font.pixelSize: 22; color: noDeleteBtnMouse.containsMouse ? "white" : "#222"; font.bold: true }
+						} catch (e) { console.log('refresh slot preview failed', e); }
 					}
 				}
 			}

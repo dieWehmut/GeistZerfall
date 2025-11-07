@@ -29,5 +29,6 @@ void Transition::returnToLore(const QString &chapterId, const QString &nodeId)
 void Transition::startLore(const QString &chapterId)
 {
     setCurrentView("LoreView");
-    emit switchToLoreView(chapterId, "start");
+    // 传递空字符串让 LoreView 从章节的 meta.startNode 读取初始节点
+    emit switchToLoreView(chapterId, "");
 }
