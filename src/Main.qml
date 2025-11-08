@@ -135,7 +135,7 @@ Window {
             console.log("Main: switching to GameView with battle", battleId);
             // 保存战斗 ID 供 GameView 使用
             window.currentBattleId = battleId;
-            smoothReplaceSource("qml/window/GameView.qml");
+            smoothReplaceSource("qml/window/Game/GameView.qml");
         }
         
         function onSwitchToLoreView(chapterId, nodeId) {

@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import "windowState.js" as WindowState
 import QtQuick.Layouts
-import "qrc:/qml/window/components"
+import "../components"
 
 Item {
 	anchors.fill: parent
@@ -282,9 +282,9 @@ Item {
 											try { WindowState.setTargetMode("loadFromSave"); } catch (e) { }
 											// immediately switch to GameView so player sees game right away
 											if (window && window.replaceSource) {
-												window.replaceSource("qml/window/GameView.qml");
+												window.replaceSource("qml/window/Game/GameView.qml");
 											} else if (window && window.pushSource) {
-												window.pushSource("qml/window/GameView.qml");
+												window.pushSource("qml/window/Game/GameView.qml");
 											}
 										}
 									}

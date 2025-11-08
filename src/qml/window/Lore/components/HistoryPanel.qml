@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick.Controls
-import "qrc:/qml/window/components"
+import "../../../components"
 
 // HistoryPanel.qml - 历史回顾窗口组件
 Item {
@@ -35,135 +35,141 @@ Item {
         }
     }
 
-    // 主面板容器
-    Rectangle {
-        id: mainPanel
+    // 主面板容器（使用 container 包裹以便给主面板添加 DropShadow）
+    Item {
+        id: panelContainer
         anchors.centerIn: parent
         width: parent.width * 0.8
         height: parent.height * 0.85
-        color: "#F5F5F5"
-        border.color: "#333333"
-        border.width: 2
-        radius: 8
 
-        // 右键关闭面板（不影响左键操作）
-        MouseArea {
+        Rectangle {
+            id: mainPanel
             anchors.fill: parent
-            acceptedButtons: Qt.RightButton
-            z: 10000
-            onClicked: function(mouse) {
-                if (mouse.button === Qt.RightButton) {
-                    console.log("HistoryPanel: right click close");
-                    root.closeRequested();
+            color: "transparent" // 主面板透明
+            border.color: "#33333388"
+            border.width: 2
+            radius: 8
+
+            // 右键关闭面板（不影响左键操作）
+            MouseArea {
+                anchors.fill: parent
+                acceptedButtons: Qt.RightButton
+                z: 10000
+                onClicked: function(mouse) {
+                    if (mouse.button === Qt.RightButton) {
+                        console.log("HistoryPanel: right click close");
+                        root.closeRequested();
+                    }
                 }
             }
-        }
 
-        // 历史记录列表区域（充满整个面板除了底部按钮区域）
-        Rectangle {
-            id: listContainer
-            anchors {
-                top: parent.top
-                left: parent.left
-                right: parent.right
-                bottom: buttonArea.top
-                margins: 40  // 增加左右上下内边距，保证对称留白
-            }
-            color: "transparent"
+            // 历史记录列表区域（充满整个面板除了底部按钮区域）
+            Rectangle {
+                id: listContainer
+                anchors {
+                    top: parent.top
+                    left: parent.left
+                    right: parent.right
+                    bottom: buttonArea.top
+                    margins: 40  // 增加左右上下内边距，保证对称留白
+                }
+                color: "transparent"
 
-            ScrollView {
-                id: scrollView
-                anchors.fill: parent
-                clip: true
-                
-                // 滚动条在右侧
-                ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
-                ScrollBar.vertical.policy: ScrollBar.AlwaysOn
-
-                ListView {
-                    id: historyListView
-                    model: root.historyData
-                    spacing: 20  // 增加条目间距
-                    // 留出滚动条空间
-                    width: scrollView.width - 20
+                ScrollView {
+                    id: scrollView
+                    anchors.fill: parent
+                    clip: true
                     
-                    delegate: Item {
-                        width: historyListView.width - 5
-                        height: Math.max(60, contentRow.height + 30)  // 最小高度60，更高
-                        
-                        Rectangle {
-                            anchors.fill: parent
-                            color: "white"
-                            border.color: "#CCCCCC"
-                            border.width: 1
-                            radius: 4
-                        }
+                    // 滚动条在右侧
+                    ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+                    ScrollBar.vertical.policy: ScrollBar.AlwaysOn
 
-                                    Row {
-                                        id: contentRow
+                    ListView {
+                        id: historyListView
+                        model: root.historyData
+                        spacing: 20  // 增加条目间距
+                        // 留出滚动条空间
+                        width: scrollView.width - 20
+                        
+                        delegate: Item {
+                            width: historyListView.width - 5
+                            height: Math.max(60, contentRow.height + 30)  // 最小高度60，更高
+                            
+                            Rectangle {
+                                id: entryBg
+                                anchors.fill: parent
+                                color: "#00000066" // 半透明深色背景，提升对比度
+                                border.color: "#FFFFFF22"
+                                border.width: 1
+                                radius: 6
+                            }
+
+                            Row {
+                                id: contentRow
+                                anchors {
+                                    left: parent.left
+                                    right: parent.right
+                                    top: parent.top
+                                    margins: 30  // 增加内边距，左右对称留白
+                                    topMargin: 15
+                                }
+                                spacing: 20  // 人名和文本之间的间距
+
+                                // 人名区域（始终占据120px，保证文本起始位置一致）
+                                Item {
+                                    width: 120  // 固定宽度，始终占位
+                                    height: parent.height
+
+                                    Text {
+                                        id: speakerText
                                         anchors {
                                             left: parent.left
-                                            right: parent.right
                                             top: parent.top
-                                            margins: 30  // 增加内边距，左右对称留白
-                                            topMargin: 15
+                                            // 保持与文本顶部对齐
                                         }
-                            spacing: 20  // 人名和文本之间的间距
-
-                            // 人名区域（始终占据120px，保证文本起始位置一致）
-                            Item {
-                                width: 120  // 固定宽度，始终占位
-                                height: parent.height
-
-                                Text {
-                                    id: speakerText
-                                    anchors {
-                                        left: parent.left
-                                        top: parent.top
-                                        // 保持与文本顶部对齐
+                                        width: parent.width
+                                        text: modelData.speaker || ""
+                                        font.pixelSize: 20
+                                        font.bold: true
+                                        color: "#90CAF9" // 浅蓝，更利于深色背景上的可读性
+                                        wrapMode: Text.WordWrap
+                                        verticalAlignment: Text.AlignTop
+                                        // 只在 scene 模式且有人名时显示文字，但区域始终占位
+                                        visible: modelData.mode === "scene" && modelData.speaker && modelData.speaker !== ""
                                     }
-                                    width: parent.width
-                                    text: modelData.speaker || ""
+                                }
+
+                                // 对话文本区域（始终从相同位置开始）
+                                Text {
+                                    id: dialogText
+                                    anchors {
+                                        top: parent.top
+                                    }
+                                    width: contentRow.width - 200  // 留出跳转按钮空间
+                                    text: modelData.text || ""
                                     font.pixelSize: 20
-                                    font.bold: true
-                                    color: "#2196F3"
+                                    color: "#FFFFFF" // 白色文本，确保在黑色遮罩上可读
                                     wrapMode: Text.WordWrap
                                     verticalAlignment: Text.AlignTop
-                                    // 只在 scene 模式且有人名时显示文字，但区域始终占位
-                                    visible: modelData.mode === "scene" && modelData.speaker && modelData.speaker !== ""
                                 }
-                            }
 
-                            // 对话文本区域（始终从相同位置开始）
-                            Text {
-                                id: dialogText
-                                anchors {
-                                    top: parent.top
-                                }
-                                width: contentRow.width - 200  // 留出跳转按钮空间
-                                text: modelData.text || ""
-                                font.pixelSize: 18
-                                color: "#333333"
-                                wrapMode: Text.WordWrap
-                                verticalAlignment: Text.AlignTop
-                            }
-
-                            // 跳转按钮（图标）
-                            AppButton {
-                                id: jumpButton
-                                width: 40
-                                height: 40
-                                text: "⤴"
-                                fontPixelSize: 18
-                                anchors.top: parent.top
-                                anchors.topMargin: 6
-                                onClicked: {
-                                    // modelData 应包含 node 与 index
-                                    if (modelData.node !== undefined && modelData.index !== undefined) {
-                                        console.log("HistoryPanel: jump requested to", modelData.node, modelData.index);
-                                        root.jumpRequested(modelData.node, modelData.index);
-                                    } else {
-                                        console.log("HistoryPanel: jump data missing for item");
+                                // 跳转按钮（图标）
+                                AppButton {
+                                    id: jumpButton
+                                    width: 40
+                                    height: 40
+                                    text: "⤴"
+                                    fontPixelSize: 18
+                                    anchors.top: parent.top
+                                    anchors.topMargin: 6
+                                    onClicked: {
+                                        // modelData 应包含 node 与 index
+                                        if (modelData.node !== undefined && modelData.index !== undefined) {
+                                            console.log("HistoryPanel: jump requested to", modelData.node, modelData.index);
+                                            root.jumpRequested(modelData.node, modelData.index);
+                                        } else {
+                                            console.log("HistoryPanel: jump data missing for item");
+                                        }
                                     }
                                 }
                             }
@@ -171,47 +177,75 @@ Item {
                     }
                 }
             }
-        }
 
-        // 底部按钮区域
-        Item {
-            id: buttonArea
-            anchors {
-                left: parent.left
-                right: parent.right
-                bottom: parent.bottom
-                margins: 15
-            }
-            height: 50
-
-            AppButton {
-                id: backButton
+            // 底部按钮区域
+            Item {
+                id: buttonArea
                 anchors {
+                    left: parent.left
                     right: parent.right
-                    verticalCenter: parent.verticalCenter
+                    bottom: parent.bottom
+                    margins: 15
                 }
-                width: 120
-                height: 40
-                text: "Back"
-                fontPixelSize: 22
-                
-                onClicked: {
-                    console.log("HistoryPanel: Back button clicked");
-                    root.closeRequested();
+                height: 50
+
+                AppButton {
+                    id: backButton
+                    anchors {
+                        right: parent.right
+                        verticalCenter: parent.verticalCenter
+                    }
+                    width: 120
+                    height: 40
+                    text: "Back"
+                    fontPixelSize: 22
+                    
+                    onClicked: {
+                        console.log("HistoryPanel: Back button clicked");
+                        root.closeRequested();
+                    }
                 }
+            }
+
+            // 只阻止点击事件穿透到背景，不阻止滚轮事件
+            MouseArea {
+                anchors.fill: parent
+                z: -1  // 在其他元素下方
+                onClicked: function(mouse) {
+                    // 吸收点击事件，防止穿透到背景关闭面板
+                    mouse.accepted = true;
+                }
+                // 不处理滚轮事件，让 WheelHandler 处理
+                propagateComposedEvents: false
             }
         }
 
-        // 只阻止点击事件穿透到背景，不阻止滚轮事件
-        MouseArea {
-            anchors.fill: parent
-            z: -1  // 在其他元素下方
-            onClicked: function(mouse) {
-                // 吸收点击事件，防止穿透到背景关闭面板
-                mouse.accepted = true;
-            }
-            // 不处理滚轮事件，让 WheelHandler 处理
-            propagateComposedEvents: false
+        // 多层半透明矩形模拟阴影（避免依赖 QtGraphicalEffects 模块）
+        Rectangle {
+            anchors.fill: mainPanel
+            anchors.margins: -8
+            color: "#00000033"
+            radius: mainPanel.radius + 6
+            z: -3
+            visible: root.visible
+        }
+
+        Rectangle {
+            anchors.fill: mainPanel
+            anchors.margins: -14
+            color: "#00000022"
+            radius: mainPanel.radius + 10
+            z: -4
+            visible: root.visible
+        }
+
+        Rectangle {
+            anchors.fill: mainPanel
+            anchors.margins: -20
+            color: "#00000014"
+            radius: mainPanel.radius + 14
+            z: -5
+            visible: root.visible
         }
     }
 

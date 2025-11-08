@@ -22,7 +22,7 @@
     },
     "start": {
       "characters": [
-        { "name": "南雲 京司", "position": "left", "scale": 1.0 }
+        { "name": "南雲 時", "position": "left", "scale": 1.0 }
       ],
       "contents": [
         {
@@ -53,8 +53,8 @@
     "sound": {
       "background": "qrc:/resource/image/bg/lore/shenLinGate.png",
       "characters": [
-        { "name": "折原 莲", "position": "left", "scale": 1.0 },
-        { "name": "东堂 南", "position": "right", "scale": 1.0 }
+        { "name": "折原 蓮", "position": "left", "scale": 1.0 },
+        { "name": "東堂 陽葵", "position": "right", "scale": 1.0 }
       ],
       "contents": [
         {
@@ -69,7 +69,7 @@
     "approach": {
       "background": "qrc:/resource/image/bg/lore/shenLinGate.png",
       "characters": [
-        { "name": "南雲 京司", "position": "left", "scale": 1.0 },
+        { "name": "南雲 時", "position": "left", "scale": 1.0 },
         { "name": "常夏 航", "position": "right", "scale": 1.0 }
       ],
       "contents": [
@@ -85,7 +85,7 @@
     "closer": {
       "background": "qrc:/resource/image/bg/lore/shenLinGate.png",
       "characters": [
-        { "name": "南雲 京司", "position": "left", "scale": 1.0 },
+        { "name": "南雲 時", "position": "left", "scale": 1.0 },
         { "name": "清原 凛", "position": "right", "scale": 1.0 }
       ],
       "contents": [
@@ -101,8 +101,8 @@
     "toBattle": {
       "background": "qrc:/resource/image/bg/lore/shenLinGate.png",
       "characters": [
-        { "name": "南雲 京司", "position": "left", "scale": 1.0 },
-        { "name": "东堂 南", "position": "right", "scale": 1.0 }
+        { "name": "南雲 時", "position": "left", "scale": 1.0 },
+        { "name": "東堂 陽葵", "position": "right", "scale": 1.0 }
       ],
       "contents": [
         {

@@ -85,12 +85,13 @@ Item {
 
     // 角色名到图片路径的映射表
     property var characterImageMap: ({
-        "南雲 京司": "qrc:/resource/image/characters/NagumoKyoji.png",
-        "东堂 南": "qrc:/resource/image/characters/TodoMinami.png",
+        "南雲 時": "qrc:/resource/image/characters/NagumoToki.png",
+        "東堂 陽葵": "qrc:/resource/image/characters/TodoHimari.png",
         "藤田 旦治": "qrc:/resource/image/characters/FujitaTanji.png",
-        "常夏 航": "qrc:/resource/image/characters/Tokonatsu.png",
-        "折原 莲": "qrc:/resource/image/characters/OriharaRen.png",
-        "清原 凛": "qrc:/resource/image/characters/KiyoharaRin.png"
+        "常夏 航": "qrc:/resource/image/characters/TokonatsuHimari.png",
+        "折原 蓮": "qrc:/resource/image/characters/OriharaRen.png",
+        "清原 凛": "qrc:/resource/image/characters/KiyoharaRin.png",
+        "清原 凛(6岁)": "qrc:/resource/image/characters/KiyoharaRin_Child.png"
     })
 
     // 根据角色定义获取图片路径（支持仅用 name 或完整定义）

@@ -361,6 +361,37 @@ Item {
         }
     }
 
+    // 历史面板打开时，全屏右键关闭覆盖层（不拦截左键）
+    MouseArea {
+        id: historyRightClickClose
+        anchors.fill: parent
+        visible: historyPanel.visible
+        z: 1500 // 高于 HistoryPanel，低于过渡遮罩
+        acceptedButtons: Qt.RightButton
+        hoverEnabled: false
+        onClicked: function(mouse) {
+            if (mouse.button === Qt.RightButton) {
+                console.log("LoreView: right click while history open, closing history");
+                historyPanel.close();
+                mouse.accepted = true;
+            }
+        }
+    }
+
+    // 历史面板打开时，任何位置向下滚轮均关闭历史面板
+    WheelHandler {
+        id: historyWheelClose
+        target: root
+        enabled: historyPanel.visible
+        onWheel: function(event) {
+            if (event.angleDelta.y < 0) {
+                console.log("LoreView: wheel down while history open, closing history");
+                historyPanel.close();
+                event.accepted = true;
+            }
+        }
+    }
+
     // 标题画面自动切换计时器
     Timer {
         id: titleAutoAdvanceTimer

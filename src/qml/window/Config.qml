@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import "windowState.js" as WindowState
-import "qrc:/qml/window/components"
+import "../components"
 
 Item {
 	anchors.fill: parent

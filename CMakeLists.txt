@@ -20,37 +20,48 @@ qt_add_qml_module(GeistZerfall
     VERSION 1.0
     QML_FILES
         src/Main.qml
+        src/qml/components/AppButton.qml
+        src/qml/components/BottomButtonBar.qml
+        src/qml/components/ConfirmDialog.qml
+        src/qml/components/qmldir
         src/qml/window/Config.qml
         src/qml/window/Extra.qml
-        src/qml/window/GameView.qml
         src/qml/window/MainMenu.qml
         src/qml/window/SaveLoad.qml
+        src/qml/window/Splash.qml
+        src/qml/window/windowState.js
+        src/qml/window/Game/GameView.qml
+        src/qml/window/Game/Map/qmldir
+        src/qml/window/Game/Map/Tile.qml
+        src/qml/window/Game/Entity/qmldir
+        src/qml/window/Game/Entity/Player.qml
+        src/qml/window/Game/Entity/PlayerBullet.qml
+        src/qml/window/Game/Entity/PlayerLaser.qml
+        src/qml/window/Lore/loreState.js
+        src/qml/window/Lore/LoreView.qml
+        src/qml/window/Lore/contentShow/Animation.qml
+        src/qml/window/Lore/contentShow/Image.qml
+        src/qml/window/Lore/contentShow/Text.qml
+        src/qml/window/Lore/components/ChoiceDialog.qml
+        src/qml/window/Lore/components/ContentLoader.qml
+        src/qml/window/Lore/components/DynamicCircle.qml
+        src/qml/window/Lore/components/VisualScene.qml
+        src/qml/window/Lore/components/HistoryPanel.qml
+        src/qml/window/Lore/chapters/chapter01.json
+        src/qml/window/Lore/chapters/prologue.json
+        src/qml/window/Lore/battles/battle01.json
+        src/qml/window/Lore/battles/battle02.json
     SOURCES
-        src/cpp/Entity/Entity.cpp src/cpp/Entity/Entity.h
-        src/cpp/Entity/LivingEntity/Player.cpp src/cpp/Entity/LivingEntity/Player.h
-        src/cpp/Manager/MapManager/TileManager.cpp src/cpp/Manager/MapManager/TileManager.h
-        QML_FILES src/qml/Map/Tile.qml
-        QML_FILES src/qml/Entity/Player.qml
-        QML_FILES src/qml/window/windowState.js
-        SOURCES src/cpp/Manager/SaveLoadManager/SaveData.cpp src/cpp/Manager/SaveLoadManager/SaveData.h src/cpp/Manager/SaveLoadManager/SaveLoad.cpp src/cpp/Manager/SaveLoadManager/SaveLoad.h
-        QML_FILES
-        QML_FILES src/qml/window/Splash.qml
-        QML_FILES src/qml/Entity/PlayerBullet.qml src/qml/Entity/PlayerLaser.qml
-        SOURCES src/cpp/Entity/Projectile/PlayerBullet.cpp src/cpp/Entity/Projectile/PlayerBullet.h src/cpp/Entity/Projectile/PlayerLaser.cpp src/cpp/Entity/Projectile/PlayerLaser.h src/cpp/Entity/Projectile/Projectile.cpp src/cpp/Entity/Projectile/Projectile.h
-        SOURCES src/cpp/Manager/EventManager/Transition.cpp src/cpp/Manager/EventManager/Transition.h
-        SOURCES src/cpp/Manager/FileReader.cpp src/cpp/Manager/FileReader.h
-        QML_FILES src/qml/window/Lore/loreState.js src/qml/window/Lore/LoreView.qml
-        QML_FILES src/qml/window/Lore/contentShow/Animation.qml src/qml/window/Lore/contentShow/Image.qml src/qml/window/Lore/contentShow/Text.qml
-        QML_FILES src/qml/window/Lore/components/ChoiceDialog.qml src/qml/window/Lore/components/ContentLoader.qml src/qml/window/Lore/components/DynamicCircle.qml
-        QML_FILES src/qml/window/Lore/components/VisualScene.qml src/qml/window/Lore/components/HistoryPanel.qml
-        QML_FILES src/qml/window/Lore/chapters/chapter01.json src/qml/window/Lore/chapters/prologue.json
-        QML_FILES src/qml/window/Lore/battles/battle01.json src/qml/window/Lore/battles/battle02.json
-
-
-
-
-
-
+        src/cpp/Entity/Entity.cpp
+        src/cpp/Entity/LivingEntity/Player.cpp
+        src/cpp/Entity/Projectile/PlayerBullet.cpp
+        src/cpp/Entity/Projectile/PlayerLaser.cpp
+        src/cpp/Entity/Projectile/Projectile.cpp
+        src/cpp/Manager/MapManager/TileManager.cpp
+        src/cpp/Manager/SaveLoadManager/SaveData.cpp
+        src/cpp/Manager/SaveLoadManager/SaveLoad.cpp
+        src/cpp/Manager/EventManager/Transition.cpp
+        src/cpp/Manager/FileReader.cpp
 )
 
 set_target_properties(GeistZerfall PROPERTIES
