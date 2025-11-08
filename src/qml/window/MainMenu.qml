@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtMultimedia 6.5
-import "qrc:/qml/window/components"
+import "../components"
 
 Item {
     anchors.fill: parent
@@ -98,11 +98,9 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             opacity: 0
             font.pixelSize: 64
+            font.weight: Font.Bold
             color: "white"
-            font.bold: true
             z: 10
-            style: Text.Outline
-            styleColor: "black"
         }
 
         // flash animation for main title
@@ -179,7 +177,7 @@ Item {
                     Behavior on y { SequentialAnimation { PauseAnimation { duration: 60 } NumberAnimation { duration: 360; easing.type: Easing.OutQuad } } }
                     Behavior on opacity { SequentialAnimation { PauseAnimation { duration: 60 } NumberAnimation { duration: 360; easing.type: Easing.OutQuad } } }
                     onClicked: {
-                        if (enabled) window.pushSource("qml/window/GameView.qml")
+                        if (enabled) window.pushSource("qml/window/Game/GameView.qml")
                     }
                 }
 

@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick.Controls
-import "qrc:/qml/window/windowState.js" as WindowState
+import "../window/windowState.js" as WindowState
 
 // 通用底部按钮栏组件
 Rectangle {
