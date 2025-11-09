@@ -1,10 +1,12 @@
 #include "PlayerBullet.h"
 #include <QDebug>
+#include <QTimer>
 #include <cmath>
 
 PlayerBullet::PlayerBullet(QObject *parent) : Projectile(parent) {
     setSpeed(16);
     setMaxDist(400);
+    setDamage(20);
     // reuse inherited moveTimer (from Entity) to avoid duplicating timers
     if (!moveTimer) {
         moveTimer = new QTimer(this);
@@ -46,4 +48,10 @@ void PlayerBullet::startTick() {
 
 void PlayerBullet::stopTick() {
     if (moveTimer && moveTimer->isActive()) moveTimer->stop();
+}
+
+void PlayerBullet::setDamage(int value) {
+    if (bulletDamage == value) return;
+    bulletDamage = value;
+    emit damageChanged();
 }

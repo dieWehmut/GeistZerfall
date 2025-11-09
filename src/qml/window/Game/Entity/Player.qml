@@ -78,7 +78,7 @@ Item {
 	Image {
 		id: playerImg
 		anchors.fill: parent
-		source: "qrc:/resource/image/playerNormal.png"
+		source: "qrc:/resource/image/entity/playerNormal.png"
 	}
 
 	// HUD bars displayed above player

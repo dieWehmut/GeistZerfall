@@ -1,5 +1,5 @@
-import QtQuick
-import QtQuick.Controls
+import QtQuick 2.15
+import QtQuick.Controls 2.15
 import QtMultimedia 6.5
 import "../components"
 
@@ -98,7 +98,7 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             opacity: 0
             font.pixelSize: 64
-            font.weight: Font.Bold
+            font.weight: Font.Weight.Bold
             color: "white"
             z: 10
         }

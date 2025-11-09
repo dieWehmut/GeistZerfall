@@ -19,6 +19,9 @@ Item {
 	property real tileScaleRef: 1.0
 	// visual thickness in pixels (can be passed from creator, e.g. 24 * tileScale)
 	property real thickness: 15
+	property var enemiesRef: null
+	property int damage: backend && backend.damage !== undefined ? backend.damage : 50
+	property var damagedEnemies: []
 	// animated end point (used to gradually extend the beam)
 	property real endX: 0
 	property real endY: 0
@@ -26,6 +29,25 @@ Item {
 	property real beamOpacity: 1.0
 	// debug helper (disabled by default)
 	property bool debugLaser: false
+
+	function distanceSqToSegment(px, py, sx, sy, ex, ey) {
+		var dx = ex - sx;
+		var dy = ey - sy;
+		if (dx === 0 && dy === 0) {
+			var ddx = px - sx;
+			var ddy = py - sy;
+			return ddx * ddx + ddy * ddy;
+		}
+		var invLenSq = dx * dx + dy * dy;
+		var t = ((px - sx) * dx + (py - sy) * dy) / invLenSq;
+		if (t < 0) t = 0;
+		else if (t > 1) t = 1;
+		var projX = sx + t * dx;
+		var projY = sy + t * dy;
+		var diffX = px - projX;
+		var diffY = py - projY;
+		return diffX * diffX + diffY * diffY;
+	}
 
 	// Top-level visual canvas - placed above map children to avoid being occluded
 	Canvas {
@@ -145,7 +167,39 @@ Item {
 		NumberAnimation { target: root; property: "beamOpacity"; from: 1.6; to: 1.0; duration: 220; easing.type: Easing.InOutQuad }
 	}
 
+	function checkLaserCollisions() {
+		if (!backend || !backend.pos || !enemiesRef || enemiesRef.length === 0) return;
+		var sx = (backend.startX !== undefined && backend.startX !== null) ? backend.startX : (backend.pos ? backend.pos.x : 0);
+		var sy = (backend.startY !== undefined && backend.startY !== null) ? backend.startY : (backend.pos ? backend.pos.y : 0);
+		var exWorld = backend.pos ? backend.pos.x : sx;
+		var eyWorld = backend.pos ? backend.pos.y : sy;
+		var scale = tileScaleRef <= 0 ? 1.0 : tileScaleRef;
+		var beamHalfWidth = (thickness / scale) * 0.5;
+		for (var idx = 0; idx < enemiesRef.length; ++idx) {
+			var enemy = enemiesRef[idx];
+			if (!enemy || enemy.alive === false || !enemy.pos) continue;
+			if (damagedEnemies.indexOf(enemy) !== -1) continue;
+			var enemyPos = enemy.pos;
+			var enemyRadius = enemy.collisionRadius !== undefined ? enemy.collisionRadius : 28;
+			var distSq = distanceSqToSegment(enemyPos.x, enemyPos.y, sx, sy, exWorld, eyWorld);
+			var limit = enemyRadius + beamHalfWidth;
+			if (distSq <= limit * limit) {
+				try { if (typeof enemy.receiveDamage === 'function') enemy.receiveDamage(damage); } catch(e){}
+				damagedEnemies.push(enemy);
+			}
+		}
+	}
+
+	Timer {
+		id: laserDamageTimer
+		interval: 80
+		repeat: true
+		running: backend && enemiesRef && enemiesRef.length > 0
+		onTriggered: checkLaserCollisions()
+	}
+
 	onBackendChanged: {
+		damagedEnemies = [];
 		if (!backend) return;
 		if (debugLaser) {
 			try { console.log('PlayerLaser.onPaint coords: start', backend.startX, backend.startY, 'pos', backend.pos ? backend.pos.x + ',' + backend.pos.y : 'no pos'); } catch(e) {}
@@ -173,4 +227,5 @@ Item {
 	}
 
 	// debug marker removed (was here for development)
+	Component.onDestruction: laserDamageTimer.stop()
 }

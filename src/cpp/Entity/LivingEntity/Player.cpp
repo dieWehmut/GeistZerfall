@@ -21,6 +21,8 @@ void Player::shoot(double px, double py, double dirx, double diry) {
 	// create backend bullet and notify QML to create visual bound to it
 	qDebug() << "Player::shoot called px,py,dir:" << px << py << dirx << diry;
 	PlayerBullet *b = new PlayerBullet(this->parent());
+	const int bulletDamage = 20;
+	b->setDamage(bulletDamage);
 	// use provided world coordinates as start pos
 	b->setStartPos(QPointF(px, py));
 	b->setDirection(dirx, diry);
@@ -70,6 +72,8 @@ void Player::snipeStop() {
 void Player::snipe(double px, double py, double dirx, double diry) {
 	qDebug() << "Player::snipe called px,py,dir:" << px << py << dirx << diry;
 	PlayerLaser *l = new PlayerLaser(this->parent());
+	const int laserDamage = 50;
+	l->setDamage(laserDamage);
 	l->setStartPos(QPointF(px, py));
 	l->setDirection(dirx, diry);
 	// expose start coordinates so QML visuals can draw beam from origin to current pos

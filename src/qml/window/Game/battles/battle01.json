@@ -1,0 +1,29 @@
+{
+  "battleId": "battle01",
+  "meta": {
+    "title": "leap01",
+    "description": "First Battle"
+  },
+  "mapData": [
+    [ 1,-1,-1,-1,-1,-1,-1,-1, 1],
+    [-1,-1,-1,-1,-1,-1,-1,-1,-1],
+    [-1,-1,-1,-1,-1,-1,-1,-1,-1],
+    [-1,-1,-1,-1,-1,-1,-1,-1,-1],
+    [-1,-1,-1,-1, 0,-1,-1,-1,-1],
+    [-1,-1,-1,-1,-1,-1,-1,-1,-1],
+    [-1,-1,-1,-1,-1,-1,-1,-1,-1],
+    [-1,-1,-1,-1,-1,-1,-1,-1,-1],
+    [ 2,-1,-1,-1,-1,-1,-1,-1, 2]
+  ],
+  "spawn": {
+    "playerPos": { "x": 2, "y": 2 }
+  },
+  "rules": {
+    "winCondition": { "type": "allEnemiesDead" },
+    "loseCondition": { "type": "playerHpZero" }
+  },
+  "onResult": {
+    "win": { "nextChapter": "chapter01", "nextNode": "start" },
+    "lose": { "action": "gameOver" }
+  }
+}

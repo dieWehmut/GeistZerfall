@@ -37,6 +37,10 @@ qt_add_qml_module(GeistZerfall
         src/qml/window/Game/Entity/Player.qml
         src/qml/window/Game/Entity/PlayerBullet.qml
         src/qml/window/Game/Entity/PlayerLaser.qml
+        src/qml/window/Game/Entity/Enemy/Enemy1.qml
+        src/qml/window/Game/Entity/Enemy/Enemy2.qml
+        src/qml/window/Game/Entity/Enemy/Enemy1Bullet.qml
+        src/qml/window/Game/Entity/Enemy/Enemy2Laser.qml
         src/qml/window/Lore/loreState.js
         src/qml/window/Lore/LoreView.qml
         src/qml/window/Lore/contentShow/Animation.qml
@@ -47,21 +51,41 @@ qt_add_qml_module(GeistZerfall
         src/qml/window/Lore/components/DynamicCircle.qml
         src/qml/window/Lore/components/VisualScene.qml
         src/qml/window/Lore/components/HistoryPanel.qml
-        src/qml/window/Lore/chapters/chapter01.json
-        src/qml/window/Lore/chapters/prologue.json
-        src/qml/window/Lore/battles/battle01.json
-        src/qml/window/Lore/battles/battle02.json
+    src/qml/window/Lore/chapters/chapter01.json
+    src/qml/window/Lore/chapters/prologue.json
+    src/qml/window/Game/battles/battle01.json
+    src/qml/window/Game/battles/battle02.json
     SOURCES
         src/cpp/Entity/Entity.cpp
+        src/cpp/Entity/Entity.h
         src/cpp/Entity/LivingEntity/Player.cpp
+        src/cpp/Entity/LivingEntity/Player.h
+        src/cpp/Entity/LivingEntity/Enemy/Enemy.cpp
+        src/cpp/Entity/LivingEntity/Enemy/Enemy.h
+        src/cpp/Entity/LivingEntity/Enemy/concrete/Enemy1.cpp
+        src/cpp/Entity/LivingEntity/Enemy/concrete/Enemy1.h
+        src/cpp/Entity/LivingEntity/Enemy/concrete/Enemy2.cpp
+        src/cpp/Entity/LivingEntity/Enemy/concrete/Enemy2.h
         src/cpp/Entity/Projectile/PlayerBullet.cpp
+        src/cpp/Entity/Projectile/PlayerBullet.h
         src/cpp/Entity/Projectile/PlayerLaser.cpp
+        src/cpp/Entity/Projectile/PlayerLaser.h
         src/cpp/Entity/Projectile/Projectile.cpp
+        src/cpp/Entity/Projectile/Projectile.h
+        src/cpp/Entity/Projectile/EnemyProjectile/Enemy1Bullet.cpp
+        src/cpp/Entity/Projectile/EnemyProjectile/Enemy1Bullet.h
+        src/cpp/Entity/Projectile/EnemyProjectile/Enemy2Laser.cpp
+        src/cpp/Entity/Projectile/EnemyProjectile/Enemy2Laser.h
         src/cpp/Manager/MapManager/TileManager.cpp
+        src/cpp/Manager/MapManager/TileManager.h
         src/cpp/Manager/SaveLoadManager/SaveData.cpp
+        src/cpp/Manager/SaveLoadManager/SaveData.h
         src/cpp/Manager/SaveLoadManager/SaveLoad.cpp
+        src/cpp/Manager/SaveLoadManager/SaveLoad.h
         src/cpp/Manager/EventManager/Transition.cpp
+        src/cpp/Manager/EventManager/Transition.h
         src/cpp/Manager/FileReader.cpp
+        src/cpp/Manager/FileReader.h
 )
 
 set_target_properties(GeistZerfall PROPERTIES
@@ -77,6 +101,8 @@ target_link_libraries(GeistZerfall
     Qt6::Core
     Qt6::Qml
 )
+
+target_include_directories(GeistZerfall PRIVATE src/cpp)
 
 include(GNUInstallDirs)
 install(TARGETS GeistZerfall
