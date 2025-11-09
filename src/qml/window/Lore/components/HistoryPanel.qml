@@ -249,6 +249,29 @@ Item {
         }
     }
 
+    // 当 ScrollView 已经不能再向下滚动时，继续向下滚轮要能够关闭历史窗口
+    // 绑定到内部的 Flickable（通过 scrollView.contentItem），优先处理在内容滚动到底后的额外下滑
+    WheelHandler {
+        // contentItem 在 ScrollView 中通常为 Flickable，可以访问 contentY/contentHeight/height
+        target: scrollView.contentItem
+        enabled: root.visible
+        onWheel: function(event) {
+            // 向下滚动（角度负值）时，只有当内容已经到达底部或无法滚动时，才触发关闭
+            if (event.angleDelta.y < 0) {
+                var flick = scrollView.contentItem;
+                if (!flick) return;
+
+                // 如果内容高度小于或等于可视高度，则视为无法滚动
+                var atBottom = (flick.contentHeight <= flick.height) || (flick.contentY >= flick.contentHeight - flick.height - 1);
+                if (atBottom) {
+                    console.log("HistoryPanel: wheel down at scroll bottom, closing");
+                    root.closeRequested();
+                    event.accepted = true;
+                }
+            }
+        }
+    }
+
     // WheelHandler 用于滚轮下滑关闭（在面板上任意位置）
     WheelHandler {
         target: mainPanel

@@ -6,50 +6,42 @@
         <file>resource/image/characters/OriharaRen.png</file>
         <file>resource/image/characters/TodoHimari.png</file>
         <file>resource/image/characters/TokonatsuWataru.png</file>
+        <file>resource/image/characters/KiyoharaRin_Child.png</file>
         <file>resource/image/bg/mainmenu.png</file>
         <file>resource/image/bg/lore/shenLinGate.png</file>
         <file>resource/audio/bgm/nervous.mp3</file>
         <file>resource/audio/bgm/mainmenu.mp3</file>
         <file>resource/audio/bgm/fight.mp3</file>
-        <file>resource/image/mainmenuBg.png</file>
-        <file>resource/image/edPage.png</file>
-        <file>resource/image/flame.png</file>
-        <file>resource/image/flamePhantom.png</file>
-        <file>resource/image/flamePhantomBase.png</file>
-        <file>resource/image/flamePhantomDrop.png</file>
-        <file>resource/image/flameWave.png</file>
-        <file>resource/image/fog.png</file>
-        <file>resource/image/helpPage.png</file>
-        <file>resource/image/king.png</file>
-        <file>resource/image/kingWave.png</file>
-        <file>resource/image/lurkPhantom.png</file>
-        <file>resource/image/lurkPhantomBase.png</file>
-        <file>resource/image/lurkPhantomDrop.png</file>
-        <file>resource/image/lurkWave.png</file>
-        <file>resource/image/mazeExit.png</file>
         <file>resource/image/PhantomGenesis.ico</file>
-        <file>resource/image/playerBurned.png</file>
-        <file>resource/image/playerLowHp.png</file>
-        <file>resource/image/playerNormal.png</file>
-        <file>resource/image/playerBullet.png</file>
-        <file>resource/image/portalStart.png</file>
-        <file>resource/image/ruins.png</file>
-        <file>resource/image/saveAndLoadPage.png</file>
-        <file>resource/image/settingsPage.png</file>
-        <file>resource/image/startPage.gif</file>
-        <file>resource/image/portalEnd.png</file>
         <file>resource/audio/SoundEffect/playerBullet.wav</file>
         <file>resource/audio/SoundEffect/playerLaser.wav</file>
+        <file>resource/audio/SoundEffect/playerHit.wav</file>
         <file>qml/window/Lore/chapters/prologue.json</file>
         <file>qml/window/Lore/chapters/chapter01.json</file>
-        <file>qml/window/Lore/battles/battle01.json</file>
-        <file>qml/window/Lore/battles/battle02.json</file>
+        <file>qml/window/Game/battles/battle01.json</file>
+        <file>qml/window/Game/battles/battle02.json</file>
         <file>qml/window/Lore/components/HistoryPanel.qml</file>
         <file>qml/window/windowState.js</file>
         <file>qml/components/BottomButtonBar.qml</file>
         <file>qml/components/ConfirmDialog.qml</file>
         <file>qml/components/AppButton.qml</file>
         <file>qml/components/qmldir</file>
-        <file>resource/image/characters/KiyoharaRin_Child.png</file>
+        <file>resource/image/bg/battle/default.png</file>
+        <file>resource/image/bg/battle/playerSpawn.png</file>
+        <file>resource/image/bg/battle/enemy1Spawn.png</file>
+        <file>resource/image/bg/battle/enemy2Spawn.png</file>
+        <file>resource/image/entity/playerNormal.png</file>
+        <file>resource/image/entity/enemy1.png</file>
+        <file>resource/image/entity/enemy2.png</file>
+        <file>resource/image/entity/enemy1Bullet1.png</file>
+        <file>resource/image/entity/enemy1Bullet2.png</file>
+        <file>resource/image/entity/enemy1Bullet3.png</file>
+        <file>resource/image/entity/enemy1Bullet4.png</file>
+        <file>resource/image/entity/enemy1Bullet5.png</file>
+        <file>resource/image/entity/enemy1Bullet6.png</file>
+        <file>resource/image/entity/enemy1Bullet7.png</file>
+        <file>resource/image/entity/enemy1Bullet8.png</file>
+        <file>resource/image/entity/enemy1Bullet9.png</file>
+        <file>resource/image/entity/playerBullet.png</file>
     </qresource>
 </RCC>

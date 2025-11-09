@@ -3,68 +3,104 @@ import QtMultimedia 6.5
 
 Item {
 	id: bulletRoot
-	width: 64; height: 64
-	// backend projectile object created by C++
+	property int baseSize: 64
 	property var backend: null
-	// optional hint from creator to indicate visual type expected (e.g. 'laser')
+	property var enemiesRef: null
+	property var mapWrapperRef: null
+	property real tileScaleRef: 1.0
 	property string expectedVisual: "bullet"
-	// optional thickness hint (ignored for bullets but accepted so createObject doesn't fail)
 	property real thickness: 24
+	property int damage: backend && backend.damage !== undefined ? backend.damage : 20
+	property real collisionRadius: baseSize * 0.35
+
+	width: baseSize * tileScaleRef
+	height: baseSize * tileScaleRef
+
+	function updateScreenPos() {
+		if (!backend || !backend.pos) return;
+		bulletRoot.x = backend.pos.x * tileScaleRef - bulletRoot.width / 2;
+		bulletRoot.y = backend.pos.y * tileScaleRef - bulletRoot.height / 2;
+	}
+
+	onTileScaleRefChanged: updateScreenPos()
 
 	Image {
 		id: img
 		anchors.centerIn: parent
-		source: "qrc:/resource/image/playerBullet.png"
-		width: parent.width; height: parent.height
+		source: "qrc:/resource/image/entity/playerBullet.png"
+		width: parent.width
+		height: parent.height
 	}
 
-	// Sound effect for bullet firing
 	SoundEffect {
 		id: bulletSfx
 		source: "qrc:/resource/audio/SoundEffect/playerBullet.wav"
 		volume: 0.8
 	}
 
-	// When backend is assigned, bind visual position to backend.pos and play sound once
+	function handleBackendAssigned() {
+		updateScreenPos();
+		try { backend.posChanged.connect(updateScreenPos); } catch(e){}
+		try {
+			backend.destroyed.connect(function() {
+				try { bulletRoot.destroy(); } catch(err){}
+			});
+		} catch(e){}
+		try {
+			if (typeof backend.backendDestroyed === 'function' || backend.hasOwnProperty('backendDestroyed')) {
+				backend.backendDestroyed.connect(function() {
+					try { bulletRoot.destroy(); } catch(err){}
+				});
+			}
+		} catch(e){}
+		try {
+			var isLaser = false;
+			try { isLaser = (backend.visualType === 'laser' || expectedVisual === 'laser'); } catch(err) { isLaser = false; }
+			if (!isLaser) bulletSfx.play();
+		} catch(e){}
+		if (!collisionTimer.running) collisionTimer.start();
+	}
+
 	onBackendChanged: {
-		if (backend && backend.pos) {
-			// initial placement
-			bulletRoot.x = backend.pos.x - bulletRoot.width/2;
-			bulletRoot.y = backend.pos.y - bulletRoot.height/2;
-			// listen for pos changes
-			try {
-				backend.posChanged.connect(function() {
-					bulletRoot.x = backend.pos.x - bulletRoot.width/2;
-					bulletRoot.y = backend.pos.y - bulletRoot.height/2;
-				});
-			} catch (e) { /* ignore if already connected */ }
-			try {
-				// when backend C++ object is destroyed, remove this visual to avoid orphaned visuals
-				backend.destroyed.connect(function() {
-					console.log('PlayerBullet.qml: backend.destroyed received');
-					try { if (typeof bulletRoot.destroy === 'function') bulletRoot.destroy(); } catch (e) { console.log('destroy failed', e); }
-				});
-			} catch (e) { /* ignore if already connected */ }
-			try {
-				// also listen for backend's custom signal as a fallback
-				if (typeof backend.backendDestroyed === 'function' || backend.hasOwnProperty('backendDestroyed')) {
-					backend.backendDestroyed.connect(function() {
-						console.log('PlayerBullet.qml: backend.backendDestroyed received');
-						try { if (typeof bulletRoot.destroy === 'function') bulletRoot.destroy(); } catch (e) { console.log('destroy failed', e); }
-					});
-				}
-			} catch (e) { /* ignore if already connected */ }
-			try {
-				// Determine whether to play bullet sound. If creator explicitly marked expectedVisual as 'laser', don't play.
-				var isLaser = false;
-				try { isLaser = (backend.visualType === 'laser' || expectedVisual === 'laser'); } catch(e) { isLaser = false; }
-				if (!isLaser) try { bulletSfx.play(); } catch (e) { console.log('bulletSfx play failed', e); }
-			} catch (e) { console.log('bulletSfx check failed', e); }
+		if (!backend) {
+			collisionTimer.stop();
+			return;
+		}
+		handleBackendAssigned();
+	}
+
+	Timer {
+		id: collisionTimer
+		interval: 16
+		repeat: true
+		running: false
+		onTriggered: checkCollision()
+	}
+
+	function checkCollision() {
+		if (!backend || !backend.pos || !enemiesRef || enemiesRef.length === 0) return;
+		var bpos = backend.pos;
+		var bx = bpos.x;
+		var by = bpos.y;
+		var bulletRadius = collisionRadius;
+		for (var i = 0; i < enemiesRef.length; ++i) {
+			var enemy = enemiesRef[i];
+			if (!enemy || enemy.alive === false || !enemy.pos) continue;
+			var enemyPos = enemy.pos;
+			var ex = enemyPos.x;
+			var ey = enemyPos.y;
+			var enemyRadius = enemy.collisionRadius !== undefined ? enemy.collisionRadius : 28;
+			var dx = ex - bx;
+			var dy = ey - by;
+			var combined = enemyRadius + bulletRadius;
+			if ((dx * dx + dy * dy) <= (combined * combined)) {
+				try { if (typeof enemy.receiveDamage === 'function') enemy.receiveDamage(damage); } catch(e){}
+				try { if (typeof backend.deleteLater === 'function') backend.deleteLater(); } catch(e){}
+				collisionTimer.stop();
+				return;
+			}
 		}
 	}
 
-	// destroy when backend is deleted (backend may call deleteLater)
-	Component.onDestruction: {
-		// nothing specific here; QML object will be destroyed by owner
-	}
+	Component.onDestruction: collisionTimer.stop()
 }
