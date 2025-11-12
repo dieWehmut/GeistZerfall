@@ -1,5 +1,6 @@
 import QtQuick
-import "components"
+import "../../components"
+import "../windowState.js" as WindowState
 
 // LoreView.qml - 剧情视图主场景
 Item {
@@ -12,20 +13,71 @@ Item {
     property int currentContentIndex: 0
     // 支持两种显示模式："circle"(默认) 或 "scene"(背景+立绘+下方文字框)
     property string currentMode: "circle"
+    // 自动模式开关：开启后每段对白自动播放
+    property bool autoModeEnabled: false
+    // 当前内容是否是章节标题画面（用于隐藏底部控制栏）
+    property bool isTitleScreen: false
 
     Component.onCompleted: {
-        // 从 window 获取章节信息
-        if (typeof window !== 'undefined') {
-            if (window.currentChapter) {
-                currentChapter = window.currentChapter;
+        // 优先从 WindowState 恢复进度
+        try {
+            // 检测是否是从存档加载过来的特殊模式（loadFromSave）。如果是，优先使用 WindowState.loreState 并尝试恢复音乐。
+            var targetMode = (typeof WindowState !== 'undefined' && WindowState.takeTargetMode) ? WindowState.takeTargetMode() : undefined;
+            var saved = (typeof WindowState !== 'undefined' && WindowState.getLoreState) ? WindowState.getLoreState() : null;
+            if (saved && saved.chapter) {
+                currentChapter = saved.chapter;
+                currentNode = saved.node || "";
+                currentContentIndex = (saved.index !== undefined) ? saved.index : 0;
+                currentMode = saved.mode || currentMode;
+                autoModeEnabled = !!saved.auto;
+                if (targetMode === 'loadFromSave') {
+                    // 回溯已保存的历史（如果存在）或当前节点内容，恢复上一次有效音乐状态
+                    try {
+                        var effectiveMusic = null;
+                        var effectiveLoops = undefined;
+                        var shouldStop = false;
+                        // 优先从 historyPanel 的历史记录（若之前曾进入过）回溯，否则从节点内容回溯
+                        var scanArray = [];
+                        if (historyPanel && historyPanel.historyData && historyPanel.historyData.length > 0) {
+                            scanArray = historyPanel.historyData;
+                        } else {
+                            // 构造临时回溯：遍历当前节点的内容到 currentContentIndex 之前
+                            if (chapterData && chapterData.nodes && chapterData.nodes[currentNode]) {
+                                var nodeObj = chapterData.nodes[currentNode];
+                                if (nodeObj && nodeObj.contents) {
+                                    for (var i=0;i<nodeObj.contents.length && i<=currentContentIndex;i++) {
+                                        var c = nodeObj.contents[i];
+                                        scanArray.push({ music: c.music, musicLoops: c.musicLoops, stopMusic: c.stopMusic, node: currentNode, index: i });
+                                    }
+                                }
+                            }
+                        }
+                        for (var j = scanArray.length - 1; j >= 0; j--) {
+                            var h = scanArray[j];
+                            if (h.stopMusic) { shouldStop = true; break; }
+                            if (h.music && h.music !== '') { effectiveMusic = h.music; effectiveLoops = h.musicLoops; break; }
+                        }
+                        if (shouldStop) {
+                            if (typeof window !== 'undefined' && typeof window.stopMusic === 'function') window.stopMusic();
+                        } else if (effectiveMusic) {
+                            if (typeof window !== 'undefined' && typeof window.playMusic === 'function') window.playMusic(effectiveMusic, effectiveLoops);
+                        } else {
+                            // 无显式音乐：使用一个默认的主菜单音乐作为占位，避免静音感知错误
+                            try { if (typeof window !== 'undefined' && typeof window.playMusic === 'function') window.playMusic('qrc:/resource/audio/bgm/mainmenu.mp3'); } catch (em) {}
+                        }
+                    } catch (em2) { console.log('LoreView: restore music after loadFromSave failed', em2); }
+                }
+            } else if (targetMode === 'loadFromSave') {
+                // 没有保存的 loreState 但从存档标记进入：可能是游戏存档，直接跳 GameView
+                try { if (window && window.replaceSource) window.replaceSource("qml/window/Game/GameView.qml"); else if (window && window.pushSource) window.pushSource("qml/window/Game/GameView.qml"); } catch (eNav) {}
+                return; // 结束后续初始化，避免错误章节加载
+            } else if (typeof window !== 'undefined') {
+                if (window.currentChapter) currentChapter = window.currentChapter;
+                if (window.currentNode) currentNode = window.currentNode;
             }
-            if (window.currentNode) {
-                currentNode = window.currentNode;
-            }
-        }
+        } catch (e) { console.log("LoreView: restore state error", e); }
 
-        // 默认值
-        if (!currentChapter) currentChapter = "prologue";
+        if (!currentChapter) currentChapter = "prologue"; // 默认章节
 
         console.log("LoreView: starting chapter", currentChapter, "node", currentNode);
 
@@ -34,6 +86,57 @@ Item {
 
         // 加载章节数据
         loadChapter(currentChapter);
+    }
+
+    Component.onDestruction: {
+        persistLoreState();
+        saveLoreAutoSnapshot();
+    }
+
+    onVisibleChanged: {
+        if (!visible) {
+            persistLoreState();
+            saveLoreAutoSnapshot();
+        }
+    }
+
+    function saveLoreAutoSnapshot() {
+        try {
+            if (typeof SaveLoadManager === 'undefined' || !SaveLoadManager) return;
+            try { SaveLoadManager.captureTemp(); } catch (eCap) { console.log('LoreView: captureTemp for auto failed', eCap); }
+            SaveLoadManager.view = "lore";
+            SaveLoadManager.loreChapter = currentChapter || "";
+            SaveLoadManager.loreNode = currentNode || "";
+            SaveLoadManager.loreIndex = currentContentIndex || 0;
+            SaveLoadManager.battleId = "";
+            // 清空游戏特定数据，避免残留影响
+            try { SaveLoadManager.setEnemies([]); } catch (eSetEn) { }
+            SaveLoadManager.posX = 0;
+            SaveLoadManager.posY = 0;
+            SaveLoadManager.speed = 0;
+            SaveLoadManager.sight = 0;
+            SaveLoadManager.hp = 0;
+            SaveLoadManager.maxHp = 0;
+            SaveLoadManager.mp = 0;
+            SaveLoadManager.maxMp = 0;
+            SaveLoadManager.saveAuto();
+        } catch (eAuto) {
+            console.log('LoreView: save auto snapshot failed', eAuto);
+        }
+    }
+
+    function persistLoreState() {
+        try {
+            if (typeof WindowState !== 'undefined' && WindowState.setLoreState) {
+                WindowState.setLoreState({
+                    chapter: currentChapter,
+                    node: currentNode,
+                    index: currentContentIndex,
+                    mode: currentMode,
+                    auto: autoModeEnabled
+                });
+            }
+        } catch (e) { console.log("LoreView: persist state error", e); }
     }
 
     // 加载章节数据（使用 FileReader 读取 JSON）
@@ -76,10 +179,42 @@ Item {
             return;
         }
 
-        if (!node.contents || currentContentIndex >= node.contents.length) {
-            console.log("LoreView: no more contents in node");
+        if (!node.contents || node.contents.length === 0) {
+            console.log("LoreView: node has no contents");
             return;
         }
+
+        // 如果保存的 index 超过范围，说明后续内容被删或结构变化：回退到最后一条有效内容（或 0）
+        if (currentContentIndex >= node.contents.length) {
+            console.log("LoreView: saved index", currentContentIndex, "out of range for node", currentNode, "clamping to", node.contents.length - 1);
+            currentContentIndex = Math.max(0, node.contents.length - 1);
+        }
+
+        // 如果当前历史为空且 index > 0，基于内容回放构造历史，保证历史窗不空
+        try {
+            if (historyPanel && (!historyPanel.historyData || historyPanel.historyData.length === 0) && currentContentIndex > 0) {
+                for (var hi = 0; hi < currentContentIndex; hi++) {
+                    var hContent = node.contents[hi];
+                    if (!hContent) continue;
+                    var hMode = (hContent.mode ? hContent.mode : (node.mode ? node.mode : (chapterData.meta && chapterData.meta.mode ? chapterData.meta.mode : "circle")));
+                    if (hContent.type === 'text' || hContent.type === 'title') {
+                        var hSpeaker = "";
+                        if (hMode === 'scene') {
+                            if (hContent.speakerName) {
+                                hSpeaker = hContent.speakerName;
+                            } else if (hContent.speaker !== undefined && node.characters && node.characters.length > hContent.speaker) {
+                                var ch = node.characters[hContent.speaker];
+                                if (ch && ch.name) hSpeaker = ch.name;
+                            }
+                        }
+                        var hText = hContent.text || "";
+                        if (hText !== "") {
+                            historyPanel.addHistory(hMode, hSpeaker, hText, currentNode, hi, hContent.music, hContent.musicLoops, hContent.stopMusic);
+                        }
+                    }
+                }
+            }
+        } catch (reh) { console.log('LoreView: rebuild history failed', reh); }
 
         // 如果是初始加载(遮罩完全不透明),先更新内容再淡入
         if (transitionOverlay.opacity === 1) {
@@ -95,14 +230,17 @@ Item {
     function updateContent() {
         if (!chapterData || !chapterData.nodes) return;
         var node = chapterData.nodes[currentNode];
-        if (!node || !node.contents || currentContentIndex >= node.contents.length) return;
+        if (!node || !node.contents || node.contents.length === 0) return;
+        if (currentContentIndex >= node.contents.length) currentContentIndex = Math.max(0, node.contents.length - 1);
 
         var content = node.contents[currentContentIndex];
         // 计算当前模式（内容优先，其次节点，再章节 meta，最后默认 circle）
         var mode = (content.mode ? content.mode : (node.mode ? node.mode : (chapterData.meta && chapterData.meta.mode ? chapterData.meta.mode : "circle")));
         currentMode = mode;
 
-        console.log("LoreView: showing content", currentNode, currentContentIndex, JSON.stringify(content), "mode:", currentMode);
+    console.log("LoreView: showing content", currentNode, currentContentIndex, JSON.stringify(content), "mode:", currentMode);
+    // 标题画面标记
+    isTitleScreen = !!(content && (content.type === "title" || content.isTitle));
 
         // 记录历史（仅记录文本类型的内容）
         if (content.type === "text" || content.type === "title") {
@@ -167,14 +305,44 @@ Item {
         if (content && (content.type === "title" || content.isTitle)) {
             console.log("LoreView: title screen detected, will auto-advance in 2 seconds");
             titleAutoAdvanceTimer.restart();
+            autoAdvanceTimer.stop();
         } else {
             // 非标题画面，停止计时器
             titleAutoAdvanceTimer.stop();
+            scheduleAutoAdvance();
         }
+    }
+
+    function setAutoMode(enabled) {
+        if (autoModeEnabled === enabled) return;
+        autoModeEnabled = enabled;
+        if (!enabled) {
+            autoAdvanceTimer.stop();
+        } else {
+            scheduleAutoAdvance();
+        }
+    }
+
+    function scheduleAutoAdvance() {
+        autoAdvanceTimer.stop();
+        if (!autoModeEnabled || historyPanel.visible) return;
+        if (!chapterData || !chapterData.nodes) return;
+        var node = chapterData.nodes[currentNode];
+        if (!node || !node.contents || currentContentIndex >= node.contents.length) return;
+        var content = node.contents[currentContentIndex];
+        if (!content || content.type === "title" || content.isTitle) return;
+        var delay = 3000;
+        if (content.autoDelay !== undefined) {
+            delay = Math.max(500, content.autoDelay);
+        }
+        autoAdvanceTimer.interval = delay;
+        autoAdvanceTimer.restart();
     }
 
     // 前进到下一个内容
     function nextContent() {
+        autoAdvanceTimer.stop();
+        titleAutoAdvanceTimer.stop();
         if (!chapterData || !chapterData.nodes) {
             console.log("LoreView: no chapter data");
             return;
@@ -196,6 +364,7 @@ Item {
 
         // 到达节点末尾，检查是否有 action
         if (node.action) {
+            setAutoMode(false);
             console.log("LoreView: triggering action", node.action);
             if (node.action === "startBattle") {
                 var battleId = node.actionParams ? node.actionParams.battleId : "battle01";
@@ -247,14 +416,126 @@ Item {
         z: 5
     }
 
+    Loader {
+        id: controlBarLoader
+        source: "qrc:/qml/components/LoreControlBar.qml"
+        // 采用手动坐标定位，避免宽高为0时锚点失效导致左上角位置
+        z: 1500
+        active: true
+        visible: root.currentMode === "scene" && scene.textBoxItem && !root.isTitleScreen
+
+        onLoaded: {
+            if (!controlBarLoader.item) return;
+            var obj = controlBarLoader.item;
+            // 让 Loader 拥有 item 尺寸用于居中
+            controlBarLoader.width = (obj.width && obj.width > 0) ? obj.width : (obj.implicitWidth || obj.childrenRect ? obj.childrenRect.width : 0);
+            controlBarLoader.height = (obj.height && obj.height > 0) ? obj.height : (obj.implicitHeight || obj.childrenRect ? obj.childrenRect.height : 0);
+            updateControlBarPos();
+            try { obj.autoEnabled = root.autoModeEnabled; } catch (e) { }
+
+            // connect signals
+            try {
+                obj.settingsClicked.connect(function() {
+                    setAutoMode(false);
+                    if (window && window.pushSource) window.pushSource("qml/window/Config.qml"); else if (window && window.replaceSource) window.replaceSource("qml/window/Config.qml");
+                });
+
+                obj.autoToggled.connect(function(enabled) { setAutoMode(enabled); });
+
+                obj.skipClicked.connect(function() { titleAutoAdvanceTimer.stop(); nextContent(); persistLoreState(); });
+
+                obj.historyClicked.connect(function() { autoAdvanceTimer.stop(); historyPanel.open(); persistLoreState(); });
+
+                obj.saveClicked.connect(function() {
+                    setAutoMode(false);
+                    try { WindowState.setTargetMode("save"); } catch (e) { }
+                    // 抓取当前 Lore 画面作为预览并写入上下文
+                    try { if (typeof SaveLoadManager !== 'undefined' && SaveLoadManager.captureTemp) SaveLoadManager.captureTemp(); } catch (e2) { console.log('LoreView: captureTemp failed', e2); }
+                    try {
+                        if (typeof SaveLoadManager !== 'undefined') {
+                            SaveLoadManager.view = "lore";
+                            SaveLoadManager.loreChapter = currentChapter || "";
+                            SaveLoadManager.loreNode = currentNode || "";
+                            SaveLoadManager.loreIndex = currentContentIndex || 0;
+                        }
+                    } catch (e3) { console.log('LoreView: set lore context failed', e3); }
+                    persistLoreState();
+                    if (window && window.pushSource) window.pushSource("qml/window/SaveLoad.qml"); else if (window && window.replaceSource) window.replaceSource("qml/window/SaveLoad.qml");
+                });
+
+                obj.loadClicked.connect(function() {
+                    setAutoMode(false);
+                    try { WindowState.setTargetMode("load"); } catch (e) { }
+                    // 也写入上下文以便覆盖保存时预览正确
+                    try { if (typeof SaveLoadManager !== 'undefined' && SaveLoadManager.captureTemp) SaveLoadManager.captureTemp(); } catch (e2) { }
+                    try {
+                        if (typeof SaveLoadManager !== 'undefined') {
+                            SaveLoadManager.view = "lore";
+                            SaveLoadManager.loreChapter = currentChapter || "";
+                            SaveLoadManager.loreNode = currentNode || "";
+                            SaveLoadManager.loreIndex = currentContentIndex || 0;
+                        }
+                    } catch (e3) { }
+                    persistLoreState();
+                    if (window && window.pushSource) window.pushSource("qml/window/SaveLoad.qml"); else if (window && window.replaceSource) window.replaceSource("qml/window/SaveLoad.qml");
+                });
+
+                obj.titleClicked.connect(function() { setAutoMode(false); confirmTitleDialog.visible = true; });
+            } catch (e) { console.log("LoreView: controlBar connect error", e); }
+        }
+        onStatusChanged: {
+            console.log("LoreView: controlBarLoader status=", status, "source=", source)
+        }
+        onWidthChanged: updateControlBarPos()
+        onHeightChanged: updateControlBarPos()
+    }
+
+    Binding {
+        target: scene
+        property: "bottomReservedHeight"
+        value: (root.isTitleScreen ? 24 : (controlBarLoader.item ? (controlBarLoader.height + 20) : 24))
+    }
+
+    // 更新控制条位置：贴在文本框底部中央
+    function updateControlBarPos() {
+        if (!scene || !scene.textBoxItem || !controlBarLoader.item) return;
+        var tb = scene.textBoxItem;
+        // 使用 textBoxItem 的全局坐标映射到 root
+        var pt = tb.mapToItem(root, 0, 0);
+        var desiredWidth = controlBarLoader.width;
+        // 若宽度尚未就绪，延迟重试
+        if (!desiredWidth || desiredWidth === 0) {
+            Qt.callLater(updateControlBarPos);
+            persistLoreState();
+            return;
+        }
+        controlBarLoader.x = pt.x + (tb.width - desiredWidth)/2;
+        controlBarLoader.y = pt.y + tb.height - controlBarLoader.height - 12; // 12px 上留白
+    }
+
+    Connections {
+        target: scene
+        function onWidthChanged() { updateControlBarPos() }
+        function onHeightChanged() { updateControlBarPos() }
+    }
+
+    Connections {
+        target: scene.textBoxItem
+        function onWidthChanged() { updateControlBarPos() }
+        function onHeightChanged() { updateControlBarPos() }
+        function onVisibleChanged() { updateControlBarPos() }
+    }
+
     // 全屏点击区域(左键点击前进)
     MouseArea {
         anchors.fill: parent
+        enabled: !historyPanel.visible && !confirmTitleDialog.visible
         onClicked: {
             console.log("LoreView: clicked, advancing content");
             // 点击时也停止标题自动切换计时器
             titleAutoAdvanceTimer.stop();
             nextContent();
+            persistLoreState();
         }
         z: 1000
     }
@@ -262,13 +543,14 @@ Item {
     // 鼠标滚轮处理器(向下滚动前进)
     WheelHandler {
         target: root
-        enabled: !historyPanel.visible  // 历史面板打开时禁用
+        enabled: !historyPanel.visible && !confirmTitleDialog.visible  // 历史或对话框打开时禁用
         onWheel: function(event) {
             // 向下滚动时 angleDelta.y < 0
             if (event.angleDelta.y < 0) {
                 console.log("LoreView: wheel down, advancing content");
                 titleAutoAdvanceTimer.stop();
                 nextContent();
+                persistLoreState();
             } else if (event.angleDelta.y > 0) {
                 // 向上滚动时打开历史面板
                 console.log("LoreView: wheel up, opening history");
@@ -306,6 +588,13 @@ Item {
         
         onCloseRequested: {
             historyPanel.close();
+        }
+        onVisibleChanged: {
+            if (visible) {
+                autoAdvanceTimer.stop();
+            } else {
+                scheduleAutoAdvance();
+            }
         }
         onJumpRequested: function(nodeId, contentIndex) {
             console.log("LoreView: jumpRequested", nodeId, contentIndex);
@@ -355,6 +644,7 @@ Item {
                 } catch (e2) {
                     console.log("LoreView: music restore scanning error", e2);
                 }
+                scheduleAutoAdvance();
             } else {
                 console.log("LoreView: invalid jump target", nodeId);
             }
@@ -401,6 +691,36 @@ Item {
             console.log("LoreView: title auto-advance triggered");
             nextContent();
         }
+    }
+
+    // 自动模式计时器，根据 autoDelay 或默认值自动前进
+    Timer {
+        id: autoAdvanceTimer
+        interval: 3000
+        repeat: false
+        onTriggered: {
+            console.log("LoreView: auto-advance timer triggered");
+            nextContent();
+        }
+    }
+
+    ConfirmDialog {
+        id: confirmTitleDialog
+        anchors.centerIn: parent
+        z: 3500
+        title: "返回主界面?"
+        yesText: "是"
+        noText: "否"
+        onYes: function() {
+            // 保留当前状态（已经在 persistLoreState 中），然后回主菜单
+            persistLoreState();
+            try { window.pageHistory = []; } catch (e) { }
+            // 切换主菜单音乐
+            try { if (window && typeof window.playMusic === 'function') window.playMusic("qrc:/resource/audio/bgm/mainmenu.mp3"); } catch (em) { console.log("LoreView: play mainmenu music error", em); }
+            if (window && window.replaceSource) window.replaceSource("qml/window/MainMenu.qml");
+            else if (window && window.pushSource) window.pushSource("qml/window/MainMenu.qml");
+        }
+        onNo: function() { /* 关闭后自动隐藏 */ }
     }
 
     // ESC 键返回

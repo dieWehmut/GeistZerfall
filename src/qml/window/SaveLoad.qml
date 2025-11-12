@@ -270,21 +270,63 @@ Item {
 												SaveLoadManager.posY = window.currentPlayer.pos.y;
 												SaveLoadManager.speed = window.currentPlayer.getSpeed ? window.currentPlayer.getSpeed() : 0;
 												SaveLoadManager.sight = window.currentPlayer.getSight ? window.currentPlayer.getSight() : 0;
+												SaveLoadManager.maxHp = (typeof window.currentPlayer.maxHp !== 'undefined') ? window.currentPlayer.maxHp : SaveLoadManager.maxHp;
+												SaveLoadManager.hp = (typeof window.currentPlayer.hp !== 'undefined') ? window.currentPlayer.hp : SaveLoadManager.hp;
 											}
 										} catch (e) { console.log(e) }
+										// also pass current enemy snapshot if available so saves include enemies
+										try {
+											var list = (typeof WindowState !== 'undefined' && WindowState.getGameEnemies) ? WindowState.getGameEnemies() : undefined;
+											if (list && list.length) SaveLoadManager.setEnemies(list); else SaveLoadManager.setEnemies([]);
+										} catch (e) { console.log('setEnemies failed', e); }
 										SaveLoadManager.saveSlot(slotRect.idx, "save");
 										// refresh preview via delegate method
 										slotRect.refreshPreview();
 									} else {
 										// load save into game: call loadSlot and then update global player if available
 										if (SaveLoadManager.loadSlot(slotRect.idx, "save")) {
-											// Mark that we're loading from a save so GameView applies SaveLoadManager values on start
+											// 标记从存档加载
 											try { WindowState.setTargetMode("loadFromSave"); } catch (e) { }
-											// immediately switch to GameView so player sees game right away
-											if (window && window.replaceSource) {
-												window.replaceSource("qml/window/Game/GameView.qml");
-											} else if (window && window.pushSource) {
-												window.pushSource("qml/window/Game/GameView.qml");
+											// 根据存档来源视图跳转
+											var v = "";
+											try { v = (SaveLoadManager.view || "").toLowerCase(); } catch (e) { v = ""; }
+											var battleId = "";
+											try { battleId = SaveLoadManager.battleId || ""; } catch (eB) { battleId = ""; }
+											if (typeof window !== 'undefined') {
+												if (v === "lore") window.currentBattleId = "";
+												else window.currentBattleId = battleId;
+											}
+											if (v === "lore") {
+												// 切换到合适的背景音乐（若剧情片段未指定，先用主菜单占位）
+												try { if (window && typeof window.playMusic === 'function') window.playMusic("qrc:/resource/audio/bgm/mainmenu.mp3"); } catch (em) { console.log('SaveLoad: play lore music failed', em); }
+												// 将 Lore 进度写入全局状态，由 LoreView 在进入时恢复
+												try {
+													WindowState.setLoreState({
+														chapter: SaveLoadManager.loreChapter || "",
+														node: SaveLoadManager.loreNode || "",
+														index: SaveLoadManager.loreIndex || 0,
+														mode: "scene",
+														auto: false
+													});
+												} catch (e2) { }
+												if (window && window.replaceSource) {
+													window.replaceSource("qml/window/Lore/LoreView.qml");
+												} else if (window && window.pushSource) {
+													window.pushSource("qml/window/Lore/LoreView.qml");
+												}
+											} else {
+												// 切换到游戏音乐，回退到主菜单
+												try {
+													if (window && typeof window.playMusic === 'function') window.playMusic("qrc:/resource/audio/bgm/fight.mp3");
+												} catch (em2) {
+													try { if (window && typeof window.playMusic === 'function') window.playMusic("qrc:/resource/audio/bgm/mainmenu.mp3"); } catch (e) {}
+												}
+												// 默认回到 GameView
+												if (window && window.replaceSource) {
+													window.replaceSource("qml/window/Game/GameView.qml");
+												} else if (window && window.pushSource) {
+													window.pushSource("qml/window/Game/GameView.qml");
+												}
 											}
 										}
 									}
@@ -346,8 +388,15 @@ Item {
 							SaveLoadManager.posY = window.currentPlayer.pos.y;
 							SaveLoadManager.speed = window.currentPlayer.getSpeed ? window.currentPlayer.getSpeed() : 0;
 							SaveLoadManager.sight = window.currentPlayer.getSight ? window.currentPlayer.getSight() : 0;
+							SaveLoadManager.maxHp = (typeof window.currentPlayer.maxHp !== 'undefined') ? window.currentPlayer.maxHp : SaveLoadManager.maxHp;
+							SaveLoadManager.hp = (typeof window.currentPlayer.hp !== 'undefined') ? window.currentPlayer.hp : SaveLoadManager.hp;
 						}
 					} catch (e) { console.log(e) }
+					// ensure enemies snapshot is passed before saving
+					try {
+						var list2 = (typeof WindowState !== 'undefined' && WindowState.getGameEnemies) ? WindowState.getGameEnemies() : undefined;
+						if (list2 && list2.length) SaveLoadManager.setEnemies(list2); else SaveLoadManager.setEnemies([]);
+					} catch (e) { console.log('setEnemies failed', e); }
 					SaveLoadManager.saveSlot(idx, "save");
 					try {
 						var it = slotsRepeater.itemAt(idx);

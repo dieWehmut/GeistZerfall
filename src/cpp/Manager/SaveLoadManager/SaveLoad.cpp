@@ -14,9 +14,11 @@
 #include <QPainter>
 #include <QUrl>
 #include <QFileInfo>
+#include <QDateTime>
 #include <QDir>
 #include <QFile>
 #include <QCoreApplication>
+#include <QVariant>
 
 SaveLoad::SaveLoad(QObject *parent) : QObject(parent) {
     // initialize autoExists based on the current file
@@ -204,6 +206,43 @@ bool SaveLoad::captureTemp(const QString &folderPath) {
     return true;
 }
 
+void SaveLoad::setEnemies(const QVariantList &list) {
+    last.enemies.clear();
+    for (const QVariant &v : list) {
+        if (!v.canConvert<QVariantMap>()) continue;
+        QVariantMap m = v.toMap();
+        SaveData::EnemySaveData e;
+        e.type = m.value("type").toString();
+        e.pos.setX(m.value("x").toDouble());
+        e.pos.setY(m.value("y").toDouble());
+        e.hp = m.value("hp").toInt();
+        e.maxHp = m.value("maxHp").toInt();
+        e.mp = m.value("mp").toInt();
+        e.maxMp = m.value("maxMp").toInt();
+    // QVariant::toBool() does not accept a default parameter. Use QVariantMap::value(key, default)
+    // so missing keys default to true.
+    e.alive = m.value("alive", true).toBool();
+        last.enemies.append(e);
+    }
+}
+
+QVariantList SaveLoad::enemiesAsVariantList() const {
+    QVariantList out;
+    for (const SaveData::EnemySaveData &e : last.enemies) {
+        QVariantMap m;
+        m["type"] = e.type;
+        m["x"] = e.pos.x();
+        m["y"] = e.pos.y();
+        m["hp"] = e.hp;
+        m["maxHp"] = e.maxHp;
+        m["mp"] = e.mp;
+        m["maxMp"] = e.maxMp;
+        m["alive"] = e.alive;
+        out.append(m);
+    }
+    return out;
+}
+
 bool SaveLoad::loadSlot(int slot, const QString &folderPath) {
     if (slot < 0 || slot > 7) return false;
     QString filePath = slotDatPath(folderPath, slot);
@@ -228,6 +267,15 @@ bool SaveLoad::loadSlot(int slot, const QString &folderPath) {
         emit posYChanged();
         emit speedChanged();
         emit sightChanged();
+        emit hpChanged();
+        emit maxHpChanged();
+        emit mpChanged();
+        emit maxMpChanged();
+        emit viewChanged();
+        emit loreChapterChanged();
+        emit loreNodeChanged();
+        emit loreIndexChanged();
+        emit battleIdChanged();
         emit loaded();
     }
     return ok;
@@ -269,7 +317,22 @@ bool SaveLoad::loadPlayer(const QString &folderPath) {
     in.setVersion(QDataStream::Qt_5_15);
     bool ok = last.read(in);
     f.close();
-    if (ok) emit loaded();
+    if (ok) {
+        emit posXChanged();
+        emit posYChanged();
+        emit speedChanged();
+        emit sightChanged();
+        emit hpChanged();
+        emit maxHpChanged();
+        emit mpChanged();
+        emit maxMpChanged();
+        emit viewChanged();
+        emit loreChapterChanged();
+        emit loreNodeChanged();
+        emit loreIndexChanged();
+        emit battleIdChanged();
+        emit loaded();
+    }
     return ok;
 }
 
@@ -284,12 +347,77 @@ bool SaveLoad::autoExists() const {
     return m_autoExists;
 }
 
+bool SaveLoad::hasAnySave(const QString &folderPath) {
+    if (hasAuto(folderPath)) return true;
+    for (int i=0;i<8;++i) {
+        if (hasSlot(i, folderPath)) return true;
+    }
+    return false;
+}
+
+bool SaveLoad::loadLatest(const QString &folderPath) {
+    // Determine the most recently modified save among auto.dat and save1..save8.dat
+    QDateTime bestTs;
+    enum Kind { None, Auto, Slot } bestKind = None;
+    int bestSlot = -1;
+
+    // Check auto.dat
+    {
+        QString dirPath = QDir::cleanPath(QCoreApplication::applicationDirPath() + "/" + folderPath);
+        QString autoPath = dirPath + "/auto.dat";
+        QFileInfo ai(autoPath);
+        if (ai.exists()) {
+            bestTs = ai.lastModified();
+            bestKind = Auto;
+        }
+    }
+
+    // Check slots
+    for (int i=0;i<8;++i) {
+        QString p = slotDatPath(folderPath, i);
+        QFileInfo si(p);
+        if (si.exists()) {
+            QDateTime ts = si.lastModified();
+            if (bestKind == None || ts > bestTs) {
+                bestTs = ts;
+                bestKind = Slot;
+                bestSlot = i;
+            }
+        }
+    }
+
+    if (bestKind == None) return false;
+    if (bestKind == Auto) return loadPlayer(folderPath);
+    if (bestKind == Slot) return loadSlot(bestSlot, folderPath);
+    return false;
+}
+
 bool SaveLoad::createDefaultAuto(const QString &folderPath, double posX, double posY, double speed, double sight) {
     // populate last with provided values and save
     last.player.pos.setX(posX);
     last.player.pos.setY(posY);
     last.player.speed = speed;
     last.player.sight = sight;
+    const int defaultMaxHp = 100;
+    last.player.maxHp = defaultMaxHp;
+    last.player.hp = defaultMaxHp;
+    last.player.maxMp = 0;
+    last.player.mp = 0;
+    last.view = "game";
+    last.battleId.clear();
+    emit posXChanged();
+    emit posYChanged();
+    emit speedChanged();
+    emit sightChanged();
+    emit hpChanged();
+    emit maxHpChanged();
+    emit mpChanged();
+    emit maxMpChanged();
+    emit viewChanged();
+    emit loreChapterChanged();
+    emit loreNodeChanged();
+    emit loreIndexChanged();
+    emit battleIdChanged();
     bool ok = savePlayer(folderPath);
     return ok;
 }

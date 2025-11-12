@@ -3,7 +3,10 @@ import QtMultimedia 6.5
 
 Item {
     id: root
-    width: 600; height: 600 // large canvas for beam drawing; clipped by parent mapWrapper
+    // 基础尺寸（世界坐标下的逻辑尺寸），随 tileScaleRef 等比缩放，避免缩放视野时视觉尺寸不再同步
+    property int baseSize: 600
+    width: baseSize * tileScaleRef
+    height: baseSize * tileScaleRef // large canvas for beam drawing; clipped by parent mapWrapper
     property var backend: null
     property var playerItemRef: null
     property var playerObjRef: null
