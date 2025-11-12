@@ -9,6 +9,10 @@ Item {
     property var nodeData: null
     // 当前内容（通常为 { type: "text", text: "..." }）
     property var contentData: null
+    // 暴露底部文本框，用于外部定位按钮栏
+    property alias textBoxItem: textBox
+    // 外部可设置的底部预留高度，避免按钮遮挡文本
+    property real bottomReservedHeight: 24
 
     // 背景
     Image {
@@ -165,9 +169,11 @@ Item {
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.top: parent.top
+            anchors.bottom: parent.bottom
             anchors.leftMargin: nameBadge.visible ? root.width * 0.15 : 24
             anchors.rightMargin: 24
             anchors.topMargin: nameBadge.visible ? 48 : 24
+            anchors.bottomMargin: Math.max(root.bottomReservedHeight, 24)
             wrapMode: Text.Wrap
             horizontalAlignment: Text.AlignLeft
             verticalAlignment: Text.AlignTop

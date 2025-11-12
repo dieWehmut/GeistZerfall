@@ -167,8 +167,8 @@ Item {
 	}
 
 	// CD properties and timers (client-side visual & guard)
-	property int bulletCd: 100
-	property int bulletCdMax: 100
+	property int bulletCd: 500
+	property int bulletCdMax: 500
 	property int laserCd: 2000
 	property int laserCdMax: 2000
 	property int bulletRechargeStep: 10 // amount to add per tick

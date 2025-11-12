@@ -22,9 +22,20 @@ Item {
 
 	// 在组件完成时加载战斗数据
 	Component.onCompleted: {
-		// 从 window 获取当前战斗 ID
+		var candidate = "";
 		if (typeof window !== 'undefined' && window.currentBattleId) {
-			battleId = window.currentBattleId;
+			candidate = window.currentBattleId;
+		}
+		if (!candidate) {
+			try {
+				if (typeof SaveLoadManager !== 'undefined' && SaveLoadManager && SaveLoadManager.battleId) {
+					candidate = SaveLoadManager.battleId;
+				}
+			} catch (eBattle) { console.log('GameView: fetch battleId from SaveLoadManager failed', eBattle); }
+		}
+		if (candidate) {
+			battleId = candidate;
+			if (typeof window !== 'undefined') window.currentBattleId = candidate;
 			loadBattleData(battleId);
 		}
 	}
@@ -57,6 +68,45 @@ Item {
 	property var enemyBackends: []
 	property var enemyVisuals: []
 	property var enemySpawnCenters: []
+	property var enemyTypes: []
+
+	function isEnemyDead(backend) {
+		if (!backend) return true;
+		var hpOk = (typeof backend.hp !== 'undefined') ? (backend.hp <= 0) : false;
+		var aliveFlag = (typeof backend.alive !== 'undefined') ? backend.alive : !hpOk;
+		return hpOk || !aliveFlag;
+	}
+
+	function removeEnemyAt(index) {
+		if (index < 0 || index >= enemyBackends.length) return;
+		var v = enemyVisuals[index];
+		var b = enemyBackends[index];
+		try { if (v && typeof v.destroy === 'function') v.destroy(); } catch(e) {}
+		try { if (b && typeof b.deleteLater === 'function') b.deleteLater(); } catch(e) {}
+		enemyVisuals.splice(index, 1);
+		enemyBackends.splice(index, 1);
+		enemySpawnCenters.splice(index, 1);
+		enemyTypes.splice(index, 1);
+	}
+
+	function cleanupDeadEnemies() {
+		for (var i = enemyBackends.length - 1; i >= 0; --i) {
+			var b = enemyBackends[i];
+			if (isEnemyDead(b)) {
+				removeEnemyAt(i);
+			}
+		}
+		// keep snapshot fresh for save UI
+		try { WindowState.setGameEnemies && WindowState.setGameEnemies(serializeEnemies()); } catch(e) {}
+	}
+
+	Timer {
+		id: enemyCleanupTimer
+		interval: 200
+		repeat: true
+		running: true
+		onTriggered: cleanupDeadEnemies()
+	}
 
 	function clearEnemies() {
 		for (var i = 0; i < enemyVisuals.length; ++i) { try { enemyVisuals[i].destroy(); } catch(e){} }
@@ -64,6 +114,25 @@ Item {
 		for (var j = 0; j < enemyBackends.length; ++j) { try { enemyBackends[j].deleteLater(); } catch(e){} }
 		enemyBackends = [];
 		enemySpawnCenters = [];
+		enemyTypes = [];
+	}
+
+	// Return a serializable snapshot of current backend enemies for saving
+	function serializeEnemies() {
+		var out = [];
+		for (var i=0;i<enemyBackends.length;++i) {
+			var b = enemyBackends[i];
+			if (!b) continue;
+			var typeName = (enemyTypes[i] !== undefined) ? enemyTypes[i] : "";
+			var posPoint = b.pos ? b.pos : Qt.point(0,0);
+			var hpVal = (typeof b.hp !== 'undefined') ? b.hp : 0;
+			var maxHpVal = (typeof b.maxHp !== 'undefined') ? b.maxHp : 0;
+			var mpVal = (typeof b.mp !== 'undefined') ? b.mp : 0;
+			var maxMpVal = (typeof b.maxMp !== 'undefined') ? b.maxMp : 0;
+			var aliveVal = (typeof b.alive !== 'undefined') ? b.alive : (hpVal > 0);
+			out.push({ type: typeName, x: posPoint.x, y: posPoint.y, hp: hpVal, maxHp: maxHpVal, mp: mpVal, maxMp: maxMpVal, alive: aliveVal });
+		}
+		return out;
 	}
 
 	function spawnEnemiesFromMap() {
@@ -146,6 +215,7 @@ Item {
 							e1.pos = Qt.point(spawnX1, spawnY1);
 							if (playerObj && typeof e1.setPlayerTarget === 'function') e1.setPlayerTarget(playerObj);
 							enemyBackends.push(e1);
+							enemyTypes.push("Enemy1");
 							enemySpawnCenters.push({ x: spawnX1, y: spawnY1 });
 							var comp1 = Qt.createComponent("./Entity/Enemy/Enemy1.qml");
 							if (comp1.status === Component.Ready) {
@@ -176,6 +246,7 @@ Item {
 							e2.pos = Qt.point(spawnX2, spawnY2);
 							if (playerObj && typeof e2.setPlayerTarget === 'function') e2.setPlayerTarget(playerObj);
 							enemyBackends.push(e2);
+							enemyTypes.push("Enemy2");
 							enemySpawnCenters.push({ x: spawnX2, y: spawnY2 });
 							var comp2 = Qt.createComponent("./Entity/Enemy/Enemy2.qml");
 							if (comp2.status === Component.Ready) {
@@ -193,7 +264,51 @@ Item {
 				}
 			}
 		}
-		console.log("spawnEnemiesFromMap: total enemies", enemyBackends.length);
+			// If there is saved enemy data, reconcile saved positions/states with the freshly created backends.
+			if (typeof SaveLoadManager !== 'undefined' && SaveLoadManager) {
+				try {
+					var savedEnemies = SaveLoadManager.enemiesAsVariantList();
+					if (savedEnemies && savedEnemies.length > 0) {
+						var assigned = [];
+						for (var i=0;i<enemyBackends.length;++i) assigned.push(false);
+						for (var si=0; si<savedEnemies.length; ++si) {
+							var s = savedEnemies[si];
+							// find nearest unassigned backend of same type
+							var bestIdx = -1;
+							var bestDist = Number.MAX_VALUE;
+							for (var bi=0; bi<enemyBackends.length; ++bi) {
+								if (assigned[bi]) continue;
+								var b = enemyBackends[bi];
+								if (!b) continue;
+								var backendType = (enemyTypes[bi] !== undefined) ? enemyTypes[bi] : "";
+								if (backendType !== s.type) continue;
+								var dx = (b.pos ? b.pos.x : 0) - s.x;
+								var dy = (b.pos ? b.pos.y : 0) - s.y;
+								var d2 = dx*dx + dy*dy;
+								if (d2 < bestDist) { bestDist = d2; bestIdx = bi; }
+							}
+							if (bestIdx !== -1) {
+								var bb = enemyBackends[bestIdx];
+								try { bb.pos = Qt.point(s.x, s.y); } catch(e){}
+								// restore HP/MP if available
+								try { if (typeof bb.setMaxHp === 'function') bb.setMaxHp(s.maxHp); else bb.maxHp = s.maxHp; } catch(e){}
+								try { if (typeof bb.setHp === 'function') bb.setHp(s.hp); else bb.hp = s.hp; } catch(e){}
+								try { if (typeof bb.setMaxMp === 'function') bb.setMaxMp(s.maxMp); else bb.maxMp = s.maxMp; } catch(e){}
+								try { if (typeof bb.setMp === 'function') bb.setMp(s.mp); else bb.mp = s.mp; } catch(e){}
+								try { bb.alive = s.alive; } catch(e){}
+								assigned[bestIdx] = true;
+							}
+						}
+						// update visuals after applying positions
+						for (var vi=0; vi<enemyVisuals.length; ++vi) {
+							try { enemyVisuals[vi].updateScreenPos && enemyVisuals[vi].updateScreenPos(); } catch(e){}
+						}
+					}
+				} catch(e) { console.log('apply saved enemies failed', e); }
+			}
+			console.log("spawnEnemiesFromMap: total enemies", enemyBackends.length);
+			// refresh global snapshot of enemies for SaveLoad UI via WindowState
+			try { WindowState.setGameEnemies && WindowState.setGameEnemies(serializeEnemies()); } catch(e) { console.log('update enemies in state failed', e); }
 	}
 
 	Connections {
@@ -243,10 +358,24 @@ Item {
 		if (typeof SaveLoadManager !== 'undefined' && SaveLoadManager && playerObj) {
 			// capture a temporary preview image of the current GameView so it can be used by SaveLoad UI
 			try { SaveLoadManager.captureTemp(); } catch (e) { console.log('captureTemp failed', e); }
+			// 标记来源视图为 game，并清空剧情字段
+			try {
+				SaveLoadManager.view = "game";
+				SaveLoadManager.loreChapter = "";
+				SaveLoadManager.loreNode = "";
+				SaveLoadManager.loreIndex = 0;
+				SaveLoadManager.battleId = battleId || (typeof window !== 'undefined' && window.currentBattleId ? window.currentBattleId : "");
+			} catch (eSet) { console.log('set game view metadata failed', eSet); }
 			SaveLoadManager.posX = playerObj.pos.x;
 			SaveLoadManager.posY = playerObj.pos.y;
 			SaveLoadManager.speed = playerObj.getSpeed ? playerObj.getSpeed() : 0;
 			SaveLoadManager.sight = playerObj.getSight ? playerObj.getSight() : 0;
+			SaveLoadManager.maxHp = (typeof playerObj.maxHp !== 'undefined') ? playerObj.maxHp : SaveLoadManager.maxHp;
+			SaveLoadManager.hp = (typeof playerObj.hp !== 'undefined') ? playerObj.hp : SaveLoadManager.hp;
+			// ensure enemies snapshot is set before saving
+			var snapshot = serializeEnemies();
+			try { SaveLoadManager.setEnemies(snapshot); } catch (e) { console.log('setEnemies before save failed', e); }
+			try { WindowState.setGameEnemies && WindowState.setGameEnemies(snapshot); } catch (e) { console.log('update enemies in state failed', e); }
 			SaveLoadManager.saveAuto();
 		}
 		// clear global pointer to player when leaving game view so other pages don't hold stale refs
@@ -258,10 +387,24 @@ Item {
 			if (typeof SaveLoadManager !== 'undefined' && SaveLoadManager && playerObj) {
 				// capture temp preview whenever leaving the GameView so SaveLoad can show it instantly
 				try { SaveLoadManager.captureTemp(); } catch (e) { console.log('captureTemp failed', e); }
+				// 标记来源视图为 game，并清空剧情字段
+				try {
+					SaveLoadManager.view = "game";
+					SaveLoadManager.loreChapter = "";
+					SaveLoadManager.loreNode = "";
+					SaveLoadManager.loreIndex = 0;
+					SaveLoadManager.battleId = battleId || (typeof window !== 'undefined' && window.currentBattleId ? window.currentBattleId : "");
+				} catch (eSet) { console.log('set game view metadata failed', eSet); }
 				SaveLoadManager.posX = playerObj.pos.x;
 				SaveLoadManager.posY = playerObj.pos.y;
 				SaveLoadManager.speed = playerObj.getSpeed ? playerObj.getSpeed() : 0;
 				SaveLoadManager.sight = playerObj.getSight ? playerObj.getSight() : 0;
+				SaveLoadManager.maxHp = (typeof playerObj.maxHp !== 'undefined') ? playerObj.maxHp : SaveLoadManager.maxHp;
+				SaveLoadManager.hp = (typeof playerObj.hp !== 'undefined') ? playerObj.hp : SaveLoadManager.hp;
+				// ensure enemies snapshot is set before saving
+				var snapshot = serializeEnemies();
+				try { SaveLoadManager.setEnemies(snapshot); } catch (e) { console.log('setEnemies before save failed', e); }
+				try { WindowState.setGameEnemies && WindowState.setGameEnemies(snapshot); } catch (e) { console.log('update enemies in state failed', e); }
 				SaveLoadManager.saveAuto();
 			}
 		}
@@ -587,15 +730,84 @@ Item {
 						SaveLoadManager.createDefaultAuto("save", centerX, centerY, defaultSpeed, defaultSight);
 					}
 				} else if (tm === "loadFromSave") {
-					// We were navigated here from SaveLoad after loadSlot succeeded. Apply saved values if present.
+					// We were navigated here from SaveLoad after loadSlot succeeded. Apply saved player & enemy values.
 					if (typeof SaveLoadManager !== 'undefined' && SaveLoadManager) {
-						console.log("GameView: detected loadFromSave, SaveLoadManager pos:", SaveLoadManager.posX, SaveLoadManager.posY, "speed", SaveLoadManager.speed, "sight", SaveLoadManager.sight);
-						if (!isNaN(SaveLoadManager.posX) && !isNaN(SaveLoadManager.posY) && (SaveLoadManager.posX !== 0 || SaveLoadManager.posY !== 0)) {
+						var savedBattleId = "";
+						try { savedBattleId = SaveLoadManager.battleId || ""; } catch (eBid) { savedBattleId = ""; }
+						if (savedBattleId) {
+							var prevBattleId = battleId;
+							battleId = savedBattleId;
+							if (typeof window !== 'undefined') window.currentBattleId = savedBattleId;
+							if (!battleData || prevBattleId !== savedBattleId) {
+								try { loadBattleData(savedBattleId); } catch (eLoad) { console.log('GameView: loadBattleData during loadFromSave failed', eLoad); }
+							}
+						}
+						console.log("GameView: detected loadFromSave, applying player+enemies");
+						if (!isNaN(SaveLoadManager.posX) && !isNaN(SaveLoadManager.posY)) {
 							playerObj.pos = Qt.point(SaveLoadManager.posX, SaveLoadManager.posY);
 						}
 						if (!isNaN(SaveLoadManager.speed) && SaveLoadManager.speed > 0) playerObj.setSpeed(SaveLoadManager.speed);
 						if (!isNaN(SaveLoadManager.sight) && SaveLoadManager.sight > 0) playerObj.setSight(SaveLoadManager.sight);
-						appliedSaveLoad = true;
+						if (!isNaN(SaveLoadManager.maxHp) && SaveLoadManager.maxHp > 0) playerObj.maxHp = SaveLoadManager.maxHp;
+						if (!isNaN(SaveLoadManager.hp)) {
+							var restoredHp = Math.max(0, Math.min(SaveLoadManager.hp, playerObj.maxHp));
+							playerObj.hp = restoredHp;
+						}
+						// Rebuild enemies directly from saved data (skip map-based spawning to preserve exact state)
+						try {
+							var savedEnemies = SaveLoadManager.enemiesAsVariantList ? SaveLoadManager.enemiesAsVariantList() : [];
+							if (savedEnemies && savedEnemies.length > 0) {
+								clearEnemies();
+								for (var si=0; si<savedEnemies.length; ++si) {
+									var s = savedEnemies[si];
+									if (!s.type) continue;
+									// 跳过已死亡或HP<=0的敌人
+									if ((typeof s.alive !== 'undefined' && !s.alive) || (typeof s.hp !== 'undefined' && s.hp <= 0)) {
+										continue;
+									}
+									var backendCode = '';
+									if (s.type === 'Enemy1') backendCode = 'import GeistZerfall.Game 1.0; BackendEnemy1 {}';
+									else if (s.type === 'Enemy2') backendCode = 'import GeistZerfall.Game 1.0; BackendEnemy2 {}';
+									else continue; // unknown type skip
+									var be = Qt.createQmlObject(backendCode, gameViewRoot);
+									if (!be) continue;
+									be.mapWidth = mapPixelWidth; be.mapHeight = mapPixelHeight;
+									try { be.pos = Qt.point(s.x, s.y); } catch(e) {}
+									if (playerObj && typeof be.setPlayerTarget === 'function') be.setPlayerTarget(playerObj);
+									// restore stats
+									try { if (typeof be.setMaxHp === 'function') be.setMaxHp(s.maxHp); else be.maxHp = s.maxHp; } catch(e){}
+									try { if (typeof be.setHp === 'function') be.setHp(s.hp); else be.hp = s.hp; } catch(e){}
+									try { if (typeof be.setMaxMp === 'function') be.setMaxMp(s.maxMp); else be.maxMp = s.maxMp; } catch(e){}
+									try { if (typeof be.setMp === 'function') be.setMp(s.mp); else be.mp = s.mp; } catch(e){}
+									try { be.alive = s.alive; } catch(e){}
+									enemyBackends.push(be);
+									enemyTypes.push(s.type);
+									enemySpawnCenters.push({ x: s.x, y: s.y });
+									// create visual
+									var compPath = '';
+									if (s.type === 'Enemy1') compPath = './Entity/Enemy/Enemy1.qml';
+									else if (s.type === 'Enemy2') compPath = './Entity/Enemy/Enemy2.qml';
+									if (compPath !== '') {
+										var comp = Qt.createComponent(compPath);
+										if (comp.status === Component.Ready) {
+											var v = comp.createObject(mapWrapper, { backend: be, playerObjRef: playerObj, playerItemRef: playerItem, mapWrapperRef: mapWrapper, tileScaleRef: tileScale });
+											if (v) {
+												enemyVisuals.push(v);
+												v.tileScaleRef = Qt.binding(function(){ return tileScale; });
+												v.playerItemRef = playerItem;
+												v.updateScreenPos && v.updateScreenPos();
+											}
+										}
+									}
+								}
+								console.log('GameView: restored', enemyBackends.length, 'enemies from save');
+								// persist snapshot for SaveLoad UI
+								try { WindowState.setGameEnemies && WindowState.setGameEnemies(serializeEnemies()); } catch(eSS) {}
+								appliedSaveLoad = true;
+							} else {
+								console.log('GameView: no saved enemies list; will spawn from map normally');
+							}
+						} catch (eEnemies) { console.log('GameView: rebuild enemies error', eEnemies); }
 					}
 				}
 			} catch (e) { /* ignore if windowState not available */ }
@@ -609,6 +821,11 @@ Item {
 						}
 						if (!isNaN(SaveLoadManager.speed) && SaveLoadManager.speed > 0) playerObj.setSpeed(SaveLoadManager.speed);
 						if (!isNaN(SaveLoadManager.sight) && SaveLoadManager.sight > 0) playerObj.setSight(SaveLoadManager.sight);
+						if (!isNaN(SaveLoadManager.maxHp) && SaveLoadManager.maxHp > 0) playerObj.maxHp = SaveLoadManager.maxHp;
+						if (!isNaN(SaveLoadManager.hp)) {
+							var autoHp = Math.max(0, Math.min(SaveLoadManager.hp, playerObj.maxHp));
+							playerObj.hp = autoHp;
+						}
 					} else {
 						playerObj.pos = Qt.point(centerX, centerY);
 					}
@@ -627,6 +844,8 @@ Item {
 			}
 			// expose playerObj to window so SaveLoad UI can read current player state when saving
 			try { if (window) window.currentPlayer = playerObj; } catch (e) {}
+			// persist enemy snapshot via WindowState for SaveLoad UI
+			try { WindowState.setGameEnemies && WindowState.setGameEnemies(serializeEnemies()); } catch (e) { console.log('persist enemies failed', e); }
 		}
 	}
 	EntityQml.Player {

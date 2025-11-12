@@ -9,7 +9,7 @@
 Player::Player(QObject *parent) : Entity(parent) {
 	setSpeed(36);
 	setSight(400);
-	setMaxHp(100);
+	setMaxHp(1000);
 	setHp(getMaxHp());
 	// Initialize cooldowns explicitly here (so defaults are set in C++ source)
 }
@@ -89,6 +89,8 @@ PlayerSaveData Player::toSaveData() const {
 	d.pos = getPos();
 	d.speed = getSpeed();
 	d.sight = getSight();
+	d.hp = getHp();
+	d.maxHp = getMaxHp();
 	return d;
 }
 
@@ -96,6 +98,8 @@ void Player::loadFromSaveData(const PlayerSaveData &data) {
 	setPos(data.pos);
 	setSpeed(data.speed);
 	setSight(data.sight);
+	setMaxHp(data.maxHp);
+	setHp(data.hp);
 }
 
 

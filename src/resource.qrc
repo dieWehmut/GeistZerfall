@@ -21,6 +21,10 @@
         <file>qml/window/Game/battles/battle01.json</file>
         <file>qml/window/Game/battles/battle02.json</file>
         <file>qml/window/Lore/components/HistoryPanel.qml</file>
+    <file>qml/window/Lore/components/LoreControlButton.qml</file>
+    <file>qml/window/Lore/components/LoreControlBar.qml</file>
+    <file>qml/components/LoreControlButton.qml</file>
+    <file>qml/components/LoreControlBar.qml</file>
         <file>qml/window/windowState.js</file>
         <file>qml/components/BottomButtonBar.qml</file>
         <file>qml/components/ConfirmDialog.qml</file>

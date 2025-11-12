@@ -2,3 +2,5 @@ module components
 BottomButtonBar 1.0 BottomButtonBar.qml
 ConfirmDialog 1.0 ConfirmDialog.qml
 AppButton 1.0 AppButton.qml
+LoreControlButton 1.0 LoreControlButton.qml
+LoreControlBar 1.0 LoreControlBar.qml

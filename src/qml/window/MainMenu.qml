@@ -2,6 +2,7 @@ import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtMultimedia 6.5
 import "../components"
+import "windowState.js" as WindowState
 
 Item {
     anchors.fill: parent
@@ -152,15 +153,27 @@ Item {
                     Behavior on y { NumberAnimation { duration: 360; easing.type: Easing.OutQuad } }
                     Behavior on opacity { NumberAnimation { duration: 360; easing.type: Easing.OutQuad } }
                     onClicked: {
-                        // 开始新游戏：进入序章
-                        console.log("MainMenu: Starting new game - entering prologue");
+                        // 开始新游戏：进入序章，从头开始且清空历史与恢复点
+                        console.log("MainMenu: Starting new game - entering prologue from beginning");
+                        try { if (WindowState && WindowState.clearLoreState) WindowState.clearLoreState(); } catch (e) { }
+                        try {
+                            if (typeof SaveLoadManager !== 'undefined' && SaveLoadManager) {
+                                // 标记本次上下文为 lore 开始，避免后续 Continue 误判
+                                SaveLoadManager.view = "lore";
+                                SaveLoadManager.loreChapter = "prologue";
+                                SaveLoadManager.loreNode = "";
+                                SaveLoadManager.loreIndex = 0;
+                            }
+                        } catch (e2) { }
                         if (typeof transitionManager !== 'undefined') {
                             transitionManager.startLore("prologue");
                         } else {
                             // 备用方案：设置章节，节点留空让 LoreView 从 meta.startNode 读取
                             window.currentChapter = "prologue";
                             window.currentNode = "";
-                            window.smoothReplaceSource("qml/window/Lore/LoreView.qml");
+                            if (window && window.smoothReplaceSource) window.smoothReplaceSource("qml/window/Lore/LoreView.qml");
+                            else if (window && window.replaceSource) window.replaceSource("qml/window/Lore/LoreView.qml");
+                            else if (window && window.pushSource) window.pushSource("qml/window/Lore/LoreView.qml");
                         }
                     }
                     Component.onCompleted: { if (buttonRow.buttonsEntered) { /* already triggered */ } }
@@ -171,13 +184,55 @@ Item {
                     text: "CONTINUE"
                     width: 180; height: 60
                     fontPixelSize: 22
-                    enabled: (typeof SaveLoadManager !== 'undefined' && SaveLoadManager) ? SaveLoadManager.autoExists : false
+                    // 只要任意存档存在（自动或普通）即可用
+                    enabled: (typeof SaveLoadManager !== 'undefined' && SaveLoadManager) ? SaveLoadManager.hasAnySave() : false
                     y: buttonRow.buttonsEntered ? 0 : 12
                     opacity: buttonRow.buttonsEntered ? 1 : 0
                     Behavior on y { SequentialAnimation { PauseAnimation { duration: 60 } NumberAnimation { duration: 360; easing.type: Easing.OutQuad } } }
                     Behavior on opacity { SequentialAnimation { PauseAnimation { duration: 60 } NumberAnimation { duration: 360; easing.type: Easing.OutQuad } } }
                     onClicked: {
-                        if (enabled) window.pushSource("qml/window/Game/GameView.qml")
+                        if (!enabled) return;
+                        // Continue: 加载自动存档，并根据存档来源视图跳转
+                        try {
+                            if (SaveLoadManager && SaveLoadManager.loadLatest && SaveLoadManager.loadLatest()) {
+                                try { WindowState.setTargetMode && WindowState.setTargetMode("loadFromSave"); } catch (eTM) {}
+                                var v = "";
+                                try { v = (SaveLoadManager.view || "").toLowerCase(); } catch (eV) { v = ""; }
+                                var battleId = "";
+                                try { battleId = SaveLoadManager.battleId || ""; } catch (eB) { battleId = ""; }
+                                if (typeof window !== 'undefined') {
+                                    if (v === "lore") window.currentBattleId = "";
+                                    else window.currentBattleId = battleId;
+                                }
+                                if (v === "lore") {
+                                    // 先切换到适合的背景音乐（若剧情未指定，先用主菜单）
+                                    try { if (window && typeof window.playMusic === 'function') window.playMusic("qrc:/resource/audio/bgm/mainmenu.mp3"); } catch (em) {}
+                                    // 写入 Lore 进度，由 LoreView 进入后恢复
+                                    try {
+                                        WindowState.setLoreState({
+                                            chapter: SaveLoadManager.loreChapter || "",
+                                            node: SaveLoadManager.loreNode || "",
+                                            index: SaveLoadManager.loreIndex || 0,
+                                            mode: "scene",
+                                            auto: false
+                                        });
+                                    } catch (eLS) {}
+                                    if (window && window.replaceSource) window.replaceSource("qml/window/Lore/LoreView.qml");
+                                    else if (window && window.pushSource) window.pushSource("qml/window/Lore/LoreView.qml");
+                                } else {
+                                    // 默认回到 GameView，并切换游戏音乐（失败回退主菜单）
+                                    try {
+                                        if (window && typeof window.playMusic === 'function') window.playMusic("qrc:/resource/audio/bgm/fight.mp3");
+                                    } catch (em2) {
+                                        try { if (window && typeof window.playMusic === 'function') window.playMusic("qrc:/resource/audio/bgm/mainmenu.mp3"); } catch (ePM) {}
+                                    }
+                                    if (window && window.replaceSource) window.replaceSource("qml/window/Game/GameView.qml");
+                                    else if (window && window.pushSource) window.pushSource("qml/window/Game/GameView.qml");
+                                }
+                            } else {
+                                console.log('MainMenu: Continue loadLatest returned false');
+                            }
+                        } catch (eA) { console.log('MainMenu: Continue loadAuto failed', eA); }
                     }
                 }
 
