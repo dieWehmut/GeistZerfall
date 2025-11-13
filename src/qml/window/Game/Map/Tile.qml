@@ -1,7 +1,6 @@
 import QtQuick 2.15
 
 Item {
-    // 统一每格像素大小，默认 64（可根据资源修改）
     property int tileSize: 512  
     id: tileRoot
     property int tileType: 0
@@ -17,6 +16,7 @@ Item {
             case 0: return "qrc:/resource/image/bg/battle/playerSpawn.png"
             case 1: return "qrc:/resource/image/bg/battle/enemy1Spawn.png"
             case 2: return "qrc:/resource/image/bg/battle/enemy2Spawn.png"
+            case 3: return "qrc:/resource/image/bg/battle/enemy3Spawn.png"
             default: return "qrc:/resource/image/bg/battle/default.png"
             }
         }

@@ -21,10 +21,10 @@
         <file>qml/window/Game/battles/battle01.json</file>
         <file>qml/window/Game/battles/battle02.json</file>
         <file>qml/window/Lore/components/HistoryPanel.qml</file>
-    <file>qml/window/Lore/components/LoreControlButton.qml</file>
-    <file>qml/window/Lore/components/LoreControlBar.qml</file>
-    <file>qml/components/LoreControlButton.qml</file>
-    <file>qml/components/LoreControlBar.qml</file>
+        <file>qml/window/Lore/components/LoreControlButton.qml</file>
+        <file>qml/window/Lore/components/LoreControlBar.qml</file>
+        <file>qml/components/LoreControlButton.qml</file>
+        <file>qml/components/LoreControlBar.qml</file>
         <file>qml/window/windowState.js</file>
         <file>qml/components/BottomButtonBar.qml</file>
         <file>qml/components/ConfirmDialog.qml</file>
@@ -34,9 +34,11 @@
         <file>resource/image/bg/battle/playerSpawn.png</file>
         <file>resource/image/bg/battle/enemy1Spawn.png</file>
         <file>resource/image/bg/battle/enemy2Spawn.png</file>
+        <file>resource/image/bg/battle/enemy3Spawn.png</file>
         <file>resource/image/entity/playerNormal.png</file>
         <file>resource/image/entity/enemy1.png</file>
         <file>resource/image/entity/enemy2.png</file>
+        <file>resource/image/entity/enemy3.png</file>
         <file>resource/image/entity/enemy1Bullet1.png</file>
         <file>resource/image/entity/enemy1Bullet2.png</file>
         <file>resource/image/entity/enemy1Bullet3.png</file>
@@ -46,6 +48,23 @@
         <file>resource/image/entity/enemy1Bullet7.png</file>
         <file>resource/image/entity/enemy1Bullet8.png</file>
         <file>resource/image/entity/enemy1Bullet9.png</file>
+        <file>resource/image/entity/enemy3ChildBullet1.png</file>
+        <file>resource/image/entity/enemy3ChildBullet2.png</file>
+        <file>resource/image/entity/enemy3ChildBullet3.png</file>
+        <file>resource/image/entity/enemy3ChildBullet4.png</file>
+        <file>resource/image/entity/enemy3ChildBullet5.png</file>
+        <file>resource/image/entity/enemy3ChildBullet6.png</file>
+        <file>resource/image/entity/enemy3ChildBullet7.png</file>
+        <file>resource/image/entity/enemy3ChildBullet8.png</file>
+        <file>resource/image/entity/enemy3ChildBullet9.png</file>
+        <file>resource/image/entity/enemy3ChildBullet10.png</file>
+        <file>resource/image/entity/enemy3ChildBullet11.png</file>
+        <file>resource/image/entity/enemy3ChildBullet12.png</file>
+        <file>resource/image/entity/enemy3ChildBullet13.png</file>
+        <file>resource/image/entity/enemy3ChildBullet14.png</file>
+        <file>resource/image/entity/enemy3ChildBullet15.png</file>
+        <file>resource/image/entity/enemy3ChildBullet16.png</file>
+        <file>resource/image/entity/enemy3MontherBullet.png</file>
         <file>resource/image/entity/playerBullet.png</file>
     </qresource>
 </RCC>
