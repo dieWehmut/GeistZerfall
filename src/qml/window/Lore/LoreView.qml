@@ -17,6 +17,16 @@ Item {
     property bool autoModeEnabled: false
     // 当前内容是否是章节标题画面（用于隐藏底部控制栏）
     property bool isTitleScreen: false
+    // 标记是否需要在初始化内容后恢复音乐
+    property bool restoreMusicPending: false
+    // 最近一次有效的音乐状态，用于持久化和存档
+    property string lastMusicSource: ""
+    property int lastMusicLoops: -1
+    property bool lastMusicStopped: false
+    // 从外部存档恢复时传入的音乐状态
+    property string savedMusicSource: ""
+    property int savedMusicLoops: -1
+    property bool savedMusicStopped: false
 
     Component.onCompleted: {
         // 优先从 WindowState 恢复进度
@@ -30,42 +40,27 @@ Item {
                 currentContentIndex = (saved.index !== undefined) ? saved.index : 0;
                 currentMode = saved.mode || currentMode;
                 autoModeEnabled = !!saved.auto;
+                savedMusicSource = (saved.music !== undefined && saved.music !== null) ? saved.music : "";
+                savedMusicLoops = (saved.musicLoops !== undefined && saved.musicLoops !== null) ? saved.musicLoops : -1;
+                savedMusicStopped = !!saved.stopMusic;
+                if (savedMusicSource) {
+                    lastMusicSource = savedMusicSource;
+                    lastMusicLoops = savedMusicLoops;
+                    lastMusicStopped = false;
+                } else if (savedMusicStopped) {
+                    lastMusicSource = "";
+                    lastMusicLoops = 0;
+                    lastMusicStopped = true;
+                } else {
+                    lastMusicSource = window && window.currentMusic ? window.currentMusic : "";
+                    lastMusicLoops = -1;
+                    lastMusicStopped = (lastMusicSource === "");
+                }
                 if (targetMode === 'loadFromSave') {
-                    // 回溯已保存的历史（如果存在）或当前节点内容，恢复上一次有效音乐状态
-                    try {
-                        var effectiveMusic = null;
-                        var effectiveLoops = undefined;
-                        var shouldStop = false;
-                        // 优先从 historyPanel 的历史记录（若之前曾进入过）回溯，否则从节点内容回溯
-                        var scanArray = [];
-                        if (historyPanel && historyPanel.historyData && historyPanel.historyData.length > 0) {
-                            scanArray = historyPanel.historyData;
-                        } else {
-                            // 构造临时回溯：遍历当前节点的内容到 currentContentIndex 之前
-                            if (chapterData && chapterData.nodes && chapterData.nodes[currentNode]) {
-                                var nodeObj = chapterData.nodes[currentNode];
-                                if (nodeObj && nodeObj.contents) {
-                                    for (var i=0;i<nodeObj.contents.length && i<=currentContentIndex;i++) {
-                                        var c = nodeObj.contents[i];
-                                        scanArray.push({ music: c.music, musicLoops: c.musicLoops, stopMusic: c.stopMusic, node: currentNode, index: i });
-                                    }
-                                }
-                            }
-                        }
-                        for (var j = scanArray.length - 1; j >= 0; j--) {
-                            var h = scanArray[j];
-                            if (h.stopMusic) { shouldStop = true; break; }
-                            if (h.music && h.music !== '') { effectiveMusic = h.music; effectiveLoops = h.musicLoops; break; }
-                        }
-                        if (shouldStop) {
-                            if (typeof window !== 'undefined' && typeof window.stopMusic === 'function') window.stopMusic();
-                        } else if (effectiveMusic) {
-                            if (typeof window !== 'undefined' && typeof window.playMusic === 'function') window.playMusic(effectiveMusic, effectiveLoops);
-                        } else {
-                            // 无显式音乐：使用一个默认的主菜单音乐作为占位，避免静音感知错误
-                            try { if (typeof window !== 'undefined' && typeof window.playMusic === 'function') window.playMusic('qrc:/resource/audio/bgm/mainmenu.mp3'); } catch (em) {}
-                        }
-                    } catch (em2) { console.log('LoreView: restore music after loadFromSave failed', em2); }
+                    var applied = applySavedMusicState();
+                    restoreMusicPending = !applied;
+                } else {
+                    restoreMusicPending = false;
                 }
             } else if (targetMode === 'loadFromSave') {
                 // 没有保存的 loreState 但从存档标记进入：可能是游戏存档，直接跳 GameView
@@ -89,12 +84,18 @@ Item {
     }
 
     Component.onDestruction: {
+        if (typeof window !== 'undefined' && window.shuttingDown) {
+            return; // 应用退出时跳过存档，避免与 Main 的关前存档重复且可能的竞态
+        }
         persistLoreState();
         saveLoreAutoSnapshot();
     }
 
     onVisibleChanged: {
         if (!visible) {
+            if (typeof window !== 'undefined' && window.shuttingDown) {
+                return; // 退出流程中不进行自动存档
+            }
             persistLoreState();
             saveLoreAutoSnapshot();
         }
@@ -109,6 +110,9 @@ Item {
             SaveLoadManager.loreNode = currentNode || "";
             SaveLoadManager.loreIndex = currentContentIndex || 0;
             SaveLoadManager.battleId = "";
+            SaveLoadManager.loreMusicStopped = lastMusicStopped;
+            SaveLoadManager.loreMusic = lastMusicStopped ? "" : (lastMusicSource || "");
+            SaveLoadManager.loreMusicLoops = lastMusicLoops;
             // 清空游戏特定数据，避免残留影响
             try { SaveLoadManager.setEnemies([]); } catch (eSetEn) { }
             SaveLoadManager.posX = 0;
@@ -125,6 +129,68 @@ Item {
         }
     }
 
+    function restoreMusicFromHistory() {
+        try {
+            var scanArray = [];
+            if (historyPanel && historyPanel.historyData && historyPanel.historyData.length > 0) {
+                scanArray = historyPanel.historyData;
+            } else if (chapterData && chapterData.nodes && chapterData.nodes[currentNode]) {
+                var nodeObj = chapterData.nodes[currentNode];
+                if (nodeObj && nodeObj.contents) {
+                    for (var i = 0; i <= currentContentIndex && i < nodeObj.contents.length; ++i) {
+                        var c = nodeObj.contents[i];
+                        if (!c) continue;
+                        scanArray.push({ music: c.music, musicLoops: c.musicLoops, stopMusic: c.stopMusic });
+                    }
+                }
+            }
+
+            for (var j = scanArray.length - 1; j >= 0; --j) {
+                var entry = scanArray[j];
+                if (entry.stopMusic) {
+                    if (typeof window !== 'undefined' && typeof window.stopMusic === 'function') window.stopMusic();
+                    lastMusicSource = "";
+                    lastMusicLoops = 0;
+                    lastMusicStopped = true;
+                    return true;
+                }
+                if (entry.music && entry.music !== '') {
+                    if (typeof window !== 'undefined' && typeof window.playMusic === 'function') window.playMusic(entry.music, entry.musicLoops);
+                    lastMusicSource = entry.music;
+                    lastMusicLoops = (entry.musicLoops !== undefined && entry.musicLoops !== null) ? entry.musicLoops : -1;
+                    lastMusicStopped = false;
+                    return true;
+                }
+            }
+        } catch (e) {
+            console.log('LoreView: restoreMusicFromHistory error', e);
+        }
+        return false;
+    }
+
+    function applySavedMusicState() {
+        try {
+            if (savedMusicStopped) {
+                if (typeof window !== 'undefined' && typeof window.stopMusic === 'function') window.stopMusic();
+                lastMusicSource = "";
+                lastMusicLoops = 0;
+                lastMusicStopped = true;
+                return true;
+            }
+            if (savedMusicSource && savedMusicSource !== "") {
+                var loops = (savedMusicLoops !== undefined && savedMusicLoops !== null) ? savedMusicLoops : undefined;
+                if (typeof window !== 'undefined' && typeof window.playMusic === 'function') window.playMusic(savedMusicSource, loops);
+                lastMusicSource = savedMusicSource;
+                lastMusicLoops = (loops !== undefined) ? savedMusicLoops : -1;
+                lastMusicStopped = false;
+                return true;
+            }
+        } catch (e) {
+            console.log('LoreView: applySavedMusicState error', e);
+        }
+        return false;
+    }
+
     function persistLoreState() {
         try {
             if (typeof WindowState !== 'undefined' && WindowState.setLoreState) {
@@ -133,7 +199,10 @@ Item {
                     node: currentNode,
                     index: currentContentIndex,
                     mode: currentMode,
-                    auto: autoModeEnabled
+                    auto: autoModeEnabled,
+                    music: lastMusicStopped ? "" : lastMusicSource,
+                    musicLoops: lastMusicLoops,
+                    stopMusic: lastMusicStopped
                 });
             }
         } catch (e) { console.log("LoreView: persist state error", e); }
@@ -283,6 +352,7 @@ Item {
 
         // 每句可控制音乐：如果 content 指定了 music，则切换播放；如果指定 stopMusic 则停止
         try {
+            var musicHandled = false;
             if (content && content.music) {
                 if (typeof window !== 'undefined' && typeof window.playMusic === 'function') {
                     var loops = (content.musicLoops !== undefined) ? content.musicLoops : undefined;
@@ -291,15 +361,34 @@ Item {
                 } else {
                     console.log("LoreView: window.playMusic not available");
                 }
+                lastMusicSource = content.music;
+                lastMusicLoops = (content.musicLoops !== undefined && content.musicLoops !== null) ? content.musicLoops : -1;
+                lastMusicStopped = false;
+                musicHandled = true;
             } else if (content && content.stopMusic) {
                 if (typeof window !== 'undefined' && typeof window.stopMusic === 'function') {
                     console.log("LoreView: content requests stopMusic");
                     window.stopMusic();
                 }
+                lastMusicSource = "";
+                lastMusicLoops = 0;
+                lastMusicStopped = true;
+                musicHandled = true;
+            }
+
+            if (!musicHandled && restoreMusicPending) {
+                console.log("LoreView: attempting to restore music from history after save load");
+                var restored = restoreMusicFromHistory();
+                if (!restored) {
+                    console.log("LoreView: no historical music found; leaving current track untouched");
+                }
+                musicHandled = restored;
             }
         } catch (e) {
             console.log("LoreView: music switch error", e);
         }
+
+        if (restoreMusicPending) restoreMusicPending = false;
 
         // 如果是标题画面，2秒后自动切换
         if (content && (content.type === "title" || content.isTitle)) {
@@ -632,11 +721,17 @@ Item {
                             console.log("LoreView: restoring stopMusic after jump");
                             window.stopMusic();
                         }
+                        lastMusicSource = "";
+                        lastMusicLoops = 0;
+                        lastMusicStopped = true;
                     } else if (effectiveMusic) {
                         if (typeof window !== 'undefined' && typeof window.playMusic === 'function') {
                             console.log("LoreView: restoring effective music after jump", effectiveMusic, "loops:", effectiveLoops);
                             window.playMusic(effectiveMusic, effectiveLoops);
                         }
+                        lastMusicSource = effectiveMusic;
+                        lastMusicLoops = (effectiveLoops !== undefined && effectiveLoops !== null) ? effectiveLoops : -1;
+                        lastMusicStopped = false;
                     } else {
                         // 没找到显式音乐指令：保持当前播放，不做处理
                         console.log("LoreView: no explicit music directive found for jump target; keeping current music");
@@ -678,6 +773,27 @@ Item {
                 console.log("LoreView: wheel down while history open, closing history");
                 historyPanel.close();
                 event.accepted = true;
+            }
+        }
+    }
+
+    // 右键快速打开设置：在剧情视图任意处右键（且历史面板未打开）跳转到 Config 页面
+    MouseArea {
+        id: loreRightClickToConfig
+        anchors.fill: parent
+        visible: !historyPanel.visible
+        z: 1400
+        acceptedButtons: Qt.RightButton
+        hoverEnabled: false
+        onClicked: function(mouse) {
+            if (mouse.button === Qt.RightButton) {
+                console.log("LoreView: right click -> open Config");
+                try { if (historyPanel && historyPanel.visible) historyPanel.close(); } catch (e) {}
+                try {
+                    if (window && window.pushSource) window.pushSource("qml/window/Config.qml");
+                    else if (window && window.replaceSource) window.replaceSource("qml/window/Config.qml");
+                } catch (eNav) { console.log('LoreView: open config failed', eNav); }
+                mouse.accepted = true;
             }
         }
     }
