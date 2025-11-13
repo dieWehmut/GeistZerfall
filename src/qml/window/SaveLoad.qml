@@ -297,8 +297,21 @@ Item {
 												else window.currentBattleId = battleId;
 											}
 											if (v === "lore") {
-												// 切换到合适的背景音乐（若剧情片段未指定，先用主菜单占位）
-												try { if (window && typeof window.playMusic === 'function') window.playMusic("qrc:/resource/audio/bgm/mainmenu.mp3"); } catch (em) { console.log('SaveLoad: play lore music failed', em); }
+												// 切换到存档记录的音乐（若缺失则回退主菜单）
+												try {
+													if (window) {
+														var loreMusic = SaveLoadManager.loreMusic || "";
+														var loreLoops = SaveLoadManager.loreMusicLoops;
+														var loreStopped = !!SaveLoadManager.loreMusicStopped;
+														if (loreStopped && typeof window.stopMusic === 'function') {
+															window.stopMusic();
+														} else if (loreMusic && typeof window.playMusic === 'function') {
+															window.playMusic(loreMusic, (loreLoops !== undefined && loreLoops !== null) ? loreLoops : undefined);
+														} else if (typeof window.playMusic === 'function') {
+															window.playMusic("qrc:/resource/audio/bgm/mainmenu.mp3");
+														}
+													}
+												} catch (em) { console.log('SaveLoad: play lore music failed', em); }
 												// 将 Lore 进度写入全局状态，由 LoreView 在进入时恢复
 												try {
 													WindowState.setLoreState({
@@ -306,7 +319,10 @@ Item {
 														node: SaveLoadManager.loreNode || "",
 														index: SaveLoadManager.loreIndex || 0,
 														mode: "scene",
-														auto: false
+														auto: false,
+														music: SaveLoadManager.loreMusicStopped ? "" : (SaveLoadManager.loreMusic || ""),
+														musicLoops: SaveLoadManager.loreMusicLoops,
+														stopMusic: !!SaveLoadManager.loreMusicStopped
 													});
 												} catch (e2) { }
 												if (window && window.replaceSource) {

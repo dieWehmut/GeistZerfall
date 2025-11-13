@@ -275,6 +275,9 @@ bool SaveLoad::loadSlot(int slot, const QString &folderPath) {
         emit loreChapterChanged();
         emit loreNodeChanged();
         emit loreIndexChanged();
+        emit loreMusicChanged();
+        emit loreMusicLoopsChanged();
+        emit loreMusicStoppedChanged();
         emit battleIdChanged();
         emit loaded();
     }
@@ -330,6 +333,9 @@ bool SaveLoad::loadPlayer(const QString &folderPath) {
         emit loreChapterChanged();
         emit loreNodeChanged();
         emit loreIndexChanged();
+        emit loreMusicChanged();
+        emit loreMusicLoopsChanged();
+        emit loreMusicStoppedChanged();
         emit battleIdChanged();
         emit loaded();
     }
@@ -405,6 +411,9 @@ bool SaveLoad::createDefaultAuto(const QString &folderPath, double posX, double 
     last.player.mp = 0;
     last.view = "game";
     last.battleId.clear();
+    last.loreMusic.clear();
+    last.loreMusicLoops = -1;
+    last.loreMusicStopped = false;
     emit posXChanged();
     emit posYChanged();
     emit speedChanged();
@@ -417,6 +426,9 @@ bool SaveLoad::createDefaultAuto(const QString &folderPath, double posX, double 
     emit loreChapterChanged();
     emit loreNodeChanged();
     emit loreIndexChanged();
+    emit loreMusicChanged();
+    emit loreMusicLoopsChanged();
+    emit loreMusicStoppedChanged();
     emit battleIdChanged();
     bool ok = savePlayer(folderPath);
     return ok;

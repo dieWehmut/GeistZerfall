@@ -22,6 +22,9 @@ class SaveLoad : public QObject {
     Q_PROPERTY(QString loreChapter READ loreChapter WRITE setLoreChapter NOTIFY loreChapterChanged)
     Q_PROPERTY(QString loreNode READ loreNode WRITE setLoreNode NOTIFY loreNodeChanged)
     Q_PROPERTY(int loreIndex READ loreIndex WRITE setLoreIndex NOTIFY loreIndexChanged)
+    Q_PROPERTY(QString loreMusic READ loreMusic WRITE setLoreMusic NOTIFY loreMusicChanged)
+    Q_PROPERTY(int loreMusicLoops READ loreMusicLoops WRITE setLoreMusicLoops NOTIFY loreMusicLoopsChanged)
+    Q_PROPERTY(bool loreMusicStopped READ loreMusicStopped WRITE setLoreMusicStopped NOTIFY loreMusicStoppedChanged)
     Q_PROPERTY(QString battleId READ battleId WRITE setBattleId NOTIFY battleIdChanged)
 public:
     explicit SaveLoad(QObject *parent = nullptr);
@@ -71,6 +74,9 @@ public:
     QString loreChapter() const { return last.loreChapter; }
     QString loreNode() const { return last.loreNode; }
     int loreIndex() const { return last.loreIndex; }
+    QString loreMusic() const { return last.loreMusic; }
+    int loreMusicLoops() const { return last.loreMusicLoops; }
+    bool loreMusicStopped() const { return last.loreMusicStopped; }
     QString battleId() const { return last.battleId; }
 
     bool autoExists() const;
@@ -87,6 +93,9 @@ public:
     void setLoreChapter(const QString &c) { if (last.loreChapter != c) { last.loreChapter = c; emit loreChapterChanged(); } }
     void setLoreNode(const QString &n) { if (last.loreNode != n) { last.loreNode = n; emit loreNodeChanged(); } }
     void setLoreIndex(int idx) { if (last.loreIndex != idx) { last.loreIndex = idx; emit loreIndexChanged(); } }
+    void setLoreMusic(const QString &m) { if (last.loreMusic != m) { last.loreMusic = m; emit loreMusicChanged(); } }
+    void setLoreMusicLoops(int loops) { if (last.loreMusicLoops != loops) { last.loreMusicLoops = loops; emit loreMusicLoopsChanged(); } }
+    void setLoreMusicStopped(bool stopped) { if (last.loreMusicStopped != stopped) { last.loreMusicStopped = stopped; emit loreMusicStoppedChanged(); } }
     void setBattleId(const QString &id) { if (last.battleId != id) { last.battleId = id; emit battleIdChanged(); } }
 
 signals:
@@ -105,6 +114,9 @@ signals:
     void loreChapterChanged();
     void loreNodeChanged();
     void loreIndexChanged();
+    void loreMusicChanged();
+    void loreMusicLoopsChanged();
+    void loreMusicStoppedChanged();
     void battleIdChanged();
 private:
     SaveData last;

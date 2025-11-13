@@ -48,8 +48,8 @@ signals:
 
 
 private:
-    int hp{100};
-    int maxHp{100};
+    int hp{10000};
+    int maxHp{10000};
     bool snipeActive{false};
     bool shootingActive{false};
     double savedSight{0};

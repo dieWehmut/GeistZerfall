@@ -355,6 +355,10 @@ Item {
 	anchors.fill: parent
 	property bool appliedSaveLoad: false
 	Component.onDestruction: {
+		if (typeof window !== 'undefined' && window.shuttingDown) {
+			// 应用正在退出：跳过额外的自动存档和截图，避免资源销毁过程中的竞态
+			return;
+		}
 		if (typeof SaveLoadManager !== 'undefined' && SaveLoadManager && playerObj) {
 			// capture a temporary preview image of the current GameView so it can be used by SaveLoad UI
 			try { SaveLoadManager.captureTemp(); } catch (e) { console.log('captureTemp failed', e); }
@@ -364,6 +368,9 @@ Item {
 				SaveLoadManager.loreChapter = "";
 				SaveLoadManager.loreNode = "";
 				SaveLoadManager.loreIndex = 0;
+				SaveLoadManager.loreMusic = "";
+				SaveLoadManager.loreMusicLoops = -1;
+				SaveLoadManager.loreMusicStopped = false;
 				SaveLoadManager.battleId = battleId || (typeof window !== 'undefined' && window.currentBattleId ? window.currentBattleId : "");
 			} catch (eSet) { console.log('set game view metadata failed', eSet); }
 			SaveLoadManager.posX = playerObj.pos.x;
@@ -384,6 +391,9 @@ Item {
 
 	onVisibleChanged: {
 		if (!visible) {
+			if (typeof window !== 'undefined' && window.shuttingDown) {
+				return; // 退出流程中不进行自动存档
+			}
 			if (typeof SaveLoadManager !== 'undefined' && SaveLoadManager && playerObj) {
 				// capture temp preview whenever leaving the GameView so SaveLoad can show it instantly
 				try { SaveLoadManager.captureTemp(); } catch (e) { console.log('captureTemp failed', e); }
@@ -393,6 +403,9 @@ Item {
 					SaveLoadManager.loreChapter = "";
 					SaveLoadManager.loreNode = "";
 					SaveLoadManager.loreIndex = 0;
+					SaveLoadManager.loreMusic = "";
+					SaveLoadManager.loreMusicLoops = -1;
+					SaveLoadManager.loreMusicStopped = false;
 					SaveLoadManager.battleId = battleId || (typeof window !== 'undefined' && window.currentBattleId ? window.currentBattleId : "");
 				} catch (eSet) { console.log('set game view metadata failed', eSet); }
 				SaveLoadManager.posX = playerObj.pos.x;
@@ -814,7 +827,7 @@ Item {
 			// If we didn't just apply a save load, try loading auto save as before; otherwise default to center
 			if (!appliedSaveLoad) {
 				if (typeof SaveLoadManager !== 'undefined' && SaveLoadManager) {
-					if (SaveLoadManager.loadAuto()) {
+					if (SaveLoadManager.loadAuto() && (typeof SaveLoadManager.view === 'undefined' || SaveLoadManager.view !== 'lore')) {
 						console.log('Loaded auto save');
 						if (!isNaN(SaveLoadManager.posX) && !isNaN(SaveLoadManager.posY) && (SaveLoadManager.posX !== 0 || SaveLoadManager.posY !== 0)) {
 							playerObj.pos = Qt.point(SaveLoadManager.posX, SaveLoadManager.posY);
@@ -851,6 +864,7 @@ Item {
 	EntityQml.Player {
 		id: playerItem
 		z: 100
+		playerObj: playerObj
 		// use scale transform to smoothly resize player visual without changing layout geometry
 		scale: tileScale
 		transformOrigin: Item.Center

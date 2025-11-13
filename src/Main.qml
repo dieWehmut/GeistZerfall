@@ -1,4 +1,6 @@
 import QtQuick
+import "qml/components"
+import "qml/window/windowState.js" as WindowState
 import QtMultimedia 6.5
 
 Window {
@@ -7,6 +9,8 @@ Window {
     height: 720
     visible: true
     title: qsTr("GeistZerfall")
+    // 防止重复关闭的标志
+    property bool shuttingDown: false
     // 全局背景音乐播放器（集中管理）
     MediaPlayer {
         id: bgmGlobal
@@ -63,11 +67,92 @@ Window {
         }
     }
 
+    // 关闭窗口前先自动存档
+    function autosaveBeforeExit() {
+        try {
+            if (typeof SaveLoadManager === 'undefined' || !SaveLoadManager) return;
+            // 尝试截图作为预览
+            try { SaveLoadManager.captureTemp(); } catch (eCap) {}
+
+            // mainLoader.source 是 url 类型，将其转为字符串再判断
+            var src = mainLoader.source ? mainLoader.source.toString() : "";
+            console.log("autosaveBeforeExit: current source =", src);
+
+            if (src.indexOf("Game/GameView.qml") !== -1) {
+                // 保存游戏场景进度
+                try {
+                    SaveLoadManager.view = "game";
+                    SaveLoadManager.loreChapter = "";
+                    SaveLoadManager.loreNode = "";
+                    SaveLoadManager.loreIndex = 0;
+                    SaveLoadManager.loreMusic = "";
+                    SaveLoadManager.loreMusicLoops = -1;
+                    SaveLoadManager.loreMusicStopped = false;
+                    SaveLoadManager.battleId = window.currentBattleId || "";
+                    if (window.currentPlayer) {
+                        SaveLoadManager.posX = window.currentPlayer.pos.x;
+                        SaveLoadManager.posY = window.currentPlayer.pos.y;
+                        SaveLoadManager.speed = window.currentPlayer.getSpeed ? window.currentPlayer.getSpeed() : 0;
+                        SaveLoadManager.sight = window.currentPlayer.getSight ? window.currentPlayer.getSight() : 0;
+                        SaveLoadManager.maxHp = (typeof window.currentPlayer.maxHp !== 'undefined') ? window.currentPlayer.maxHp : SaveLoadManager.maxHp;
+                        SaveLoadManager.hp = (typeof window.currentPlayer.hp !== 'undefined') ? window.currentPlayer.hp : SaveLoadManager.hp;
+                    }
+                    // 敌人快照（若 WindowState 有）
+                    try {
+                        var enemies = (typeof WindowState !== 'undefined' && WindowState.getGameEnemies) ? WindowState.getGameEnemies() : undefined;
+                        if (enemies && enemies.length) SaveLoadManager.setEnemies(enemies); else SaveLoadManager.setEnemies([]);
+                    } catch (eSetEn) {}
+                    SaveLoadManager.saveAuto();
+                    console.log("autosaveBeforeExit: game auto save done");
+                } catch (eGameSave) { console.log('autosave (game) failed', eGameSave); }
+            } else if (src.indexOf("Lore/LoreView.qml") !== -1) {
+                // 保存剧情进度（从 WindowState 获取最近一次持久化状态）
+                try {
+                    var st = (typeof WindowState !== 'undefined' && WindowState.getLoreState) ? WindowState.getLoreState() : null;
+                    SaveLoadManager.view = "lore";
+                    SaveLoadManager.loreChapter = (st && st.chapter) ? st.chapter : (window.currentChapter || "");
+                    SaveLoadManager.loreNode = (st && st.node) ? st.node : (window.currentNode || "");
+                    SaveLoadManager.loreIndex = (st && st.index !== undefined) ? st.index : 0;
+                    SaveLoadManager.battleId = "";
+                    // 音乐状态（若有则保存）
+                    try {
+                        var mus = st ? (st.music || "") : "";
+                        var loops = st ? (st.musicLoops) : -1;
+                        var stopped = st ? (!!st.stopMusic) : false;
+                        SaveLoadManager.loreMusic = stopped ? "" : mus;
+                        SaveLoadManager.loreMusicLoops = (loops !== undefined && loops !== null) ? loops : -1;
+                        SaveLoadManager.loreMusicStopped = !!stopped;
+                    } catch (eMus) {}
+                    // 清空敌人
+                    try { SaveLoadManager.setEnemies([]); } catch (eSetEn2) {}
+                    SaveLoadManager.saveAuto();
+                    console.log("autosaveBeforeExit: lore auto save done");
+                } catch (eLoreSave) { console.log('autosave (lore) failed', eLoreSave); }
+            } else {
+                // 其它页面：不自动存档
+                console.log("autosaveBeforeExit: skip autosave for non-Game/Lore page");
+            }
+        } catch (e) { console.log('autosaveBeforeExit error', e); }
+    }
+
     Loader {
         id: mainLoader
         anchors.fill: parent
         source: "qml/window/Splash.qml"
         property alias mainLoader: mainLoader
+    }
+
+    // Top-level controls panel loader: only active when GameView is displayed
+    Loader {
+        id: topControlsLoader
+        source: "qml/window/Game/ControlsPanel.qml"
+        active: mainLoader.source ? mainLoader.source.toString().indexOf("Game/GameView.qml") !== -1 : false
+        onLoaded: {
+            if (!item) return;
+            try { item.parent = window; } catch(e) {}
+            try { item.x = 8; item.y = 8; } catch(e) {}
+            try { item.z = 9999; } catch(e) {}
+        }
     }
 
     // 屏幕切换覆盖层（用于平滑过渡）
@@ -150,4 +235,29 @@ Window {
     property string currentBattleId: ""
     property string currentChapter: ""
     property string currentNode: ""
+
+    // 拦截窗口关闭：先自动存档，再确认是否退出
+    onClosing: function(close) {
+        if (shuttingDown) {
+            return; // 允许真正关闭
+        }
+        close.accepted = false; // 阻止立即关闭
+        autosaveBeforeExit();
+        confirmExitDialog.visible = true;
+    }
+
+    // 退出确认弹窗
+    ConfirmDialog {
+        id: confirmExitDialog
+        anchors.centerIn: parent
+        title: "退出游戏"
+        // 可根据需要加上 message 属性（如果组件支持）
+        onYes: function() {
+            shuttingDown = true;
+            Qt.quit();
+        }
+        onNo: function() {
+            confirmExitDialog.visible = false;
+        }
+    }
 }

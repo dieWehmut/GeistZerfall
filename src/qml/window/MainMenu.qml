@@ -205,8 +205,21 @@ Item {
                                     else window.currentBattleId = battleId;
                                 }
                                 if (v === "lore") {
-                                    // 先切换到适合的背景音乐（若剧情未指定，先用主菜单）
-                                    try { if (window && typeof window.playMusic === 'function') window.playMusic("qrc:/resource/audio/bgm/mainmenu.mp3"); } catch (em) {}
+                                    // 根据存档记录的音乐状态优先切换背景音乐
+                                    try {
+                                        if (window) {
+                                            var loreMusic = SaveLoadManager.loreMusic || "";
+                                            var loreLoops = SaveLoadManager.loreMusicLoops;
+                                            var loreStopped = !!SaveLoadManager.loreMusicStopped;
+                                            if (loreStopped && typeof window.stopMusic === 'function') {
+                                                window.stopMusic();
+                                            } else if (loreMusic && typeof window.playMusic === 'function') {
+                                                window.playMusic(loreMusic, (loreLoops !== undefined && loreLoops !== null) ? loreLoops : undefined);
+                                            } else if (typeof window.playMusic === 'function') {
+                                                window.playMusic("qrc:/resource/audio/bgm/mainmenu.mp3");
+                                            }
+                                        }
+                                    } catch (em) {}
                                     // 写入 Lore 进度，由 LoreView 进入后恢复
                                     try {
                                         WindowState.setLoreState({
@@ -214,7 +227,10 @@ Item {
                                             node: SaveLoadManager.loreNode || "",
                                             index: SaveLoadManager.loreIndex || 0,
                                             mode: "scene",
-                                            auto: false
+                                            auto: false,
+                                            music: SaveLoadManager.loreMusicStopped ? "" : (SaveLoadManager.loreMusic || ""),
+                                            musicLoops: SaveLoadManager.loreMusicLoops,
+                                            stopMusic: !!SaveLoadManager.loreMusicStopped
                                         });
                                     } catch (eLS) {}
                                     if (window && window.replaceSource) window.replaceSource("qml/window/Lore/LoreView.qml");

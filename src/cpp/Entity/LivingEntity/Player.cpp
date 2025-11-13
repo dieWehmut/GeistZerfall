@@ -8,8 +8,8 @@
 #include "../Projectile/PlayerLaser.h"
 Player::Player(QObject *parent) : Entity(parent) {
 	setSpeed(36);
-	setSight(400);
-	setMaxHp(1000);
+	setSight(500);
+	setMaxHp(10000);
 	setHp(getMaxHp());
 	// Initialize cooldowns explicitly here (so defaults are set in C++ source)
 }

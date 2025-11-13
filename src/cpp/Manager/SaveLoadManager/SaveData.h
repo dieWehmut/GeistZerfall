@@ -11,8 +11,8 @@ struct PlayerSaveData {
     QPointF pos{0,0};
     double speed{0};
     double sight{0};
-    int hp{100};
-    int maxHp{100};
+    int hp{10000};
+    int maxHp{10000};
     int mp{0};
     int maxMp{0};
 
@@ -29,6 +29,9 @@ struct SaveData {
     QString loreChapter;
     QString loreNode;
     int loreIndex{0};
+    QString loreMusic;
+    int loreMusicLoops{-1};
+    bool loreMusicStopped{false};
     // Battle identifier (valid when view=="game"). Empty indicates default map.
     QString battleId;
     // Save a list of enemies present in the scene. Bullets/lasers are intentionally omitted.

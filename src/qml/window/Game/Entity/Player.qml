@@ -3,6 +3,16 @@ import QtQuick
 Item {
 	id: playerRoot
 	width: 64; height: 64 
+	property var playerObj: null
+
+	onPlayerObjChanged: {
+		console.log("Player.qml: playerObj changed ->", playerObj ? ("hp="+playerObj.hp+", maxHp="+playerObj.maxHp) : "null");
+		try {
+			if (playerObj && typeof playerObj.hpChanged !== 'undefined') {
+				playerObj.hpChanged.connect(function(){ console.log('Player.qml: hpChanged ->', playerObj.hp); });
+			}
+		} catch(e) { }
+	}
 	focus: true
 	activeFocusOnTab: true
 	Component.onCompleted: playerRoot.forceActiveFocus()
@@ -111,15 +121,9 @@ Item {
 				anchors.leftMargin: 0
 				y: 0
 				height: parent.height
-				width: Math.max(0, (function(){
-					if (!playerObj) return hpBarBg.width;
-					try {
-						var cur = (playerObj.hp !== undefined) ? playerObj.hp : (typeof playerObj.getHp === 'function' ? playerObj.getHp() : undefined);
-						var mx = (playerObj.maxHp !== undefined) ? playerObj.maxHp : (typeof playerObj.getMaxHp === 'function' ? playerObj.getMaxHp() : 100);
-						if (cur === undefined || mx === 0) return hpBarBg.width;
-						return hpBarBg.width * (cur / mx);
-					} catch(e) { return hpBarBg.width; }
-				})())
+				width: (function(){
+					return playerObj ? (hpBarBg.width * Math.max(0, playerObj.hp) / Math.max(1, playerObj.maxHp)) : 0;
+				})()
 				color: "#ff3333"
 				radius: 3
 			}
@@ -162,6 +166,30 @@ Item {
 				width: Math.max(0, (laserCd / laserCdMax) * laserCdBg.width)
 				color: "#174a8a"
 				radius: 3
+			}
+		}
+
+		// Debug HP text (shows current hp/maxHp)
+		Text {
+			id: hpDebugText
+			anchors.right: parent.right
+			y: 0
+			color: "white"
+			font.pixelSize: 10
+			text: playerObj ? (playerObj.hp + "/" + playerObj.maxHp) : "hp: ?"
+			visible: true
+		}
+
+		Connections {
+			id: playerConnections
+			target: playerObj
+			onHpChanged: {
+				console.log("Player.qml: onHpChanged ->", playerObj ? playerObj.hp : "null");
+				hpDebugText.text = playerObj ? (playerObj.hp + "/" + playerObj.maxHp) : "hp: ?";
+			}
+			onMaxHpChanged: {
+				console.log("Player.qml: onMaxHpChanged ->", playerObj ? playerObj.maxHp : "null");
+				hpDebugText.text = playerObj ? (playerObj.hp + "/" + playerObj.maxHp) : "hp: ?";
 			}
 		}
 	}

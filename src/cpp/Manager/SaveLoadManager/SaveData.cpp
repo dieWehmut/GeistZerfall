@@ -64,8 +64,8 @@ bool PlayerSaveData::read(QDataStream &in) {
 }
 
 void SaveData::write(QDataStream &out) const {
-    // bump top-level version to 4 to include battleId in addition to previous fields
-    quint32 topVersion = 4;
+    // bump top-level version to 5 to include lore music state in addition to previous fields
+    quint32 topVersion = 5;
     out << topVersion;
     // write player block
     player.write(out);
@@ -75,6 +75,9 @@ void SaveData::write(QDataStream &out) const {
     out << loreNode;
     out << loreIndex;
     out << battleId;
+    out << loreMusic;
+    out << loreMusicLoops;
+    out << static_cast<quint8>(loreMusicStopped ? 1 : 0);
     // write enemy list
     quint32 enemyCount = static_cast<quint32>(enemies.size());
     out << enemyCount;
@@ -169,6 +172,9 @@ bool SaveData::read(QDataStream &in) {
         in >> loreIndex;
         if (in.status() != QDataStream::Ok) return false;
         battleId.clear();
+        loreMusic.clear();
+    loreMusicLoops = -1;
+        loreMusicStopped = false;
         quint32 enemyCount = 0;
         in >> enemyCount;
         if (in.status() != QDataStream::Ok) return false;
@@ -186,6 +192,32 @@ bool SaveData::read(QDataStream &in) {
         in >> loreNode;
         in >> loreIndex;
         in >> battleId;
+        if (in.status() != QDataStream::Ok) return false;
+        loreMusic.clear();
+    loreMusicLoops = -1;
+        loreMusicStopped = false;
+        quint32 enemyCount = 0;
+        in >> enemyCount;
+        if (in.status() != QDataStream::Ok) return false;
+        enemies.clear();
+        for (quint32 i=0;i<enemyCount;++i) {
+            EnemySaveData e;
+            if (!e.read(in)) return false;
+            enemies.append(e);
+        }
+        return true;
+    } else if (topVersion == 5) {
+        if (!player.read(in)) return false;
+        in >> view;
+        in >> loreChapter;
+        in >> loreNode;
+        in >> loreIndex;
+        in >> battleId;
+        in >> loreMusic;
+        in >> loreMusicLoops;
+        quint8 stoppedByte = 0;
+        in >> stoppedByte;
+        loreMusicStopped = (stoppedByte != 0);
         if (in.status() != QDataStream::Ok) return false;
         quint32 enemyCount = 0;
         in >> enemyCount;
