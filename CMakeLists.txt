@@ -39,8 +39,11 @@ qt_add_qml_module(GeistZerfall
         src/qml/window/Game/Entity/PlayerLaser.qml
         src/qml/window/Game/Entity/Enemy/Enemy1.qml
         src/qml/window/Game/Entity/Enemy/Enemy2.qml
+        src/qml/window/Game/Entity/Enemy/Enemy3.qml
         src/qml/window/Game/Entity/Enemy/Enemy1Bullet.qml
         src/qml/window/Game/Entity/Enemy/Enemy2Laser.qml
+        src/qml/window/Game/Entity/Enemy/Enemy3ChildBullet.qml
+        src/qml/window/Game/Entity/Enemy/Enemy3MontherBullet.qml
         src/qml/window/Lore/loreState.js
         src/qml/window/Lore/LoreView.qml
         src/qml/window/Lore/contentShow/Animation.qml
@@ -51,6 +54,10 @@ qt_add_qml_module(GeistZerfall
         src/qml/window/Lore/components/DynamicCircle.qml
         src/qml/window/Lore/components/VisualScene.qml
         src/qml/window/Lore/components/HistoryPanel.qml
+        src/qml/window/Lore/components/LoreControlBar.qml
+        src/qml/window/Lore/components/LoreControlButton.qml
+        src/qml/window/Lore/effects/AudioEffect.qml
+        src/qml/window/Lore/effects/ParticleEffect.qml
     src/qml/window/Lore/chapters/chapter01.json
     src/qml/window/Lore/chapters/prologue.json
     src/qml/window/Game/battles/battle01.json
@@ -66,6 +73,8 @@ qt_add_qml_module(GeistZerfall
         src/cpp/Entity/LivingEntity/Enemy/concrete/Enemy1.h
         src/cpp/Entity/LivingEntity/Enemy/concrete/Enemy2.cpp
         src/cpp/Entity/LivingEntity/Enemy/concrete/Enemy2.h
+        src/cpp/Entity/LivingEntity/Enemy/concrete/Enemy3.cpp
+        src/cpp/Entity/LivingEntity/Enemy/concrete/Enemy3.h
         src/cpp/Entity/Projectile/PlayerBullet.cpp
         src/cpp/Entity/Projectile/PlayerBullet.h
         src/cpp/Entity/Projectile/PlayerLaser.cpp
@@ -76,6 +85,10 @@ qt_add_qml_module(GeistZerfall
         src/cpp/Entity/Projectile/EnemyProjectile/Enemy1Bullet.h
         src/cpp/Entity/Projectile/EnemyProjectile/Enemy2Laser.cpp
         src/cpp/Entity/Projectile/EnemyProjectile/Enemy2Laser.h
+        src/cpp/Entity/Projectile/EnemyProjectile/Enemy3MotherBullet.cpp
+        src/cpp/Entity/Projectile/EnemyProjectile/Enemy3MotherBullet.h
+        src/cpp/Entity/Projectile/EnemyProjectile/Enemy3ChildBullet.cpp
+        src/cpp/Entity/Projectile/EnemyProjectile/Enemy3ChildBullet.h
         src/cpp/Manager/MapManager/TileManager.cpp
         src/cpp/Manager/MapManager/TileManager.h
         src/cpp/Manager/SaveLoadManager/SaveData.cpp

@@ -194,7 +194,7 @@ Item {
 		for (var r = 0; r < rows; ++r) {
 			for (var c = 0; c < cols; ++c) {
 				var t = tileManager.getTileType(r, c);
-					if (t === 1 || t === 2) {
+					if (t === 1 || t === 2 || t === 3) {
 					var worldX = c * tileSize + tileSize/2;
 					var worldY = r * tileSize + tileSize/2;
 					console.log("Tile type", t, "converted to world", worldX, worldY, "for tileSize", tileSize);
@@ -260,60 +260,105 @@ Item {
 								}
 							}
 						}
+					} else if (t === 3) {
+						var candidate3 = chooseSpawn(worldX, worldY);
+						if (!candidate3) {
+							console.log("spawnEnemiesFromMap: unable to place Enemy3 near", worldX, worldY, "due to spacing constraints");
+							continue;
+						}
+						var spawnX3 = candidate3.x;
+						var spawnY3 = candidate3.y;
+						if (Math.abs(spawnX3 - worldX) > 0.5 || Math.abs(spawnY3 - worldY) > 0.5) {
+							console.log("spawnEnemiesFromMap: adjusted Enemy3 spawn from", worldX, worldY, "to", spawnX3, spawnY3);
+						}
+						var e3 = Qt.createQmlObject('import GeistZerfall.Game 1.0; BackendEnemy3 {}', gameViewRoot);
+						if (e3) {
+							e3.mapWidth = w; e3.mapHeight = h;
+							e3.pos = Qt.point(spawnX3, spawnY3);
+							if (playerObj && typeof e3.setPlayerTarget === 'function') e3.setPlayerTarget(playerObj);
+							enemyBackends.push(e3);
+							enemyTypes.push("Enemy3");
+							enemySpawnCenters.push({ x: spawnX3, y: spawnY3 });
+							var comp3 = Qt.createComponent("./Entity/Enemy/Enemy3.qml");
+							if (comp3.status === Component.Ready) {
+								console.log("spawnEnemiesFromMap: creating Enemy3 at row", r, "col", c, "world", spawnX3, spawnY3, "tileScale", tileScale);
+								var v3 = comp3.createObject(mapWrapper, { backend: e3, playerObjRef: playerObj, playerItemRef: playerItem, mapWrapperRef: mapWrapper, tileScaleRef: tileScale });
+								if (v3) {
+									enemyVisuals.push(v3);
+									v3.tileScaleRef = Qt.binding(function(){ return tileScale; });
+									v3.playerItemRef = playerItem;
+									v3.updateScreenPos && v3.updateScreenPos();
+								}
+							} else {
+								console.log("spawnEnemiesFromMap: Enemy3 component not ready:", comp3.status, comp3.errorString ? comp3.errorString() : "");
+							}
+						}
 					}
 				}
 			}
 		}
-			// If there is saved enemy data, reconcile saved positions/states with the freshly created backends.
-			if (typeof SaveLoadManager !== 'undefined' && SaveLoadManager) {
-				try {
-					var savedEnemies = SaveLoadManager.enemiesAsVariantList();
-					if (savedEnemies && savedEnemies.length > 0) {
-						var assigned = [];
-						for (var i=0;i<enemyBackends.length;++i) assigned.push(false);
-						for (var si=0; si<savedEnemies.length; ++si) {
-							var s = savedEnemies[si];
-							// find nearest unassigned backend of same type
-							var bestIdx = -1;
-							var bestDist = Number.MAX_VALUE;
-							for (var bi=0; bi<enemyBackends.length; ++bi) {
-								if (assigned[bi]) continue;
-								var b = enemyBackends[bi];
-								if (!b) continue;
-								var backendType = (enemyTypes[bi] !== undefined) ? enemyTypes[bi] : "";
-								if (backendType !== s.type) continue;
-								var dx = (b.pos ? b.pos.x : 0) - s.x;
-								var dy = (b.pos ? b.pos.y : 0) - s.y;
-								var d2 = dx*dx + dy*dy;
-								if (d2 < bestDist) { bestDist = d2; bestIdx = bi; }
-							}
-							if (bestIdx !== -1) {
-								var bb = enemyBackends[bestIdx];
-								try { bb.pos = Qt.point(s.x, s.y); } catch(e){}
-								// restore HP/MP if available
-								try { if (typeof bb.setMaxHp === 'function') bb.setMaxHp(s.maxHp); else bb.maxHp = s.maxHp; } catch(e){}
-								try { if (typeof bb.setHp === 'function') bb.setHp(s.hp); else bb.hp = s.hp; } catch(e){}
-								try { if (typeof bb.setMaxMp === 'function') bb.setMaxMp(s.maxMp); else bb.maxMp = s.maxMp; } catch(e){}
-								try { if (typeof bb.setMp === 'function') bb.setMp(s.mp); else bb.mp = s.mp; } catch(e){}
-								try { bb.alive = s.alive; } catch(e){}
-								assigned[bestIdx] = true;
+		// If there is saved enemy data, reconcile saved positions/states with the freshly created backends.
+		if (typeof SaveLoadManager !== 'undefined' && SaveLoadManager) {
+			try {
+				var savedEnemies = SaveLoadManager.enemiesAsVariantList();
+				if (savedEnemies && savedEnemies.length > 0) {
+					var assigned = [];
+					for (var i = 0; i < enemyBackends.length; ++i) assigned.push(false);
+					for (var si = 0; si < savedEnemies.length; ++si) {
+						var s = savedEnemies[si];
+						// find nearest unassigned backend of same type
+						var bestIdx = -1;
+						var bestDist = Number.MAX_VALUE;
+						for (var bi = 0; bi < enemyBackends.length; ++bi) {
+							if (assigned[bi]) continue;
+							var b = enemyBackends[bi];
+							if (!b) continue;
+							var backendType = (enemyTypes[bi] !== undefined) ? enemyTypes[bi] : "";
+							if (backendType !== s.type) continue;
+							var dx = (b.pos ? b.pos.x : 0) - s.x;
+							var dy = (b.pos ? b.pos.y : 0) - s.y;
+							var d2 = dx * dx + dy * dy;
+							if (d2 < bestDist) {
+								bestDist = d2;
+								bestIdx = bi;
 							}
 						}
-						// update visuals after applying positions
-						for (var vi=0; vi<enemyVisuals.length; ++vi) {
-							try { enemyVisuals[vi].updateScreenPos && enemyVisuals[vi].updateScreenPos(); } catch(e){}
+						if (bestIdx !== -1) {
+							var bb = enemyBackends[bestIdx];
+							try { bb.pos = Qt.point(s.x, s.y); } catch(e) {}
+							// restore HP/MP if available
+							try {
+								if (typeof bb.setMaxHp === 'function') bb.setMaxHp(s.maxHp); else bb.maxHp = s.maxHp;
+							} catch(e) {}
+							try {
+								if (typeof bb.setHp === 'function') bb.setHp(s.hp); else bb.hp = s.hp;
+							} catch(e) {}
+							try {
+								if (typeof bb.setMaxMp === 'function') bb.setMaxMp(s.maxMp); else bb.maxMp = s.maxMp;
+							} catch(e) {}
+							try {
+								if (typeof bb.setMp === 'function') bb.setMp(s.mp); else bb.mp = s.mp;
+							} catch(e) {}
+							try { bb.alive = s.alive; } catch(e) {}
+							assigned[bestIdx] = true;
 						}
 					}
-				} catch(e) { console.log('apply saved enemies failed', e); }
+					// update visuals after applying positions
+					for (var vi = 0; vi < enemyVisuals.length; ++vi) {
+						try { enemyVisuals[vi].updateScreenPos && enemyVisuals[vi].updateScreenPos(); } catch(e) {}
+					}
+				}
+			} catch (e) {
+				console.log('apply saved enemies failed', e);
 			}
-			console.log("spawnEnemiesFromMap: total enemies", enemyBackends.length);
-			// refresh global snapshot of enemies for SaveLoad UI via WindowState
-			try { WindowState.setGameEnemies && WindowState.setGameEnemies(serializeEnemies()); } catch(e) { console.log('update enemies in state failed', e); }
-	}
-
-	Connections {
-		target: tileManager
-		onCurMapDataChanged: spawnEnemiesFromMap()
+		}
+		console.log("spawnEnemiesFromMap: total enemies", enemyBackends.length);
+		// refresh global snapshot of enemies for SaveLoad UI via WindowState
+		try {
+			WindowState.setGameEnemies && WindowState.setGameEnemies(serializeEnemies());
+		} catch(e) {
+			console.log('update enemies in state failed', e);
+		}
 	}
 
 	// 右键点击跳转到设置界面
