@@ -13,6 +13,10 @@ qt_add_resources(RESOURCES src/resource.qrc)
 qt_add_executable(GeistZerfall
     src/main.cpp
     ${RESOURCES}
+        src/cpp/Entity/LivingEntity/Enemy/concrete/Enemy5.cpp
+        src/cpp/Entity/LivingEntity/Enemy/concrete/Enemy5.h
+        src/cpp/Entity/Projectile/EnemyProjectile/Enemy5Bullet.cpp
+        src/cpp/Entity/Projectile/EnemyProjectile/Enemy5Bullet.h
 )
 
 qt_add_qml_module(GeistZerfall
