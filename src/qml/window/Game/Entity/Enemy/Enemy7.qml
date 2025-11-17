@@ -2,74 +2,89 @@ import QtQuick 2.15
 import GeistZerfall.Game 1.0
 
 Item {
-    id: enemy7
-    property BackendEnemy7 backend: BackendEnemy7 {
-        id: backendEnemy
-        pos: Qt.point(x + width/2, y + height/2)
-        onDied: {
-            // 死亡特效
-            deathEffect.visible = true
-            deathEffect.start()
-            // 延迟移除避免动画中断
-            timer.restart()
-        }
-        onEnemyProjectileCreated: {
-            // 创建散射子弹
-            var bullet = enemy7BulletComponent.createObject(enemy7.parent)
-            bullet.x = x + width/2 - bullet.width/2
-            bullet.y = y + height/2 - bullet.height/2
-            bullet.backend = projectile
-        }
-    }
+    id: enemy7Root
+    property int baseSize: 128
+    width: baseSize * tileScaleRef
+    height: baseSize * tileScaleRef
+    // 与其他敌人统一：外部传入 backend 引用
+    property var backend: null
+    property var playerObjRef: null
+    property var playerItemRef: null
+    property var mapWrapperRef: null
+    property real tileScaleRef: 1.0
+    z: 120
 
-    property BackendPlayer backendPlayer
-    width: 56
-    height: 56
-
-    // 主精灵
     Image {
-        id: mainSprite
-        source: "qrc:/resource/image/entity/enemy7.png"
-        width: 56
-        height: 56
+        id: sprite
         anchors.centerIn: parent
+        source: "qrc:/resource/image/entity/enemy7.png"
+        width: parent.width
+        height: parent.height
     }
 
-    // 死亡粒子效果
-    ParticleSystem {
-        id: deathEffect
-        visible: false
-        anchors.fill: parent
-        Particle {
-            color: "#ff4444"
-            lifeSpan: 800
-            size: 8
-            emitRate: 0
-            maximumEmitted: 30
-            velocity: AngleDirection { angle: 0; angleVariation: 360; magnitude: 50 }
+    // HUD 与其它保持一致（简化示例）
+    Item {
+        id: hudRoot
+        width: enemy7Root.width
+        height: 20
+        anchors.horizontalCenter: parent.horizontalCenter
+        y: -hudRoot.height - 6
+        Rectangle { anchors.fill: parent; color: "transparent" }
+        Rectangle {
+            id: hpBarBg
+            x: 4; y: 0; width: parent.width - 8; height: 8; radius: 3
+            color: "#3a0b0b"; border.color: "#000"
+            Rectangle {
+                anchors.left: parent.left
+                width: backend ? (hpBarBg.width * Math.max(0, backend.hp) / Math.max(1, backend.maxHp)) : 0
+                height: parent.height
+                color: "#ff3333"
+                radius: parent.radius
+            }
         }
-        onStopped: enemy7.parent.removeEnemy(enemy7)
-    }
-
-    Timer {
-        id: timer
-        interval: 800
-        onTriggered: deathEffect.stop()
-    }
-
-    // 子弹组件
-    Component {
-        id: enemy7BulletComponent
-        Enemy7Bullet {
-            width: 16
-            height: 16
-            onBackendDestroyed: destroy()
+        Rectangle {
+            id: mpBarBg
+            x: 4; y: 10; width: parent.width - 8; height: 6; radius: 3
+            color: "#071028"
+            Rectangle {
+                anchors.left: parent.left
+                width: backend ? (mpBarBg.width * Math.max(0, backend.mp) / Math.max(1, backend.maxMp)) : 0
+                height: parent.height
+                color: "#3399ff"
+                radius: parent.radius
+            }
         }
     }
 
-    // 位置同步
-    onXChanged: backend.x = x + width/2
-    onYChanged: backend.y = y + height/2
+    // 位置更新
+    function updateScreenPos() {
+        if (!backend) return;
+        enemy7Root.x = backend.pos.x * tileScaleRef - enemy7Root.width / 2;
+        enemy7Root.y = backend.pos.y * tileScaleRef - enemy7Root.height / 2;
+    }
+    onTileScaleRefChanged: updateScreenPos()
 
-    Component.onCompleted: backend.setPlayerTarget(backendPlayer)
+    // 初始化与信号绑定
+    onBackendChanged: {
+        if (!backend) return;
+        try { backend.setProperty("collisionRadius", baseSize * 0.45); } catch(e){}
+        try { backend.posChanged.connect(updateScreenPos); } catch(e){}
+        // 子弹创建（散射弹）
+        try { backend.enemyProjectileCreated.connect(function(pr){
+            var comp = Qt.createComponent("./Enemy7Bullet.qml");
+            if (comp.status === Component.Ready) {
+                var bullet = comp.createObject(mapWrapperRef, { backend: pr, playerItemRef: playerItemRef, playerObjRef: playerObjRef, tileScaleRef: tileScaleRef, mapWrapperRef: mapWrapperRef });
+                if (bullet) bullet.tileScaleRef = Qt.binding(function(){ return tileScaleRef; });
+            } else {
+                console.log("Enemy7: bullet component error", comp.errorString());
+            }
+        }); } catch(e){}
+        updateScreenPos();
+    }
+
+    // 死亡销毁
+    Connections {
+        target: backend
+        onAliveChanged: { if (backend && !backend.alive) { try { enemy7Root.destroy(); } catch(e){} } }
+    }
 }

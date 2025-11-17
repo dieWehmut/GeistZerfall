@@ -17,6 +17,10 @@ Item {
             case 1: return "qrc:/resource/image/bg/battle/enemy1Spawn.png"
             case 2: return "qrc:/resource/image/bg/battle/enemy2Spawn.png"
             case 3: return "qrc:/resource/image/bg/battle/enemy3Spawn.png"
+            case 4: return "qrc:/resource/image/bg/battle/enemy4Spawn.png"
+            case 5: return "qrc:/resource/image/bg/battle/enemy5Spawn.png"
+            case 6: return "qrc:/resource/image/bg/battle/enemy6Spawn.png"
+            case 7: return "qrc:/resource/image/bg/battle/enemy7Spawn.png"
             default: return "qrc:/resource/image/bg/battle/default.png"
             }
         }

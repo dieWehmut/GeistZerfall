@@ -35,10 +35,18 @@
         <file>resource/image/bg/battle/enemy1Spawn.png</file>
         <file>resource/image/bg/battle/enemy2Spawn.png</file>
         <file>resource/image/bg/battle/enemy3Spawn.png</file>
+        <file>resource/image/bg/battle/enemy4Spawn.png</file>
+        <file>resource/image/bg/battle/enemy5Spawn.png</file>
+        <file>resource/image/bg/battle/enemy6Spawn.png</file>
+        <file>resource/image/bg/battle/enemy7Spawn.png</file>
         <file>resource/image/entity/playerNormal.png</file>
         <file>resource/image/entity/enemy1.png</file>
         <file>resource/image/entity/enemy2.png</file>
         <file>resource/image/entity/enemy3.png</file>
+        <file>resource/image/entity/enemy4.png</file>
+        <file>resource/image/entity/enemy5.png</file>
+        <file>resource/image/entity/enemy6.png</file>
+        <file>resource/image/entity/enemy7.png</file>
         <file>resource/image/entity/enemy1Bullet1.png</file>
         <file>resource/image/entity/enemy1Bullet2.png</file>
         <file>resource/image/entity/enemy1Bullet3.png</file>
@@ -65,6 +73,13 @@
         <file>resource/image/entity/enemy3ChildBullet15.png</file>
         <file>resource/image/entity/enemy3ChildBullet16.png</file>
         <file>resource/image/entity/enemy3MontherBullet.png</file>
+        <file>resource/image/entity/enemy4Bullet1.png</file>
+        <file>resource/image/entity/enemy4Bullet2.png</file>
+        <file>resource/image/entity/enemy4Bullet3.png</file>
+        <file>resource/image/entity/enemy4Bullet4.png</file>
+        <file>resource/image/entity/enemy4Bullet5.png</file>
+        <file>resource/image/entity/enemy5Bullet.png</file>
+        <file>resource/image/entity/enemy7Bullet.png</file>
         <file>resource/image/entity/playerBullet.png</file>
     </qresource>
 </RCC>

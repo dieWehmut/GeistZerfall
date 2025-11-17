@@ -6,8 +6,8 @@
 Enemy6::Enemy6(QObject *parent) : Enemy(parent) {
   setSpeed(5);
   setSight(380);
-  setMaxHp(110);
-  setHp(110);
+  setMaxHp(1200);
+  setHp(getMaxHp());
   setMaxMp(100);
   setMp(100);
   setAttackCooldownMs(2500); // 攻击冷却2.5秒
