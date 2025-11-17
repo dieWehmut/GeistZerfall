@@ -89,28 +89,10 @@ Item {
         try {
             backend.posChanged.connect(updateScreenPos);
         } catch (e) {}
-        // connect projectile creation to spawn visuals
-        try {
-            backend.enemyProjectileCreated.connect(function (pr) {
-                var comp = Qt.createComponent("./Enemy6Bullet.qml");
-                if (comp.status === Component.Ready) {
-                    var bullet = comp.createObject(mapWrapperRef, {
-                        backend: pr,
-                        playerItemRef: playerItemRef,
-                        playerObjRef: playerObjRef,
-                        tileScaleRef: tileScaleRef,
-                        mapWrapperRef: mapWrapperRef
-                    });
-                    if (bullet)
-                        bullet.tileScaleRef = Qt.binding(function () {
-                            return tileScaleRef;
-                        });
-                }
-            });
-        } catch (e) {}
+        // connect laser creation to spawn visuals
         try {
             backend.enemyLaserCreated.connect(function (ls) {
-                var comp = Qt.createComponent("./Enemy2Laser.qml");
+                var comp = Qt.createComponent("./Enemy6Laser.qml");
                 if (comp.status === Component.Ready) {
                     var laser = comp.createObject(mapWrapperRef, {
                         backend: ls,

@@ -1,11 +1,11 @@
-#ifndef ENEMY6_BULLET_H
-#define ENEMY6_BULLET_H
+#ifndef ENEMY6_LASER_H
+#define ENEMY6_LASER_H
 
 #include "Entity/Projectile/Projectile.h"
 #include <QElapsedTimer>
 #include <QTimer>
 
-class Enemy6Bullet : public Projectile {
+class Enemy6Laser : public Projectile {
   Q_OBJECT
   Q_PROPERTY(double waveFrequency READ waveFrequency WRITE setWaveFrequency
                  NOTIFY waveFrequencyChanged)
@@ -15,8 +15,8 @@ class Enemy6Bullet : public Projectile {
   Q_PROPERTY(double dirx READ dirx NOTIFY directionChanged)
   Q_PROPERTY(double diry READ diry NOTIFY directionChanged)
 public:
-  explicit Enemy6Bullet(QObject *parent = nullptr);
-  ~Enemy6Bullet() override;
+  explicit Enemy6Laser(QObject *parent = nullptr);
+  ~Enemy6Laser() override;
 
   void setStartPos(const QPointF &p) {
     setPos(p);
@@ -35,7 +35,7 @@ public:
   double diry() const { return diry_; }
 
 signals:
-  void backendDestroyed(Enemy6Bullet *self);
+  void backendDestroyed(Enemy6Laser *self);
   void waveFrequencyChanged();
   void waveAmplitudeChanged();
   void waveTimeChanged();
@@ -54,4 +54,4 @@ private:
   double currentTime{0.0}; // 当前时间（秒）
 };
 
-#endif // ENEMY6_BULLET_H
+#endif // ENEMY6_LASER_H

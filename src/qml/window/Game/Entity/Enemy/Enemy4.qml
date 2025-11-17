@@ -106,24 +106,6 @@ Item {
                 }
             });
         } catch (e) {}
-        try {
-            backend.enemyLaserCreated.connect(function (ls) {
-                var comp = Qt.createComponent("./Enemy2Laser.qml");
-                if (comp.status === Component.Ready) {
-                    var laser = comp.createObject(mapWrapperRef, {
-                        backend: ls,
-                        playerItemRef: playerItemRef,
-                        playerObjRef: playerObjRef,
-                        tileScaleRef: tileScaleRef,
-                        mapWrapperRef: mapWrapperRef
-                    });
-                    if (laser)
-                        laser.tileScaleRef = Qt.binding(function () {
-                            return tileScaleRef;
-                        });
-                }
-            });
-        } catch (e) {}
         updateScreenPos();
     }
 

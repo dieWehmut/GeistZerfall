@@ -1,18 +1,18 @@
-#include "Enemy6Bullet.h"
+#include "Enemy6Laser.h"
 #include <QtMath>
 
-Enemy6Bullet::Enemy6Bullet(QObject *parent) : Projectile(parent) {
+Enemy6Laser::Enemy6Laser(QObject *parent) : Projectile(parent) {
   setMaxDist(750);
   setTraveledDist(0);
   updateTimer = new QTimer(this);
   updateTimer->setInterval(16);
-  connect(updateTimer, &QTimer::timeout, this, &Enemy6Bullet::updateStep);
+  connect(updateTimer, &QTimer::timeout, this, &Enemy6Laser::updateStep);
   updateTimer->start();
 }
 
-Enemy6Bullet::~Enemy6Bullet() { emit backendDestroyed(this); }
+Enemy6Laser::~Enemy6Laser() { emit backendDestroyed(this); }
 
-void Enemy6Bullet::setDirection(double dx, double dy) {
+void Enemy6Laser::setDirection(double dx, double dy) {
   double len = std::sqrt(dx * dx + dy * dy);
   if (len == 0) {
     dirx_ = 1;
@@ -24,7 +24,7 @@ void Enemy6Bullet::setDirection(double dx, double dy) {
   emit directionChanged();
 }
 
-void Enemy6Bullet::updateStep() {
+void Enemy6Laser::updateStep() {
   // 每 tick 移动 velocity * dt
   const double dt = 0.016; // 假定 ~60FPS
 
@@ -50,14 +50,14 @@ void Enemy6Bullet::updateStep() {
   }
 }
 
-void Enemy6Bullet::setWaveFrequency(double value) {
+void Enemy6Laser::setWaveFrequency(double value) {
   if (qAbs(waveFreq - value) < 0.001)
     return;
   waveFreq = value;
   emit waveFrequencyChanged();
 }
 
-void Enemy6Bullet::setWaveAmplitude(double value) {
+void Enemy6Laser::setWaveAmplitude(double value) {
   if (qAbs(waveAmp - value) < 0.001)
     return;
   waveAmp = value;
