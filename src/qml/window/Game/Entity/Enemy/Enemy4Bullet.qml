@@ -3,7 +3,7 @@ import QtMultimedia 6.5
 
 Item {
     id: root
-    property int baseSize: 48
+    property int baseSize: 64  // 子弹尺寸：64*64
     width: baseSize * tileScaleRef
     height: baseSize * tileScaleRef
     property var backend: null

@@ -188,7 +188,7 @@ Item {
     onDirYChanged: waveCanvas.requestPaint()
     onTraveledDistChanged: waveCanvas.requestPaint()
 
-    // 简单碰撞检测：AABB 与玩家矩形
+    // 碰撞检测：检测玩家是否与波形路径相交
     Timer {
         interval: 16
         running: true
@@ -196,24 +196,46 @@ Item {
         onTriggered: {
             if (!backend || !playerItemRef || !playerObjRef)
                 return;
-            var bx = root.x + (mapWrapperRef ? mapWrapperRef.x : 0);
-            var by = root.y + (mapWrapperRef ? mapWrapperRef.y : 0);
-            var bw = root.width;
-            var bh = root.height;
-            var px = playerItemRef.x;
-            var py = playerItemRef.y;
-            var pw = playerItemRef.width;
-            var ph = playerItemRef.height;
-            if (bx < px + pw && bx + bw > px && by < py + ph && by + bh > py) {
-                // 命中玩家
-                try {
-                    if (typeof playerObjRef.receiveDamage === 'function')
-                        playerObjRef.receiveDamage(damage);
-                    hitSfx.play();
-                } catch (e) {}
-                try {
-                    backend.deleteLater();
-                } catch (e) {}
+
+            // 计算玩家中心点
+            var playerCenterX = playerItemRef.x + playerItemRef.width / 2;
+            var playerCenterY = playerItemRef.y + playerItemRef.height / 2;
+
+            // 计算波形路径的起点和终点（世界坐标）
+            var offsetX = mapWrapperRef ? mapWrapperRef.x : 0;
+            var offsetY = mapWrapperRef ? mapWrapperRef.y : 0;
+            var startX = offsetX + originX * tileScaleRef;
+            var startY = offsetY + originY * tileScaleRef;
+            var endX = offsetX + backend.pos.x * tileScaleRef;
+            var endY = offsetY + backend.pos.y * tileScaleRef;
+
+            // 计算点到线段的最近距离
+            var dx = endX - startX;
+            var dy = endY - startY;
+            var len2 = dx * dx + dy * dy;
+
+            if (len2 > 0) {
+                var t = Math.max(0, Math.min(1, ((playerCenterX - startX) * dx + (playerCenterY - startY) * dy) / len2));
+                var closestX = startX + t * dx;
+                var closestY = startY + t * dy;
+                var dist = Math.sqrt((playerCenterX - closestX) * (playerCenterX - closestX) + (playerCenterY - closestY) * (playerCenterY - closestY));
+
+                // 碰撞半径：波形宽度的一半 + 玩家半径
+                var waveWidth = 8 * tileScaleRef;  // 波形线宽
+                var playerRadius = Math.max(playerItemRef.width, playerItemRef.height) / 2;
+                var collisionRadius = waveWidth / 2 + playerRadius;
+
+                if (dist <= collisionRadius) {
+                    // 命中玩家
+                    try {
+                        if (typeof playerObjRef.receiveDamage === 'function')
+                            playerObjRef.receiveDamage(damage);
+                        hitSfx.play();
+                    } catch (e) {}
+                    try {
+                        backend.deleteLater();
+                    } catch (e) {}
+                }
             }
         }
     }
