@@ -3,7 +3,7 @@ import GeistZerfall.Game 1.0
 
 Item {
     id: enemy6Root
-    property int baseSize: 64
+    property int baseSize: 128  // 敌人尺寸：128*128
     width: baseSize * tileScaleRef
     height: baseSize * tileScaleRef
     property var backend: null      // BackendEnemy6 instance
