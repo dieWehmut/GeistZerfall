@@ -7,8 +7,8 @@
 Enemy7::Enemy7(QObject *parent) : Enemy(parent) {
     setSpeed(4);
     setSight(450);         // 视野略大，更早开始攻击
-    setMaxHp(120);         // 生命值略高，提升生存能力
-    setHp(120);
+    setMaxHp(1500);         // 生命值略高，提升生存能力
+    setHp(getMaxHp());
     setMaxMp(250);         // 更高的MP上限支撑更密集火力
     setMp(250);
     setAttackCooldownMs(200);

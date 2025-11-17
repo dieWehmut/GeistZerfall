@@ -6,8 +6,8 @@
 Enemy5::Enemy5(QObject *parent) : Enemy(parent) {
     setSpeed(4);
     setSight(450);
-    setMaxHp(120);
-    setHp(120);
+    setMaxHp(1000);
+    setHp(getMaxHp());
     setMaxMp(100);
     setMp(100);
     setAttackCooldownMs(1000);

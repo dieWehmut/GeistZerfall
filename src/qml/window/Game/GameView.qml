@@ -194,7 +194,7 @@ Item {
 		for (var r = 0; r < rows; ++r) {
 			for (var c = 0; c < cols; ++c) {
 				var t = tileManager.getTileType(r, c);
-					if (t === 1 || t === 2 || t === 3) {
+					if (t === 1 || t === 2 || t === 3 || t === 4 || t === 5 || t === 6 || t === 7) {
 					var worldX = c * tileSize + tileSize/2;
 					var worldY = r * tileSize + tileSize/2;
 					console.log("Tile type", t, "converted to world", worldX, worldY, "for tileSize", tileSize);
@@ -291,6 +291,130 @@ Item {
 								}
 							} else {
 								console.log("spawnEnemiesFromMap: Enemy3 component not ready:", comp3.status, comp3.errorString ? comp3.errorString() : "");
+							}
+						}
+					} else if (t === 4) {
+						var candidate4 = chooseSpawn(worldX, worldY);
+						if (!candidate4) {
+							console.log("spawnEnemiesFromMap: unable to place Enemy4 near", worldX, worldY, "due to spacing constraints");
+							continue;
+						}
+						var spawnX4 = candidate4.x;
+						var spawnY4 = candidate4.y;
+						if (Math.abs(spawnX4 - worldX) > 0.5 || Math.abs(spawnY4 - worldY) > 0.5) {
+							console.log("spawnEnemiesFromMap: adjusted Enemy4 spawn from", worldX, worldY, "to", spawnX4, spawnY4);
+						}
+						var e4 = Qt.createQmlObject('import GeistZerfall.Game 1.0; BackendEnemy4 {}', gameViewRoot);
+						if (e4) {
+							e4.mapWidth = w; e4.mapHeight = h;
+							e4.pos = Qt.point(spawnX4, spawnY4);
+							if (playerObj && typeof e4.setPlayerTarget === 'function') e4.setPlayerTarget(playerObj);
+							enemyBackends.push(e4);
+							enemyTypes.push("Enemy4");
+							enemySpawnCenters.push({ x: spawnX4, y: spawnY4 });
+							var comp4 = Qt.createComponent("./Entity/Enemy/Enemy4.qml");
+							if (comp4.status === Component.Ready) {
+								console.log("spawnEnemiesFromMap: creating Enemy4 at row", r, "col", c, "world", spawnX4, spawnY4, "tileScale", tileScale);
+								var v4 = comp4.createObject(mapWrapper, { backend: e4, playerObjRef: playerObj, playerItemRef: playerItem, mapWrapperRef: mapWrapper, tileScaleRef: tileScale });
+								if (v4) {
+									enemyVisuals.push(v4);
+									v4.tileScaleRef = Qt.binding(function(){ return tileScale; });
+									v4.playerItemRef = playerItem;
+									v4.updateScreenPos && v4.updateScreenPos();
+								}
+							}
+						}
+					} else if (t === 5) {
+						var candidate5 = chooseSpawn(worldX, worldY);
+						if (!candidate5) {
+							console.log("spawnEnemiesFromMap: unable to place Enemy5 near", worldX, worldY, "due to spacing constraints");
+							continue;
+						}
+						var spawnX5 = candidate5.x;
+						var spawnY5 = candidate5.y;
+						if (Math.abs(spawnX5 - worldX) > 0.5 || Math.abs(spawnY5 - worldY) > 0.5) {
+							console.log("spawnEnemiesFromMap: adjusted Enemy5 spawn from", worldX, worldY, "to", spawnX5, spawnY5);
+						}
+						var e5 = Qt.createQmlObject('import GeistZerfall.Game 1.0; BackendEnemy5 {}', gameViewRoot);
+						if (e5) {
+							e5.mapWidth = w; e5.mapHeight = h;
+							e5.pos = Qt.point(spawnX5, spawnY5);
+							if (playerObj && typeof e5.setPlayerTarget === 'function') e5.setPlayerTarget(playerObj);
+							enemyBackends.push(e5);
+							enemyTypes.push("Enemy5");
+							enemySpawnCenters.push({ x: spawnX5, y: spawnY5 });
+							var comp5 = Qt.createComponent("./Entity/Enemy/Enemy5.qml");
+							if (comp5.status === Component.Ready) {
+								console.log("spawnEnemiesFromMap: creating Enemy5 at row", r, "col", c, "world", spawnX5, spawnY5, "tileScale", tileScale);
+								var v5 = comp5.createObject(mapWrapper, { backend: e5, playerObjRef: playerObj, playerItemRef: playerItem, mapWrapperRef: mapWrapper, tileScaleRef: tileScale });
+								if (v5) {
+									enemyVisuals.push(v5);
+									v5.tileScaleRef = Qt.binding(function(){ return tileScale; });
+									v5.playerItemRef = playerItem;
+									v5.updateScreenPos && v5.updateScreenPos();
+								}
+							}
+						}
+					} else if (t === 6) {
+						var candidate6 = chooseSpawn(worldX, worldY);
+						if (!candidate6) {
+							console.log("spawnEnemiesFromMap: unable to place Enemy6 near", worldX, worldY, "due to spacing constraints");
+							continue;
+						}
+						var spawnX6 = candidate6.x;
+						var spawnY6 = candidate6.y;
+						if (Math.abs(spawnX6 - worldX) > 0.5 || Math.abs(spawnY6 - worldY) > 0.5) {
+							console.log("spawnEnemiesFromMap: adjusted Enemy6 spawn from", worldX, worldY, "to", spawnX6, spawnY6);
+						}
+						var e6 = Qt.createQmlObject('import GeistZerfall.Game 1.0; BackendEnemy6 {}', gameViewRoot);
+						if (e6) {
+							e6.mapWidth = w; e6.mapHeight = h;
+							e6.pos = Qt.point(spawnX6, spawnY6);
+							if (playerObj && typeof e6.setPlayerTarget === 'function') e6.setPlayerTarget(playerObj);
+							enemyBackends.push(e6);
+							enemyTypes.push("Enemy6");
+							enemySpawnCenters.push({ x: spawnX6, y: spawnY6 });
+							var comp6 = Qt.createComponent("./Entity/Enemy/Enemy6.qml");
+							if (comp6.status === Component.Ready) {
+								console.log("spawnEnemiesFromMap: creating Enemy6 at row", r, "col", c, "world", spawnX6, spawnY6, "tileScale", tileScale);
+								var v6 = comp6.createObject(mapWrapper, { backend: e6, playerObjRef: playerObj, playerItemRef: playerItem, mapWrapperRef: mapWrapper, tileScaleRef: tileScale });
+								if (v6) {
+									enemyVisuals.push(v6);
+									v6.tileScaleRef = Qt.binding(function(){ return tileScale; });
+									v6.playerItemRef = playerItem;
+									v6.updateScreenPos && v6.updateScreenPos();
+								}
+							}
+						}
+					} else if (t === 7) {
+						var candidate7 = chooseSpawn(worldX, worldY);
+						if (!candidate7) {
+							console.log("spawnEnemiesFromMap: unable to place Enemy7 near", worldX, worldY, "due to spacing constraints");
+							continue;
+						}
+						var spawnX7 = candidate7.x;
+						var spawnY7 = candidate7.y;
+						if (Math.abs(spawnX7 - worldX) > 0.5 || Math.abs(spawnY7 - worldY) > 0.5) {
+							console.log("spawnEnemiesFromMap: adjusted Enemy7 spawn from", worldX, worldY, "to", spawnX7, spawnY7);
+						}
+						var e7 = Qt.createQmlObject('import GeistZerfall.Game 1.0; BackendEnemy7 {}', gameViewRoot);
+						if (e7) {
+							e7.mapWidth = w; e7.mapHeight = h;
+							e7.pos = Qt.point(spawnX7, spawnY7);
+							if (playerObj && typeof e7.setPlayerTarget === 'function') e7.setPlayerTarget(playerObj);
+							enemyBackends.push(e7);
+							enemyTypes.push("Enemy7");
+							enemySpawnCenters.push({ x: spawnX7, y: spawnY7 });
+							var comp7 = Qt.createComponent("./Entity/Enemy/Enemy7.qml");
+							if (comp7.status === Component.Ready) {
+								console.log("spawnEnemiesFromMap: creating Enemy7 at row", r, "col", c, "world", spawnX7, spawnY7, "tileScale", tileScale);
+								var v7 = comp7.createObject(mapWrapper, { backend: e7, playerObjRef: playerObj, playerItemRef: playerItem, mapWrapperRef: mapWrapper, tileScaleRef: tileScale });
+								if (v7) {
+									enemyVisuals.push(v7);
+									v7.tileScaleRef = Qt.binding(function(){ return tileScale; });
+									v7.playerItemRef = playerItem;
+									v7.updateScreenPos && v7.updateScreenPos();
+								}
 							}
 						}
 					}
@@ -826,6 +950,11 @@ Item {
 									var backendCode = '';
 									if (s.type === 'Enemy1') backendCode = 'import GeistZerfall.Game 1.0; BackendEnemy1 {}';
 									else if (s.type === 'Enemy2') backendCode = 'import GeistZerfall.Game 1.0; BackendEnemy2 {}';
+									else if (s.type === 'Enemy3') backendCode = 'import GeistZerfall.Game 1.0; BackendEnemy3 {}';
+									else if (s.type === 'Enemy4') backendCode = 'import GeistZerfall.Game 1.0; BackendEnemy4 {}';
+									else if (s.type === 'Enemy5') backendCode = 'import GeistZerfall.Game 1.0; BackendEnemy5 {}';
+									else if (s.type === 'Enemy6') backendCode = 'import GeistZerfall.Game 1.0; BackendEnemy6 {}';
+									else if (s.type === 'Enemy7') backendCode = 'import GeistZerfall.Game 1.0; BackendEnemy7 {}';
 									else continue; // unknown type skip
 									var be = Qt.createQmlObject(backendCode, gameViewRoot);
 									if (!be) continue;
@@ -845,6 +974,11 @@ Item {
 									var compPath = '';
 									if (s.type === 'Enemy1') compPath = './Entity/Enemy/Enemy1.qml';
 									else if (s.type === 'Enemy2') compPath = './Entity/Enemy/Enemy2.qml';
+									else if (s.type === 'Enemy3') compPath = './Entity/Enemy/Enemy3.qml';
+									else if (s.type === 'Enemy4') compPath = './Entity/Enemy/Enemy4.qml';
+									else if (s.type === 'Enemy5') compPath = './Entity/Enemy/Enemy5.qml';
+									else if (s.type === 'Enemy6') compPath = './Entity/Enemy/Enemy6.qml';
+									else if (s.type === 'Enemy7') compPath = './Entity/Enemy/Enemy7.qml';
 									if (compPath !== '') {
 										var comp = Qt.createComponent(compPath);
 										if (comp.status === Component.Ready) {
