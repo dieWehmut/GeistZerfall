@@ -12,6 +12,7 @@ Item {
 	property real thickness: 24
 	property int damage: backend && backend.damage !== undefined ? backend.damage : 20
 	property real collisionRadius: baseSize * 0.35
+	property real knockbackDistance: 50
 
 	width: baseSize * tileScaleRef
 	height: baseSize * tileScaleRef
@@ -94,7 +95,9 @@ Item {
 			var dy = ey - by;
 			var combined = enemyRadius + bulletRadius;
 			if ((dx * dx + dy * dy) <= (combined * combined)) {
-				try { if (typeof enemy.receiveDamage === 'function') enemy.receiveDamage(damage); } catch(e){}
+				// 要求：按敌人当前移动方向的相反方向击退
+				// 这里仅传入击退距离，让 C++ 侧用 -dirX/-dirY 自动计算
+				try { if (typeof enemy.receiveDamage === 'function') enemy.receiveDamage(damage, 0, 0, knockbackDistance); } catch(e){}
 				try { if (typeof backend.deleteLater === 'function') backend.deleteLater(); } catch(e){}
 				collisionTimer.stop();
 				return;

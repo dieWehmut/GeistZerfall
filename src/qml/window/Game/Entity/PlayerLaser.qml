@@ -20,7 +20,7 @@ Item {
 	// visual thickness in pixels (can be passed from creator, e.g. 24 * tileScale)
 	property real thickness: 15
 	property var enemiesRef: null
-	property int damage: backend && backend.damage !== undefined ? backend.damage : 50
+	property int damage: backend && backend.damage !== undefined ? backend.damage : 250
 	property var damagedEnemies: []
 	// animated end point (used to gradually extend the beam)
 	property real endX: 0
@@ -171,8 +171,8 @@ Item {
 		if (!backend || !backend.pos || !enemiesRef || enemiesRef.length === 0) return;
 		var sx = (backend.startX !== undefined && backend.startX !== null) ? backend.startX : (backend.pos ? backend.pos.x : 0);
 		var sy = (backend.startY !== undefined && backend.startY !== null) ? backend.startY : (backend.pos ? backend.pos.y : 0);
-		var exWorld = backend.pos ? backend.pos.x : sx;
-		var eyWorld = backend.pos ? backend.pos.y : sy;
+		var ex = (endX !== 0 && endX !== undefined && endX !== null) ? endX : (backend.pos ? backend.pos.x : sx);
+		var ey = (endY !== 0 && endY !== undefined && endY !== null) ? endY : (backend.pos ? backend.pos.y : sy);
 		var scale = tileScaleRef <= 0 ? 1.0 : tileScaleRef;
 		var beamHalfWidth = (thickness / scale) * 0.5;
 		for (var idx = 0; idx < enemiesRef.length; ++idx) {
@@ -181,7 +181,7 @@ Item {
 			if (damagedEnemies.indexOf(enemy) !== -1) continue;
 			var enemyPos = enemy.pos;
 			var enemyRadius = enemy.collisionRadius !== undefined ? enemy.collisionRadius : 28;
-			var distSq = distanceSqToSegment(enemyPos.x, enemyPos.y, sx, sy, exWorld, eyWorld);
+			var distSq = distanceSqToSegment(enemyPos.x, enemyPos.y, sx, sy, ex, ey);
 			var limit = enemyRadius + beamHalfWidth;
 			if (distSq <= limit * limit) {
 				try { if (typeof enemy.receiveDamage === 'function') enemy.receiveDamage(damage); } catch(e){}
@@ -192,7 +192,7 @@ Item {
 
 	Timer {
 		id: laserDamageTimer
-		interval: 80
+		interval: 16
 		repeat: true
 		running: backend && enemiesRef && enemiesRef.length > 0
 		onTriggered: checkLaserCollisions()

@@ -927,7 +927,7 @@ Item {
 				// mark that snipe key is held so other logic (moving) won't change the sight while held
 				gameViewRoot.snipeHeld = true;
 				if (playerObj && typeof playerObj.snipeStart === 'function') playerObj.snipeStart();
-				tileScale = 1.0 / 2.0;
+				tileScale = 1.5 / 2.0;
 				// ensure sightMask radius is updated to match scaled view
 				sightMask.radius = sightMask.baseRadius * tileScale;
 				// pressing space should stop bullet auto-fire if it was active

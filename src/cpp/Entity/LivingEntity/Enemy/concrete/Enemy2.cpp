@@ -6,8 +6,8 @@
 Enemy2::Enemy2(QObject *parent) : Enemy(parent) {
 	setSpeed(6);
 	setSight(340);
-	setMaxHp(120);
-	setHp(120);
+	setMaxHp(1000);
+	setHp(getMaxHp());
 	setMaxMp(100);
 	setMp(100);
 	setAttackCooldownMs(1800); // 激光稍慢

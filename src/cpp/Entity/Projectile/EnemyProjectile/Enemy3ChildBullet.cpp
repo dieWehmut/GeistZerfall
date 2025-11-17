@@ -3,7 +3,7 @@
 #include <cmath>
 
 Enemy3ChildBullet::Enemy3ChildBullet(QObject *parent) : Projectile(parent) {
-  setMaxDist(600);
+  setMaxDist(1000);
   setTraveledDist(0);
   updateTimer = new QTimer(this);
   updateTimer->setInterval(16);

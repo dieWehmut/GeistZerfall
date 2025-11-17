@@ -3,7 +3,7 @@ import QtMultimedia 6.5
 
 Item {
     id: root
-    property int baseSize: 48
+    property int baseSize: 96
     width: baseSize * tileScaleRef
     height: baseSize * tileScaleRef
     property var backend: null
