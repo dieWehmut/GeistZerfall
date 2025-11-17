@@ -2,7 +2,7 @@ import QtQuick
 
 Item {
 	id: playerRoot
-	width: 64; height: 64 
+	width: 96; height: 96
 	property var playerObj: null
 
 	onPlayerObjChanged: {
@@ -169,16 +169,6 @@ Item {
 			}
 		}
 
-		// Debug HP text (shows current hp/maxHp)
-		Text {
-			id: hpDebugText
-			anchors.right: parent.right
-			y: 0
-			color: "white"
-			font.pixelSize: 10
-			text: playerObj ? (playerObj.hp + "/" + playerObj.maxHp) : "hp: ?"
-			visible: true
-		}
 
 		Connections {
 			id: playerConnections
@@ -195,8 +185,8 @@ Item {
 	}
 
 	// CD properties and timers (client-side visual & guard)
-	property int bulletCd: 500
-	property int bulletCdMax: 500
+	property int bulletCd: 3000
+	property int bulletCdMax: 3000
 	property int laserCd: 2000
 	property int laserCdMax: 2000
 	property int bulletRechargeStep: 10 // amount to add per tick

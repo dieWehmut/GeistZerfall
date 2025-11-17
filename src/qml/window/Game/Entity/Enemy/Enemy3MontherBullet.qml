@@ -3,7 +3,7 @@ import QtMultimedia 6.5
 
 Item {
 	id: root
-	property int baseSize: 96
+	property int baseSize: 128
 	width: baseSize * tileScaleRef
 	height: baseSize * tileScaleRef
 	property var backend: null
@@ -11,7 +11,7 @@ Item {
 	property var playerObjRef: null
 	property var mapWrapperRef: null
 	property real tileScaleRef: 1.0
-	property int damage: 15
+	property int damage: 100
 	z: 130
 
 	Image {

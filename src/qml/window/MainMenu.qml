@@ -99,7 +99,7 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             opacity: 0
             font.pixelSize: 64
-            font.weight: Font.Weight.Bold
+            font.bold: true
             color: "white"
             z: 10
         }

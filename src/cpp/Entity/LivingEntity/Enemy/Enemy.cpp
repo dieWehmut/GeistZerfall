@@ -85,8 +85,37 @@ void Enemy::chasePlayerStep() {
 	move(int(std::round(dx)), int(std::round(dy)));
 }
 
-void Enemy::receiveDamage(int amount) {
+void Enemy::receiveDamage(int amount, double knockbackDirX, double knockbackDirY, double knockbackDistance) {
 	if (!alive) return;
 	setHp(hp - qMax(0, amount));
+	// 击退效果（当提供距离时生效）
+	if (knockbackDistance > 0) {
+		// 若未提供方向，使用“当前移动方向的反方向”
+		double vx = knockbackDirX;
+		double vy = knockbackDirY;
+		if (vx == 0.0 && vy == 0.0) {
+			vx = -static_cast<double>(dirX);
+			vy = -static_cast<double>(dirY);
+		}
+		double len = std::sqrt(vx * vx + vy * vy);
+		if (len > 0.0) {
+			double nx = vx / len;
+			double ny = vy / len;
+			QPointF p = getPos();
+			QPointF np(p.x() + nx * knockbackDistance, p.y() + ny * knockbackDistance);
+			// 边界裁剪
+			double clampedX = np.x();
+			double clampedY = np.y();
+			if (getMapWidth() > 0) {
+				if (clampedX < 0) clampedX = 0;
+				if (clampedX > getMapWidth()) clampedX = getMapWidth();
+			}
+			if (getMapHeight() > 0) {
+				if (clampedY < 0) clampedY = 0;
+				if (clampedY > getMapHeight()) clampedY = getMapHeight();
+			}
+			setPos(QPointF(clampedX, clampedY));
+		}
+	}
 }
 

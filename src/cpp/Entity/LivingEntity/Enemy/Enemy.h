@@ -55,7 +55,7 @@ public:
 	Q_INVOKABLE void tryAttack();
 
 	// 受击（被玩家或其他来源伤害）。Enemy 之间不会互相伤害，调用前应在外部过滤。
-	Q_INVOKABLE void receiveDamage(int amount);
+	Q_INVOKABLE void receiveDamage(int amount, double knockbackDirX = 0, double knockbackDirY = 0, double knockbackDistance = 0);
 
 signals:
 	void hpChanged();

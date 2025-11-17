@@ -12,7 +12,7 @@ Item {
     property var playerObjRef: null
     property var mapWrapperRef: null
     property real tileScaleRef: 1.0
-    property int damage: 20
+    property int damage: 200
     z: 140
 
     // Red beam visual via Canvas

@@ -3,7 +3,7 @@ import QtMultimedia 6.5
 
 Item {
 	id: root
-	property int baseSize: 64
+	property int baseSize: 96
 	width: baseSize * tileScaleRef
 	height: baseSize * tileScaleRef
 	property var backend: null
@@ -11,7 +11,7 @@ Item {
 	property var playerObjRef: null
 	property var mapWrapperRef: null
 	property real tileScaleRef: 1.0
-	property int damage: 10
+	property int damage: 300
 	z: 130
 
 	// 16 种子弹图，优先使用后端 spriteIndex；否则在前端随机一个
@@ -53,15 +53,18 @@ Item {
 		interval: 16; running: true; repeat: true
 		onTriggered: {
 			if (!backend || !playerItemRef || !playerObjRef) return;
-			var bx = root.x + (mapWrapperRef ? mapWrapperRef.x : 0);
-			var by = root.y + (mapWrapperRef ? mapWrapperRef.y : 0);
-			var bw = root.width;
-			var bh = root.height;
-			var px = playerItemRef.x;
-			var py = playerItemRef.y;
-			var pw = playerItemRef.width;
-			var ph = playerItemRef.height;
-			if (bx < px + pw && bx + bw > px && by < py + ph && by + bh > py) {
+			var bulletRect = root.mapRectToItem ? root.mapRectToItem(null, Qt.rect(0, 0, root.width, root.height))
+									 : Qt.rect(root.x + (mapWrapperRef ? mapWrapperRef.x : 0),
+										  root.y + (mapWrapperRef ? mapWrapperRef.y : 0),
+										  root.width,
+										  root.height);
+			var playerRect = playerItemRef.mapRectToItem ? playerItemRef.mapRectToItem(null, Qt.rect(0, 0, playerItemRef.width, playerItemRef.height))
+									   : Qt.rect(playerItemRef.x, playerItemRef.y, playerItemRef.width, playerItemRef.height);
+			var intersects = bulletRect.x < playerRect.x + playerRect.width &&
+							 bulletRect.x + bulletRect.width > playerRect.x &&
+							 bulletRect.y < playerRect.y + playerRect.height &&
+							 bulletRect.y + bulletRect.height > playerRect.y;
+			if (intersects) {
 				try {
 					if (typeof playerObjRef.receiveDamage === 'function') playerObjRef.receiveDamage(damage);
 					hitSfx.play();

@@ -7,8 +7,8 @@
 Enemy3::Enemy3(QObject *parent) : Enemy(parent) {
   setSpeed(5);
   setSight(420);
-  setMaxHp(130);
-  setHp(130);
+  setMaxHp(1500);
+  setHp(getMaxHp());
   setMaxMp(100);
   setMp(100);
   setAttackCooldownMs(3000); // 母弹攻击冷却3秒
