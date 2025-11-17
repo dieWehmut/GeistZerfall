@@ -1,5 +1,5 @@
 #include "Enemy6.h"
-#include "Entity/Projectile/EnemyProjectile/Enemy6Bullet.h"
+#include "Entity/Projectile/EnemyProjectile/Enemy6Laser.h"
 #include <QVariant>
 #include <QtMath>
 
@@ -38,11 +38,11 @@ int Enemy6::performAttack() {
   }
 
   // 向玩家方向发射一个波形光波
-  auto *b = new Enemy6Bullet(this->parent());
-  b->setStartPos(p);
-  b->setDirection(dx, dy);
-  b->setProperty("visualType", QVariant("bullet"));
-  emit enemyProjectileCreated(b);
+  auto *laser = new Enemy6Laser(this->parent());
+  laser->setStartPos(p);
+  laser->setDirection(dx, dy);
+  laser->setProperty("visualType", QVariant("laser"));
+  emit enemyLaserCreated(laser);
 
   return cost;
 }
