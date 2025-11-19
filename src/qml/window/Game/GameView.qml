@@ -115,6 +115,13 @@ Item {
 		enemyBackends = [];
 		enemySpawnCenters = [];
 		enemyTypes = [];
+		if (mapWrapper && mapWrapper.enemyProjectileVisuals) {
+			for (var k = mapWrapper.enemyProjectileVisuals.length - 1; k >= 0; --k) {
+				var proj = mapWrapper.enemyProjectileVisuals[k];
+				try { if (proj && typeof proj.destroy === 'function') proj.destroy(); } catch(e){}
+			}
+			mapWrapper.enemyProjectileVisuals = [];
+		}
 	}
 
 	// Return a serializable snapshot of current backend enemies for saving
@@ -183,11 +190,32 @@ Item {
 			}
 			return true;
 		}
+
+		// chooseSpawn: radial sampling with multiple radii and random angles
 		function chooseSpawn(baseX, baseY) {
-			for (var o = 0; o < spawnOffsets.length; ++o) {
-				var offset = spawnOffsets[o];
-				var candidate = clampToMap(Qt.point(baseX + offset.x, baseY + offset.y));
-				if (isFarEnough(candidate)) return candidate;
+			// fast check at exact tile center
+			var center = clampToMap(Qt.point(baseX, baseY));
+			if (isFarEnough(center)) return center;
+
+			var maxRings = 6;
+			var attemptsPerRing = 12;
+			for (var ring = 1; ring <= maxRings; ++ring) {
+				var radius = minSeparation * ring;
+				for (var a = 0; a < attemptsPerRing; ++a) {
+					var angle = (2 * Math.PI) * (a / attemptsPerRing) + (Math.random() * 0.4 - 0.2);
+					var cand = Qt.point(baseX + Math.cos(angle) * radius, baseY + Math.sin(angle) * radius);
+					cand = clampToMap(cand);
+					if (isFarEnough(cand)) return cand;
+				}
+			}
+			// last resort: try small random jitter around tile until timeout
+			var randAttempts = 30;
+			for (var i = 0; i < randAttempts; ++i) {
+				var jitter = minSeparation * (0.5 + Math.random() * 2.0);
+				var ang = Math.random() * 2 * Math.PI;
+				var c = Qt.point(baseX + Math.cos(ang) * jitter, baseY + Math.sin(ang) * jitter);
+				c = clampToMap(c);
+				if (isFarEnough(c)) return c;
 			}
 			return null;
 		}
@@ -421,6 +449,53 @@ Item {
 				}
 			}
 		}
+		// Post-spawn: ensure minimum separation between spawned enemies (nudge pairs apart)
+		try {
+			for (var i = 0; i < enemyBackends.length; ++i) {
+				for (var j = i + 1; j < enemyBackends.length; ++j) {
+					var a = enemyBackends[i];
+					var b = enemyBackends[j];
+					if (!a || !b) continue;
+					var ax = (a.pos ? a.pos.x : (enemySpawnCenters[i] ? enemySpawnCenters[i].x : 0));
+					var ay = (a.pos ? a.pos.y : (enemySpawnCenters[i] ? enemySpawnCenters[i].y : 0));
+					var bx = (b.pos ? b.pos.x : (enemySpawnCenters[j] ? enemySpawnCenters[j].x : 0));
+					var by = (b.pos ? b.pos.y : (enemySpawnCenters[j] ? enemySpawnCenters[j].y : 0));
+					var dx = bx - ax;
+					var dy = by - ay;
+					var d2 = dx * dx + dy * dy;
+					if (d2 === 0) {
+						// perfectly overlapping — pick a small random direction to separate
+						var ang = Math.random() * Math.PI * 2;
+						dx = Math.cos(ang); dy = Math.sin(ang); d2 = 1.0;
+					}
+					if (d2 < minSeparationSq) {
+						var d = Math.sqrt(d2);
+						var need = Math.max(0, minSeparation - d);
+						var nx = dx / d;
+						var ny = dy / d;
+						var shift = need * 0.5;
+						var ax2 = ax - nx * shift;
+						var ay2 = ay - ny * shift;
+						var bx2 = bx + nx * shift;
+						var by2 = by + ny * shift;
+						// clamp to map bounds
+						ax2 = Math.max(0, Math.min(w - 1, ax2));
+						ay2 = Math.max(0, Math.min(h - 1, ay2));
+						bx2 = Math.max(0, Math.min(w - 1, bx2));
+						by2 = Math.max(0, Math.min(h - 1, by2));
+						try { a.pos = Qt.point(ax2, ay2); } catch(e) {}
+						try { b.pos = Qt.point(bx2, by2); } catch(e) {}
+						if (enemySpawnCenters[i]) enemySpawnCenters[i].x = ax2, enemySpawnCenters[i].y = ay2;
+						if (enemySpawnCenters[j]) enemySpawnCenters[j].x = bx2, enemySpawnCenters[j].y = by2;
+						// update visuals to reflect new backend positions
+						try { enemyVisuals[i] && enemyVisuals[i].updateScreenPos && enemyVisuals[i].updateScreenPos(); } catch(e) {}
+						try { enemyVisuals[j] && enemyVisuals[j].updateScreenPos && enemyVisuals[j].updateScreenPos(); } catch(e) {}
+					}
+				}
+			}
+		} catch (e) {
+			console.log('post-spawn separation pass failed', e);
+		}
 		// If there is saved enemy data, reconcile saved positions/states with the freshly created backends.
 		if (typeof SaveLoadManager !== 'undefined' && SaveLoadManager) {
 			try {
@@ -606,6 +681,16 @@ Item {
 		clip: true
 		Item {
 			id: mapWrapper
+			property var enemyProjectileVisuals: []
+			function registerEnemyProjectile(obj) {
+				if (!obj || enemyProjectileVisuals.indexOf(obj) !== -1) return;
+				enemyProjectileVisuals.push(obj);
+			}
+			function unregisterEnemyProjectile(obj) {
+				if (!obj) return;
+				var idx = enemyProjectileVisuals.indexOf(obj);
+				if (idx !== -1) enemyProjectileVisuals.splice(idx, 1);
+			}
 			// 明确设置宽高，避免在缩放或计算偏移时出现未定义边界导致的裁剪/空白
 			width: mapPixelWidth
 			height: mapPixelHeight

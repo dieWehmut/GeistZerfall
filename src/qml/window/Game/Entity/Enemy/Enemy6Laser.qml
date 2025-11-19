@@ -13,6 +13,7 @@ Item {
     property real tileScaleRef: 1.0
     property int damage: 10
     z: 130
+    visible: backend !== null
 
     // 波形参数
     property double waveFrequency: backend ? backend.waveFrequency : 2.0
@@ -61,6 +62,9 @@ Item {
             var dx = canvasEndX - canvasStartX;
             var dy = canvasEndY - canvasStartY;
             var dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist <= 0.5) {
+                return;
+            }
             var perpX = -dirY;  // 垂直向量
             var perpY = dirX;
 
@@ -89,10 +93,15 @@ Item {
                 var x = canvasStartX + dx * t;
                 var y = canvasStartY + dy * t;
 
+                var alongDist = dist * t;
+
                 // 计算波形偏移（垂直于移动方向）
                 // 波形相位：基于沿路径的距离，形成传播的波形
                 // 使用波长来计算相位（波长 = 速度 / 频率）
-                var wavelength = 260.0 / waveFrequency;
+                var freq = waveFrequency;
+                if (Math.abs(freq) < 0.0001)
+                    freq = 0.0001;
+                var wavelength = 260.0 / freq;
                 var wavePhase = 2.0 * Math.PI * (alongDist / wavelength - waveTime * waveFrequency);
                 var waveOffset = waveAmplitude * Math.sin(wavePhase) * tileScaleRef;
 
@@ -131,7 +140,7 @@ Item {
     function updateScreenPos() {
         if (!backend)
             return;
-        // 计算起点位置（第一次调用时记录）
+        // 计算起点位置（世界坐标）
         if (!originInitialized) {
             originX = backend.pos.x;
             originY = backend.pos.y;
@@ -148,6 +157,7 @@ Item {
     onBackendChanged: {
         if (!backend)
             return;
+        originInitialized = false;
         try {
             backend.posChanged.connect(updateScreenPos);
         } catch (e) {}
@@ -187,6 +197,8 @@ Item {
     onDirXChanged: waveCanvas.requestPaint()
     onDirYChanged: waveCanvas.requestPaint()
     onTraveledDistChanged: waveCanvas.requestPaint()
+    onWaveFrequencyChanged: waveCanvas.requestPaint()
+    onWaveAmplitudeChanged: waveCanvas.requestPaint()
 
     // 碰撞检测：检测玩家是否与波形路径相交
     Timer {
