@@ -12,6 +12,11 @@ Item {
     property var mapWrapperRef: null
     property real tileScaleRef: 1.0
     z: 120
+    transformOrigin: Item.Center
+    property real pulsateScale: 1.0
+    property real impactScale: 1.0
+    property int pulsateDuration: 1600
+    scale: pulsateScale * impactScale
 
     Image {
         id: sprite
@@ -72,6 +77,17 @@ Item {
         enemy5Root.y = backend.pos.y * tileScaleRef - enemy5Root.height / 2;
     }
 
+    function syncForcedRevealRegistration() {
+        if (!mapWrapperRef) return;
+        if (backend && backend.forcedReveal) {
+            if (typeof mapWrapperRef.registerRevealedEnemy === 'function') {
+                mapWrapperRef.registerRevealedEnemy(enemy5Root);
+            }
+        } else if (typeof mapWrapperRef.unregisterRevealedEnemy === 'function') {
+            mapWrapperRef.unregisterRevealedEnemy(enemy5Root);
+        }
+    }
+
     onTileScaleRefChanged: updateScreenPos()
 
     onBackendChanged: {
@@ -99,12 +115,13 @@ Item {
             });
         } catch (e) {}
         updateScreenPos();
+        syncForcedRevealRegistration();
     }
 
     SequentialAnimation {
         id: attackAnim
-        PropertyAnimation { target: enemy5Root; property: "scale"; to: 1.08; duration: 100 }
-        PropertyAnimation { target: enemy5Root; property: "scale"; to: 1.0; duration: 100 }
+        PropertyAnimation { target: enemy5Root; property: "impactScale"; to: 1.08; duration: 100 }
+        PropertyAnimation { target: enemy5Root; property: "impactScale"; to: 1.0; duration: 100 }
     }
 
     SequentialAnimation {
@@ -112,6 +129,33 @@ Item {
         PropertyAnimation { target: enemy5Root; property: "opacity"; to: 0; duration: 420 }
         onStopped: enemy5Root.destroy()
     }
+
+    SequentialAnimation {
+        id: pulsateAnim
+        loops: Animation.Infinite
+        running: false
+        NumberAnimation { target: enemy5Root; property: "pulsateScale"; from: 1.0; to: 2.0; duration: pulsateDuration; easing.type: Easing.InOutSine }
+        NumberAnimation { target: enemy5Root; property: "pulsateScale"; from: 2.0; to: 1.0; duration: pulsateDuration; easing.type: Easing.InOutSine }
+    }
+
+	Timer { id: pulsateStarter; interval: 0; repeat: false; onTriggered: pulsateAnim.start() }
+
+	Component.onCompleted: {
+		try {
+			var d = 1200 + Math.floor(Math.random() * 1000);
+			pulsateDuration = d;
+			var offset = Math.floor(Math.random() * pulsateDuration);
+			pulsateStarter.interval = offset;
+			pulsateStarter.start();
+		} catch(e) {}
+		syncForcedRevealRegistration();
+	}
+
+	Component.onDestruction: {
+		if (mapWrapperRef && typeof mapWrapperRef.unregisterRevealedEnemy === 'function') {
+			mapWrapperRef.unregisterRevealedEnemy(enemy5Root);
+		}
+	}
 
     Connections {
         target: backend
@@ -121,5 +165,6 @@ Item {
                 dieAnim.restart();
             }
         }
+        onForcedRevealChanged: syncForcedRevealRegistration()
     }
 }

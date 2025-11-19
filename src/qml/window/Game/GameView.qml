@@ -122,6 +122,11 @@ Item {
 			}
 			mapWrapper.enemyProjectileVisuals = [];
 		}
+		if (mapWrapper && mapWrapper.revealedEnemyVisuals) {
+			mapWrapper.revealedEnemyVisuals = [];
+			if (sightMask) sightMask.requestPaint();
+			if (revealRepaintTimer) revealRepaintTimer.running = false;
+		}
 	}
 
 	// Return a serializable snapshot of current backend enemies for saving
@@ -682,6 +687,7 @@ Item {
 		Item {
 			id: mapWrapper
 			property var enemyProjectileVisuals: []
+			property var revealedEnemyVisuals: []
 			function registerEnemyProjectile(obj) {
 				if (!obj || enemyProjectileVisuals.indexOf(obj) !== -1) return;
 				enemyProjectileVisuals.push(obj);
@@ -690,6 +696,19 @@ Item {
 				if (!obj) return;
 				var idx = enemyProjectileVisuals.indexOf(obj);
 				if (idx !== -1) enemyProjectileVisuals.splice(idx, 1);
+			}
+			function registerRevealedEnemy(obj) {
+				if (!obj || revealedEnemyVisuals.indexOf(obj) !== -1) return;
+				revealedEnemyVisuals.push(obj);
+				if (revealRepaintTimer) revealRepaintTimer.running = true;
+				if (sightMask) sightMask.requestPaint();
+			}
+			function unregisterRevealedEnemy(obj) {
+				if (!obj) return;
+				var idx = revealedEnemyVisuals.indexOf(obj);
+				if (idx !== -1) revealedEnemyVisuals.splice(idx, 1);
+				if (revealedEnemyVisuals.length === 0 && revealRepaintTimer) revealRepaintTimer.running = false;
+				if (sightMask) sightMask.requestPaint();
 			}
 			// 明确设置宽高，避免在缩放或计算偏移时出现未定义边界导致的裁剪/空白
 			width: mapPixelWidth
@@ -1269,12 +1288,34 @@ Item {
 			ctx.beginPath();
 			ctx.arc(cx, cy, radius, 0, Math.PI * 2);
 			ctx.fill();
+			if (mapWrapper && mapWrapper.revealedEnemyVisuals && mapWrapper.revealedEnemyVisuals.length > 0) {
+				for (var idx = mapWrapper.revealedEnemyVisuals.length - 1; idx >= 0; --idx) {
+					var enemy = mapWrapper.revealedEnemyVisuals[idx];
+					if (!enemy || !enemy.visible) continue;
+					var centerX = mapWrapper.x + enemy.x + enemy.width / 2;
+					var centerY = mapWrapper.y + enemy.y + enemy.height / 2;
+					var scaleFactor = (enemy.scale !== undefined && enemy.scale > 0) ? enemy.scale : 1.0;
+					var radiusHint = Math.max(enemy.width, enemy.height) * scaleFactor * 0.7;
+					var revealRadius = Math.max(radiusHint, 60);
+					ctx.beginPath();
+					ctx.arc(centerX, centerY, revealRadius, 0, Math.PI * 2);
+					ctx.fill();
+				}
+			}
 			// 恢复默认合并方式
 			ctx.globalCompositeOperation = 'source-over';
 		}
 	}
 
-	// 监听 playerItem 的 moving 状态，平滑调整视野半径到 baseRadius/2 或 baseRadius
+		Timer {
+			id: revealRepaintTimer
+			interval: 120
+			repeat: true
+			running: false
+			onTriggered: sightMask.requestPaint()
+		}
+
+		// 监听 playerItem 的 moving 状态，平滑调整视野半径到 baseRadius/2 或 baseRadius
     	Connections {
     		target: playerItem
     		onMovingChanged: {

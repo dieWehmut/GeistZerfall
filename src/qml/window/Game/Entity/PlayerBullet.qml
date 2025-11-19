@@ -17,6 +17,9 @@ Item {
 	width: baseSize * tileScaleRef
 	height: baseSize * tileScaleRef
 	transformOrigin: Item.Center
+	property real pulsateScale: 1.0
+	property int pulsateDuration: 1200
+	scale: pulsateScale
 
 	function updateScreenPos() {
 		if (!backend || !backend.pos) return;
@@ -154,5 +157,23 @@ Item {
 		duration: 360
 		loops: Animation.Infinite
 		running: true
+	}
+
+	Component.onCompleted: {
+		// assign a pseudo-unique duration different from enemy pulsate (1600)
+		try {
+			var d = 1000 + Math.floor(Math.random() * 800);
+			if (d === 1600) d += 137;
+			pulsateDuration = d;
+			if (pulseAnimBullets.running) pulseAnimBullets.stop();
+			pulseAnimBullets.start();
+		} catch(e) {}
+	}
+
+	SequentialAnimation {
+		id: pulseAnimBullets
+		loops: Animation.Infinite
+		NumberAnimation { target: bulletRoot; property: "pulsateScale"; from: 1.0; to: 1.5; duration: pulsateDuration; easing.type: Easing.InOutSine }
+		NumberAnimation { target: bulletRoot; property: "pulsateScale"; from: 1.5; to: 1.0; duration: pulsateDuration; easing.type: Easing.InOutSine }
 	}
 }
