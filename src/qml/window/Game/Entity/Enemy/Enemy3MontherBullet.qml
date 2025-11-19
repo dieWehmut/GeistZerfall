@@ -6,12 +6,14 @@ Item {
 	property int baseSize: 128
 	width: baseSize * tileScaleRef
 	height: baseSize * tileScaleRef
+	transformOrigin: Item.Center
 	property var backend: null
 	property var playerItemRef: null
 	property var playerObjRef: null
 	property var mapWrapperRef: null
 	property real tileScaleRef: 1.0
 	property int damage: 100
+	property real collisionRadius: baseSize * 0.35
 	z: 130
 
 	Image {
@@ -71,6 +73,28 @@ Item {
 				try { if (typeof playerObjRef.receiveDamage === 'function') playerObjRef.receiveDamage(damage); hitSfx.play(); } catch(e){}
 				try { backend.deleteLater(); } catch(e){}
 			}
+		}
+	}
+
+	NumberAnimation {
+		target: root
+		property: "rotation"
+		from: 0
+		to: 360
+		duration: 700
+		loops: Animation.Infinite
+		running: true
+	}
+
+	Component.onCompleted: {
+		if (mapWrapperRef && typeof mapWrapperRef.registerEnemyProjectile === 'function') {
+			mapWrapperRef.registerEnemyProjectile(root);
+		}
+	}
+
+	Component.onDestruction: {
+		if (mapWrapperRef && typeof mapWrapperRef.unregisterEnemyProjectile === 'function') {
+			mapWrapperRef.unregisterEnemyProjectile(root);
 		}
 	}
 }
