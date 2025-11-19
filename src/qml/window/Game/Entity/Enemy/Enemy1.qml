@@ -12,6 +12,11 @@ Item {
 	property var mapWrapperRef: null
 	property real tileScaleRef: 1.0
 	z: 120
+	transformOrigin: Item.Center
+	property real pulsateScale: 1.0
+	property real impactScale: 1.0
+	property int pulsateDuration: 1600
+	scale: pulsateScale * impactScale
 
 	Image {
 		id: sprite
@@ -71,6 +76,17 @@ Item {
 		enemy1Root.y = backend.pos.y * tileScaleRef - enemy1Root.height/2;
 	}
 
+	function syncForcedRevealRegistration() {
+		if (!mapWrapperRef) return;
+		if (backend && backend.forcedReveal) {
+			if (typeof mapWrapperRef.registerRevealedEnemy === 'function') {
+				mapWrapperRef.registerRevealedEnemy(enemy1Root);
+			}
+		} else if (typeof mapWrapperRef.unregisterRevealedEnemy === 'function') {
+			mapWrapperRef.unregisterRevealedEnemy(enemy1Root);
+		}
+	}
+
 	onTileScaleRefChanged: updateScreenPos()
 
 	onBackendChanged: {
@@ -95,11 +111,39 @@ Item {
 			});
 		} catch(e){}
 		updateScreenPos();
+		syncForcedRevealRegistration();
 	}
 
 	// When enemy dies, remove visual
+	SequentialAnimation {
+		id: pulsateAnim
+		loops: Animation.Infinite
+		running: false
+		NumberAnimation { target: enemy1Root; property: "pulsateScale"; from: 1.0; to: 2.0; duration: pulsateDuration; easing.type: Easing.InOutSine }
+		NumberAnimation { target: enemy1Root; property: "pulsateScale"; from: 2.0; to: 1.0; duration: pulsateDuration; easing.type: Easing.InOutSine }
+	}
+
+	Timer { id: pulsateStarter; interval: 0; repeat: false; onTriggered: pulsateAnim.start() }
+
+	Component.onCompleted: {
+		try {
+			var d = 1200 + Math.floor(Math.random() * 1000); // 1200..2199ms
+			pulsateDuration = d;
+			var offset = Math.floor(Math.random() * pulsateDuration);
+			pulsateStarter.interval = offset;
+			pulsateStarter.start();
+		} catch(e) {}
+		syncForcedRevealRegistration();
+	}
+
+	Component.onDestruction: {
+		if (mapWrapperRef && typeof mapWrapperRef.unregisterRevealedEnemy === 'function') {
+			mapWrapperRef.unregisterRevealedEnemy(enemy1Root);
+		}
+	}
 	Connections {
 		target: backend
 		onAliveChanged: { if (backend && !backend.alive) { try { enemy1Root.destroy(); } catch(e){} } }
+		onForcedRevealChanged: syncForcedRevealRegistration()
 	}
 }

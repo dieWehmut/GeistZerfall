@@ -7,6 +7,9 @@ Item {
     width: baseSize * tileScaleRef
     height: baseSize * tileScaleRef
     transformOrigin: Item.Center
+    property real pulsateScale: 1.0
+    property int pulsateDuration: 1200
+    scale: pulsateScale
     property var backend: null
     property var playerItemRef: null
     property var playerObjRef: null
@@ -81,10 +84,22 @@ Item {
         running: true
     }
 
+    SequentialAnimation { id: pulsateAnimBul; loops: Animation.Infinite
+        NumberAnimation { target: root; property: "pulsateScale"; from: 1.0; to: 1.5; duration: pulsateDuration; easing.type: Easing.InOutSine }
+        NumberAnimation { target: root; property: "pulsateScale"; from: 1.5; to: 1.0; duration: pulsateDuration; easing.type: Easing.InOutSine }
+    }
+
     Component.onCompleted: {
         if (mapWrapperRef && typeof mapWrapperRef.registerEnemyProjectile === 'function') {
             mapWrapperRef.registerEnemyProjectile(root);
         }
+        try {
+            var d = 1000 + Math.floor(Math.random() * 800);
+            if (d === 1600) d += 73;
+            pulsateDuration = d;
+            if (pulsateAnimBul.running) pulsateAnimBul.stop();
+            pulsateAnimBul.start();
+        } catch(e) {}
     }
 
     Component.onDestruction: {

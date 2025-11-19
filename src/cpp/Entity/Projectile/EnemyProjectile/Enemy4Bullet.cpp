@@ -2,7 +2,7 @@
 #include <QtMath>
 
 Enemy4Bullet::Enemy4Bullet(QObject *parent) : Projectile(parent) {
-  setMaxDist(700);
+  setMaxDist(1000);
   setTraveledDist(0);
   updateTimer = new QTimer(this);
   updateTimer->setInterval(16);
@@ -25,7 +25,7 @@ void Enemy4Bullet::setDirection(double dx, double dy) {
 
 void Enemy4Bullet::updateStep() {
   // 每 tick 移动 velocity * dt
-  const double dt = 0.016; // 假定 ~60FPS
+  const double dt = 0.016; 
   QPointF p = getPos();
   QPointF np(p.x() + dirx * velocity * dt, p.y() + diry * velocity * dt);
   setPos(np);

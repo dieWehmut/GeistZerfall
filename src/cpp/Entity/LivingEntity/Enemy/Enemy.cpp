@@ -36,6 +36,12 @@ Enemy::Enemy(QObject *parent) : Entity(parent) {
 		}
 	});
 	mpRegenTimer->start();
+
+	forcedRevealTimer = new QTimer(this);
+	forcedRevealTimer->setSingleShot(true);
+	connect(forcedRevealTimer, &QTimer::timeout, this, [this]() {
+		setForcedReveal(false);
+	});
 }
 
 Enemy::~Enemy() {
@@ -88,6 +94,7 @@ void Enemy::chasePlayerStep() {
 void Enemy::receiveDamage(int amount, double knockbackDirX, double knockbackDirY, double knockbackDistance) {
 	if (!alive) return;
 	setHp(hp - qMax(0, amount));
+	triggerForcedReveal(3000);
 	// 击退效果（当提供距离时生效）
 	if (knockbackDistance > 0) {
 		// 若未提供方向，使用“当前移动方向的反方向”
@@ -116,6 +123,24 @@ void Enemy::receiveDamage(int amount, double knockbackDirX, double knockbackDirY
 			}
 			setPos(QPointF(clampedX, clampedY));
 		}
+	}
+}
+
+void Enemy::setForcedReveal(bool value) {
+	if (forcedReveal == value) return;
+	forcedReveal = value;
+	emit forcedRevealChanged();
+}
+
+void Enemy::triggerForcedReveal(int durationMs) {
+	if (durationMs <= 0) {
+		setForcedReveal(false);
+		if (forcedRevealTimer) forcedRevealTimer->stop();
+		return;
+	}
+	setForcedReveal(true);
+	if (forcedRevealTimer) {
+		forcedRevealTimer->start(durationMs);
 	}
 }
 

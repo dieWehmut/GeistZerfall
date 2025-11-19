@@ -13,6 +13,11 @@ Item {
     property var mapWrapperRef: null
     property real tileScaleRef: 1.0
     z: 120
+    transformOrigin: Item.Center
+    property real pulsateScale: 1.0
+    property real impactScale: 1.0
+    property int pulsateDuration: 1600
+    scale: pulsateScale * impactScale
 
     Image {
         id: sprite
@@ -62,6 +67,17 @@ Item {
         enemy7Root.x = backend.pos.x * tileScaleRef - enemy7Root.width / 2;
         enemy7Root.y = backend.pos.y * tileScaleRef - enemy7Root.height / 2;
     }
+
+    function syncForcedRevealRegistration() {
+        if (!mapWrapperRef) return;
+        if (backend && backend.forcedReveal) {
+            if (typeof mapWrapperRef.registerRevealedEnemy === 'function') {
+                mapWrapperRef.registerRevealedEnemy(enemy7Root);
+            }
+        } else if (typeof mapWrapperRef.unregisterRevealedEnemy === 'function') {
+            mapWrapperRef.unregisterRevealedEnemy(enemy7Root);
+        }
+    }
     onTileScaleRefChanged: updateScreenPos()
 
     // 初始化与信号绑定
@@ -80,11 +96,40 @@ Item {
             }
         }); } catch(e){}
         updateScreenPos();
+        syncForcedRevealRegistration();
     }
 
     // 死亡销毁
     Connections {
         target: backend
-        onAliveChanged: { if (backend && !backend.alive) { try { enemy7Root.destroy(); } catch(e){} } }
+		onAliveChanged: { if (backend && !backend.alive) { try { enemy7Root.destroy(); } catch(e){} } }
+		onForcedRevealChanged: syncForcedRevealRegistration()
+    }
+
+    SequentialAnimation {
+        id: pulsateAnim
+        loops: Animation.Infinite
+        running: false
+        NumberAnimation { target: enemy7Root; property: "pulsateScale"; from: 1.0; to: 2.0; duration: pulsateDuration; easing.type: Easing.InOutSine }
+        NumberAnimation { target: enemy7Root; property: "pulsateScale"; from: 2.0; to: 1.0; duration: pulsateDuration; easing.type: Easing.InOutSine }
+    }
+
+    Timer { id: pulsateStarter; interval: 0; repeat: false; onTriggered: pulsateAnim.start() }
+
+    Component.onCompleted: {
+        try {
+            var d = 1200 + Math.floor(Math.random() * 1000);
+            pulsateDuration = d;
+            var offset = Math.floor(Math.random() * pulsateDuration);
+            pulsateStarter.interval = offset;
+            pulsateStarter.start();
+        } catch(e) {}
+        syncForcedRevealRegistration();
+    }
+
+    Component.onDestruction: {
+        if (mapWrapperRef && typeof mapWrapperRef.unregisterRevealedEnemy === 'function') {
+            mapWrapperRef.unregisterRevealedEnemy(enemy7Root);
+        }
     }
 }
