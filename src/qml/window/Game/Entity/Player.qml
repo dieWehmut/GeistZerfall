@@ -48,6 +48,8 @@ Item {
 
 	function computeAndMove() {
 		if (!playerObj) return;
+		// Allow movement while teleport mode is active.
+		// Teleport UI should not block player movement, so do not early-return here.
 		var dx = 0; var dy = 0;
 		if (wDown) dy -= 1;
 		if (sDown) dy += 1;
@@ -70,6 +72,16 @@ Item {
 
 	Keys.onPressed: function(event) {
 		if (!playerObj) return;
+		if (event.key === Qt.Key_F) {
+			event.accepted = true;
+			try {
+				if (typeof playerObj.toggleTeleportMode === 'function') playerObj.toggleTeleportMode();
+			} catch (e) {
+				console.log('Player.qml: toggleTeleportMode failed', e);
+			}
+			resetKeys();
+			return;
+		}
 		if (event.key === Qt.Key_W||event.key === Qt.Key_Up) wDown = true;
 		if (event.key === Qt.Key_S||event.key === Qt.Key_Down) sDown = true;
 		if (event.key === Qt.Key_A||event.key === Qt.Key_Left) aDown = true;
@@ -184,6 +196,16 @@ Item {
 		}
 	}
 
+	Connections {
+		target: playerObj
+		enabled: !!playerObj
+		function onTeleportModeChanged() {
+			if (playerObj.teleportMode) {
+				resetKeys();
+			}
+		}
+	}
+
 	// CD properties and timers (client-side visual & guard)
 	property int bulletCd: 3000
 	property int bulletCdMax: 3000
@@ -223,12 +245,11 @@ Item {
 				if (laserCd >= laserCdMax) {
 					laserCd = laserCdMax;
 					laserCdTimer.stop(); laserRecharging = false;
-					// snipe ended, notify backend to restore speed
-					try { if (typeof playerObj.snipeStop === 'function') playerObj.snipeStop(); } catch(e) {}
+						// snipe ended; do not modify player speed here
 				}
 			} else {
-				laserCdTimer.stop(); laserRecharging = false;
-				try { if (typeof playerObj.snipeStop === 'function') playerObj.snipeStop(); } catch(e) {}
+						laserCdTimer.stop(); laserRecharging = false;
+						// do not modify player speed here
 			}
 		}
 	}
@@ -245,8 +266,7 @@ Item {
 		var shotCost = 10; // how much bulletCd is consumed per shot
 		bulletCd = Math.max(0, bulletCd - shotCost);
 		bulletRecharging = false; bulletCdTimer.stop();
-		// notify backend that shooting started (reduce speed)
-		try { if (typeof playerObj.shootStart === 'function') playerObj.shootStart(); } catch(e) {}
+		// do not notify backend to change speed when shooting
 		// call backend shoot method
 		try {
 			if (typeof playerObj.shoot === 'function') {
@@ -263,8 +283,7 @@ Item {
 	function startBulletRecharge() {
 		if (bulletCd >= bulletCdMax) { bulletCd = bulletCdMax; bulletRecharging = false; bulletCdTimer.stop(); return; }
 		bulletRecharging = true;
-		// stop shooting state when recharge starts
-		try { if (typeof playerObj.shootStop === 'function') playerObj.shootStop(); } catch(e) {}
+		// stop shooting state when recharge starts (no backend speed restore)
 		if (!bulletCdTimer.running) bulletCdTimer.start();
 	}
 
@@ -279,8 +298,7 @@ Item {
 		if (!playerObj) return false;
 		if (laserCd < laserCdMax) return false;
 		laserCd = 0; laserRecharging = true; laserCdTimer.start();
-		// notify backend snipe start (halves speed already in C++)
-		try { if (typeof playerObj.snipeStart === 'function') playerObj.snipeStart(); } catch(e) {}
+		// do not notify backend to change speed when sniping
 		try {
 			if (typeof playerObj.snipe === 'function') {
 				playerObj.snipe(px, py, dirx, diry);

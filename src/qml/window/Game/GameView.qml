@@ -674,6 +674,7 @@ Item {
 	property int tileSize: 512
 	// when snipe mode is active we set tileScale to 0.5 to shrink everything visually
 	property real tileScale: 1.0
+	property real teleportRingDistance: Math.max(256, tileSize * 0.75)
 
 	Behavior on tileScale { NumberAnimation { duration: 220; easing.type: Easing.InOutQuad } }
 	property int mapRows: tileManager.curMapData ? tileManager.curMapData.length : 0
@@ -789,6 +790,7 @@ Item {
 		id: aimOverlay
 		anchors.fill: parent
 		z: 998
+		visible: !(playerObj && playerObj.teleportMode)
 		property real aimX: 0
 		property real aimY: 0
 
@@ -852,6 +854,7 @@ Item {
 		MouseArea {
 			anchors.fill: parent
 			hoverEnabled: true
+			enabled: aimOverlay.visible
 			acceptedButtons: Qt.LeftButton
 			onPositionChanged: function(mouse) {
 				// compute world coords relative to mapWrapper
@@ -929,6 +932,7 @@ Item {
 			running: false
 			onTriggered: function() {
 				if (!playerObj || !playerItem) return;
+				if (playerObj.teleportMode) return;
 				// compute aim target similar to previous onClicked logic
 					var sx = mapWrapper.x + (playerObj.pos.x + (playerItem.width/2)) * tileScale;
 					var sy = mapWrapper.y + (playerObj.pos.y + (playerItem.height/2)) * tileScale;
@@ -988,6 +992,123 @@ Item {
 						// if bullet not ready, still allow continuous clicking but don't create visual
 					}
 				}
+			}
+		}
+	}
+
+	// While in teleport mode, clicking anywhere on the viewport teleports the player to that world position
+	MouseArea {
+		id: teleportClickArea
+		anchors.fill: parent
+		z: 2105
+		visible: (playerObj && playerObj.teleportMode)
+		enabled: visible
+		hoverEnabled: false
+		acceptedButtons: Qt.LeftButton
+		cursorShape: Qt.PointingHandCursor
+		onClicked: function(mouse) {
+			if (!playerObj || !mapWrapper) return;
+			var localX = mouse.x - mapWrapper.x;
+			var localY = mouse.y - mapWrapper.y;
+			var worldX = localX / tileScale;
+			var worldY = localY / tileScale;
+			var clampedX = Math.max(0, Math.min(worldX, mapCols * tileSize));
+			var clampedY = Math.max(0, Math.min(worldY, mapRows * tileSize));
+			// Start a high-speed animated move instead of instant teleport
+			try {
+				startTeleportMove(clampedX, clampedY);
+			} catch (e) {
+				console.log('teleportClickArea teleport failed', e);
+			}
+		}
+	}
+
+	// Teleport mover: animates playerObj.pos from current position to target smoothly
+	Item {
+		id: teleportMover
+		visible: false
+		width: 1; height: 1
+		property bool running: false
+		property real px: 0
+		property real py: 0
+		signal finished()
+
+		ParallelAnimation {
+			id: teleportParallel
+			running: false
+			NumberAnimation { id: animX; target: teleportMover; property: "px" }
+			NumberAnimation { id: animY; target: teleportMover; property: "py" }
+			onStopped: {
+				teleportMover.running = false;
+				teleportClickArea.enabled = true;
+				try { teleportMover.finished(); } catch(e) {}
+			}
+		}
+
+		onPxChanged: {
+			// update backend player pos (playerObj.pos is top-left in world coords)
+			if (!playerObj || !playerItem) return;
+			var newWorldX = teleportMover.px - (playerItem.width/2);
+			var newWorldY = teleportMover.py - (playerItem.height/2);
+			try { playerObj.pos = Qt.point(newWorldX, newWorldY); } catch(e) {}
+		}
+		onPyChanged: onPxChanged
+	}
+
+	function startTeleportMove(targetWorldX, targetWorldY) {
+		if (!playerObj || !playerItem) return;
+		// prevent additional clicks while moving
+		teleportClickArea.enabled = false;
+		// compute current player center in world coords
+		var curCenterX = playerObj.pos.x + (playerItem.width/2);
+		var curCenterY = playerObj.pos.y + (playerItem.height/2);
+		var dstX = targetWorldX + (playerItem.width/2);
+		var dstY = targetWorldY + (playerItem.height/2);
+		var dx = dstX - curCenterX; var dy = dstY - curCenterY;
+		var dist = Math.sqrt(dx*dx + dy*dy);
+		// choose high speed (world units per second)
+		var speed = 2400.0; // adjust for "high-speed" feel
+		var durationMs = Math.max(80, Math.min(1200, Math.round((dist / speed) * 1000)));
+
+		teleportMover.px = curCenterX;
+		teleportMover.py = curCenterY;
+		animX.from = curCenterX; animX.to = dstX; animX.duration = durationMs; animX.easing.type = Easing.InOutQuad;
+		animY.from = curCenterY; animY.to = dstY; animY.duration = durationMs; animY.easing.type = Easing.InOutQuad;
+		teleportMover.running = true;
+		teleportParallel.start();
+
+		teleportMover.finished.connect(function() {
+			// ensure final pos set exactly
+			try { playerObj.pos = Qt.point(targetWorldX, targetWorldY); } catch(e) {}
+			try { if (typeof playerObj.exitTeleportMode === 'function') playerObj.exitTeleportMode(); } catch(e) {}
+		});
+	}
+
+	// Teleport overlay floats above the map so teleport targets remain visible while aim overlay is hidden.
+	EntityQml.TeleportOverlay {
+		id: teleportOverlay
+		// parent it to mapWrapper so overlay coordinates share the same coordinate space
+		parent: mapWrapper
+		playerObj: playerObj
+		tileScale: tileScale
+		mapWrapperRef: mapWrapper
+		teleportDistance: teleportRingDistance
+		// pass reference to dynamic sight mask so overlay uses current visible radius
+		sightMaskRef: sightMask
+		active: playerObj && playerObj.teleportMode
+		playerVisualWidth: playerItem ? playerItem.width : 0
+		playerVisualHeight: playerItem ? playerItem.height : 0
+		mapClamp: ({ width: mapCols * tileSize, height: mapRows * tileSize })
+	}
+	Connections {
+		target: playerObj
+		enabled: !!playerObj
+		function onTeleportModeChanged() {
+			if (playerObj.teleportMode) {
+				if (fireTimer.running) fireTimer.stop();
+				try {
+					if (typeof playerItem.startBulletRecharge === 'function') playerItem.startBulletRecharge();
+				} catch (e) {}
 			}
 		}
 	}

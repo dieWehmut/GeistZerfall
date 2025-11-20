@@ -53,6 +53,8 @@ qt_add_qml_module(GeistZerfall
         src/qml/window/Game/Entity/Player.qml
         src/qml/window/Game/Entity/PlayerBullet.qml
         src/qml/window/Game/Entity/PlayerLaser.qml
+        src/qml/window/Game/Entity/TeleportCircle.qml
+        src/qml/window/Game/Entity/TeleportOverlay.qml
         src/qml/window/Game/Entity/Enemy/Enemy1.qml
         src/qml/window/Game/Entity/Enemy/Enemy2.qml
         src/qml/window/Game/Entity/Enemy/Enemy3.qml
