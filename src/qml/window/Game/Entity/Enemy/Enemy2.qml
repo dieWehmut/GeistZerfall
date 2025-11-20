@@ -25,6 +25,139 @@ Item {
 		width: parent.width; height: parent.height
 	}
 
+	/* Vision circle (red) centered on the enemy. Width/height = sight * 2 */
+	Rectangle {
+		id: visionCircle
+		anchors.centerIn: parent
+		width: backend ? backend.sight * 2 * tileScaleRef : 0
+		height: width
+		color: "transparent"
+		border.color: "#ff0000"
+		border.width: 4
+		opacity: 0.35
+		radius: width/2
+		z: 100
+		visible: backend ? backend.sight > 0 : false
+	}
+
+	/* Line from enemy center to player when player is in sight. Implemented as a Canvas for continuous drawing. */
+	Canvas {
+		id: sightLine
+		anchors.fill: parent
+		z: 125
+		visible: false
+
+		property real dx: (function(){
+			if (!playerItemRef) return 0;
+			try {
+				var pt = playerItemRef.mapToItem(enemy2Root, playerItemRef.width/2, playerItemRef.height/2);
+				return pt.x - enemy2Root.width/2;
+			} catch(e) { return 0; }
+		})()
+		property real dy: (function(){
+			if (!playerItemRef) return 0;
+			try {
+				var pt = playerItemRef.mapToItem(enemy2Root, playerItemRef.width/2, playerItemRef.height/2);
+				return pt.y - enemy2Root.height/2;
+			} catch(e) { return 0; }
+		})()
+		property real dist: Math.sqrt(dx*dx + dy*dy)
+
+		onPaint: {
+			var ctx = getContext('2d');
+			ctx.clearRect(0, 0, width, height);
+			try {
+				if (!backend || !playerItemRef || !mapWrapperRef) return;
+				var sx = enemy2Root.width / 2;
+				var sy = enemy2Root.height / 2;
+				var tx = sx + dx;
+				var ty = sy + dy;
+				// glow layers for red line
+				for (var g = 6; g >= 1; --g) {
+					ctx.beginPath();
+					ctx.strokeStyle = 'rgba(255,0,0,' + (0.10 * g).toFixed(3) + ')';
+					ctx.lineWidth = 3 * g;
+					ctx.lineCap = 'round';
+					ctx.moveTo(sx, sy);
+					ctx.lineTo(tx, ty);
+					ctx.stroke();
+				}
+				// solid core
+				ctx.beginPath();
+				ctx.strokeStyle = 'rgba(255,0,0,1.0)';
+				ctx.lineWidth = 8;
+				ctx.lineCap = 'round';
+				ctx.moveTo(sx, sy);
+				ctx.lineTo(tx, ty);
+				ctx.stroke();
+			} catch(e) {}
+		}
+
+		Timer {
+			id: linePainter
+			interval: 50
+			repeat: true
+			running: false
+			onTriggered: sightLine.requestPaint()
+		}
+	}
+
+	// Periodic drain timer. Interval chosen small for smooth continuous drain.
+	Timer {
+		id: auraTimer
+		interval: 200
+		repeat: true
+		running: false
+		onTriggered: {
+			if (!playerObjRef) return;
+			var intervalSec = auraTimer.interval / 1000.0;
+			var dps = 20;
+			try {
+				if (backend) {
+					if (typeof backend.auraDPS === 'function') dps = backend.auraDPS();
+					else if (backend.hasOwnProperty('auraDPS')) dps = backend.auraDPS;
+				}
+			} catch(e){}
+			var damage = Math.max(1, Math.round(dps * intervalSec));
+			try {
+				if (typeof playerObjRef.receiveDamage === 'function') playerObjRef.receiveDamage(damage);
+				else if (typeof playerObjRef.takeDamage === 'function') playerObjRef.takeDamage(damage);
+				else if (typeof playerObjRef.setProperty === 'function') {
+					// fallback: try decrementing hp property if exposed
+					try { playerObjRef.setProperty('hp', Math.max(0, (playerObjRef.hp || 0) - damage)); } catch(e){}
+				}
+			} catch(e){}
+		}
+	}
+
+	// update sightLine visibility based on computed distance
+	Binding {
+		target: sightLine
+		property: "visible"
+		value: (backend && playerItemRef) ? (sightLine.dist <= (backend.sight * tileScaleRef)) : false
+	}
+
+	// start/stop line painter together with sightLine visibility
+	Binding {
+		target: sightLine.linePainter
+		property: "running"
+		value: sightLine.visible
+	}
+
+	Connections {
+		target: sightLine
+		onVisibleChanged: if (sightLine.visible) sightLine.requestPaint()
+	}
+
+	// start/stop aura timer together with sightLine visibility
+	// keep aura timer running while player is in sight
+	Binding {
+		target: auraTimer
+		property: "running"
+		value: sightLine.visible
+	}
+
+
 	Item {
 		id: hudRoot
 		width: enemy2Root.width
