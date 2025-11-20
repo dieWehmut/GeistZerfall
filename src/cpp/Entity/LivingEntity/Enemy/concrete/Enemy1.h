@@ -17,11 +17,17 @@ protected:
 
 private:
 	QTimer *teleportTimer{nullptr};
+	QTimer *teleportDelayTimer{nullptr};
+	bool teleportPending{false};
 	QTimer *ownLogicTimer{nullptr};
 	QPointF behindTarget{0,0};
 	bool movingToBehind{false};
 	int behindMoveTimeoutMs{3000}; // stop trying after this time
 	QTimer *behindStopTimer{nullptr};
+
+signals:
+	void aboutToTeleport(const QPointF &target);
+	void teleported(const QPointF &newPos);
 };
 
 #endif // ENEMY1_H

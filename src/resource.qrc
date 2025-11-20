@@ -12,6 +12,7 @@
         <file>resource/audio/bgm/nervous.mp3</file>
         <file>resource/audio/bgm/mainmenu.mp3</file>
         <file>resource/audio/bgm/fight.mp3</file>
+        <file>resource/audio/bgm/battle01.mp3</file>
         <file>resource/image/PhantomGenesis.ico</file>
         <file>resource/audio/SoundEffect/playerBullet.wav</file>
         <file>resource/audio/SoundEffect/playerLaser.wav</file>

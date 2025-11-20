@@ -19,6 +19,30 @@ Enemy1::Enemy1(QObject *parent) : Enemy(parent) {
 	connect(teleportTimer, &QTimer::timeout, this, &Enemy1::initiateMoveBehind);
 	teleportTimer->start();
 
+	// delay timer for the 2s warning before teleport
+	teleportDelayTimer = new QTimer(this);
+	teleportDelayTimer->setSingleShot(true);
+	connect(teleportDelayTimer, &QTimer::timeout, this, [this]() {
+		// perform actual teleport now
+		if (!playerTarget) { teleportPending = false; return; }
+		QPointF p = getPos();
+		QPointF t = playerTarget->getPos();
+		double newX = 2.0 * t.x() - p.x();
+		double newY = 2.0 * t.y() - p.y();
+		if (getMapWidth() > 0) {
+			if (newX < 0) newX = 0;
+			if (newX > getMapWidth()) newX = getMapWidth();
+		}
+		if (getMapHeight() > 0) {
+			if (newY < 0) newY = 0;
+			if (newY > getMapHeight()) newY = getMapHeight();
+		}
+		setPos(QPointF(newX, newY));
+		teleportPending = false;
+		emit teleported(QPointF(newX, newY));
+		qDebug() << "Enemy1: teleported to" << QPointF(newX, newY);
+	});
+
 	// create an owning logic timer so we can temporarily direct movement to behindTarget
 	// stop base logicTimer (created in Enemy) to avoid duplicate movement; then provide equivalent behavior
 	if (logicTimer && logicTimer->isActive()) logicTimer->stop();
@@ -90,9 +114,8 @@ int Enemy1::mpRegenRatePerSec() const {
 
 void Enemy1::initiateMoveBehind() {
 	if (!playerTarget) return;
-	// Instant teleport: compute the symmetric point across the player (reflection)
-	// newPos = 2 * playerPos - enemyPos, which lies on the extension of the line and
-	// is at the same distance from the player as the enemy currently is.
+	if (teleportPending) return; // already scheduled
+	// compute reflection point now and emit warning
 	QPointF p = getPos();
 	QPointF t = playerTarget->getPos();
 	double newX = 2.0 * t.x() - p.x();
@@ -107,6 +130,9 @@ void Enemy1::initiateMoveBehind() {
 		if (newY > getMapHeight()) newY = getMapHeight();
 	}
 
-	setPos(QPointF(newX, newY));
-	qDebug() << "Enemy1: teleported to" << QPointF(newX, newY);
+	teleportPending = true;
+	emit aboutToTeleport(QPointF(newX, newY));
+	// start 2s delay then actual teleport happens in teleportDelayTimer handler
+	teleportDelayTimer->start(2000);
+	qDebug() << "Enemy1: about to teleport to" << QPointF(newX, newY);
 }
