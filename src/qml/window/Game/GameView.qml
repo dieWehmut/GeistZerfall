@@ -59,6 +59,19 @@ Item {
 			// 设置地图数据
 			tileManager.setMapData(battleData.mapData);
 			spawnEnemiesFromMap();
+			// Setup optional time-limit rule from battle JSON. Support multiple possible field names for compatibility.
+			try {
+				var tl = 0;
+				if (battleData && battleData.rules) {
+					tl = battleData.rules.timeLimitSeconds || battleData.rules.timeLimit || battleData.rules.timeLimitSec || 0;
+				}
+				if (tl && tl > 0) {
+					timeLimitSeconds = tl;
+					timeLeftSeconds = tl;
+					countdownTimer.running = true;
+					console.log('GameView: starting countdown, seconds=', tl);
+				}
+			} catch(eTL) { console.log('setup timeLimit failed', eTL); }
 			// 播放对应的BGM（通过宿主 window 提供的播放函数）
 			if (battleData.meta && battleData.meta.bgm) {
 				if (typeof window !== 'undefined' && typeof window.playMusic === 'function') {
@@ -118,6 +131,18 @@ Item {
 
 	// Battle end detection: when player HP reaches 0 (lose) or all enemies dead (win)
 	property bool battleEnded: false
+
+	// Optional time-limit rule: if set (>0) counts down every second. When reaches 0 and player HP>0, it's a win.
+	property int timeLimitSeconds: 0
+	property int timeLeftSeconds: 0
+	property bool countdownRunning: false
+
+	function formatTimeLeft() {
+		var s = Math.max(0, Math.round(timeLeftSeconds));
+		var mm = Math.floor(s/60);
+		var ss = s % 60;
+		return (mm < 10 ? "0" + mm : mm) + ":" + (ss < 10 ? "0" + ss : ss);
+	}
 
 	function applyBattleResult(resultType) {
 		if (battleEnded) return;
@@ -207,6 +232,59 @@ Item {
 					applyBattleResult('win');
 				}
 			} catch(e2) { console.log('check enemies failed', e2); }
+		}
+	}
+
+	// Countdown timer: ticks every second when a time limit is set.
+	Timer {
+		id: countdownTimer
+		interval: 1000
+		repeat: true
+		running: false
+		onTriggered: {
+			if (battleEnded) return;
+			try {
+				if (timeLeftSeconds > 0) {
+					timeLeftSeconds = Math.max(0, timeLeftSeconds - 1);
+					// reached zero
+					if (timeLeftSeconds <= 0) {
+						countdownTimer.running = false;
+						console.log('GameView: countdown reached zero');
+						// victory if player still alive (hp > 0)
+						if (playerObj && typeof playerObj.hp !== 'undefined' && playerObj.hp > 0) {
+							console.log('GameView: time-up victory triggered');
+							applyBattleResult('win');
+						}
+					}
+				}
+			} catch (e) { console.log('countdown onTriggered failed', e); }
+		}
+	}
+
+	// Top-right time display (visible only when a timeLimit is configured)
+	Item {
+		id: timeDisplayRoot
+		anchors.top: parent.top
+		anchors.right: parent.right
+		anchors.topMargin: 12
+		anchors.rightMargin: 12
+		z: 3000
+		visible: timeLimitSeconds > 0
+		Rectangle {
+			id: timeBg
+			anchors.top: parent.top
+			anchors.right: parent.right
+			color: "#00000080"
+			radius: 6
+			width: textTime.width + 24
+			height: textTime.height + 12
+		}
+		Text {
+			id: textTime
+			anchors.centerIn: timeBg
+			color: "white"
+			font.pixelSize: 20
+			text: formatTimeLeft()
 		}
 	}
 
@@ -674,6 +752,16 @@ Item {
 			} catch (e) {
 				console.log('apply saved enemies failed', e);
 			}
+			// restore saved countdown time if present
+			try {
+				if (typeof SaveLoadManager.timeLeftSeconds !== 'undefined' && SaveLoadManager.timeLeftSeconds !== null) {
+					timeLeftSeconds = SaveLoadManager.timeLeftSeconds;
+					if (timeLeftSeconds > 0) {
+						countdownTimer.running = true;
+					}
+					console.log('spawnEnemiesFromMap: restored countdown timeLeftSeconds=', timeLeftSeconds);
+				}
+			} catch (eTL) { console.log('restore saved timeLeftSeconds failed', eTL); }
 		}
 		console.log("spawnEnemiesFromMap: total enemies", enemyBackends.length);
 		// after spawning, check if victory condition already met (e.g., enemies restored as dead)
@@ -749,6 +837,8 @@ Item {
 			SaveLoadManager.sight = playerObj.getSight ? playerObj.getSight() : 0;
 			SaveLoadManager.maxHp = (typeof playerObj.maxHp !== 'undefined') ? playerObj.maxHp : SaveLoadManager.maxHp;
 			SaveLoadManager.hp = (typeof playerObj.hp !== 'undefined') ? playerObj.hp : SaveLoadManager.hp;
+			// Save remaining countdown time so a resumed battle can continue where it left off
+			try { SaveLoadManager.timeLeftSeconds = timeLeftSeconds; } catch(eTime) { console.log('cannot set SaveLoadManager.timeLeftSeconds', eTime); }
 			// ensure enemies snapshot is set before saving
 			var snapshot = serializeEnemies();
 			try { SaveLoadManager.setEnemies(snapshot); } catch (e) { console.log('setEnemies before save failed', e); }
@@ -784,6 +874,8 @@ Item {
 				SaveLoadManager.sight = playerObj.getSight ? playerObj.getSight() : 0;
 				SaveLoadManager.maxHp = (typeof playerObj.maxHp !== 'undefined') ? playerObj.maxHp : SaveLoadManager.maxHp;
 				SaveLoadManager.hp = (typeof playerObj.hp !== 'undefined') ? playerObj.hp : SaveLoadManager.hp;
+				// Save remaining countdown time so a resumed battle can continue where it left off
+				try { SaveLoadManager.timeLeftSeconds = timeLeftSeconds; } catch(eTime) { console.log('cannot set SaveLoadManager.timeLeftSeconds', eTime); }
 				// ensure enemies snapshot is set before saving
 				var snapshot = serializeEnemies();
 				try { SaveLoadManager.setEnemies(snapshot); } catch (e) { console.log('setEnemies before save failed', e); }
@@ -1366,6 +1458,14 @@ Item {
 							var autoHp = Math.max(0, Math.min(SaveLoadManager.hp, playerObj.maxHp));
 							playerObj.hp = autoHp;
 						}
+						// restore countdown time from auto-save if present
+						try {
+							if (typeof SaveLoadManager.timeLeftSeconds !== 'undefined' && !isNaN(SaveLoadManager.timeLeftSeconds)) {
+								timeLeftSeconds = SaveLoadManager.timeLeftSeconds;
+								if (timeLeftSeconds > 0) countdownTimer.running = true;
+								console.log('GameView: restored timeLeftSeconds from auto-save', timeLeftSeconds);
+							}
+						} catch(eTL) { console.log('restore timeLeftSeconds from auto-save failed', eTL); }
 					} else {
 						// If battle JSON provides an explicit spawn.playerPos, honor it (tile coords assumed)
 						if (battleData && battleData.spawn && battleData.spawn.playerPos) {
