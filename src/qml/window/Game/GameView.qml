@@ -59,6 +59,14 @@ Item {
 			// 设置地图数据
 			tileManager.setMapData(battleData.mapData);
 			spawnEnemiesFromMap();
+			// 播放对应的BGM（通过宿主 window 提供的播放函数）
+			if (battleData.meta && battleData.meta.bgm) {
+				if (typeof window !== 'undefined' && typeof window.playMusic === 'function') {
+					try {
+						window.playMusic("qrc:/resource/audio/bgm/" + battleData.meta.bgm);
+					} catch (e) { console.log('播放BGM失败', e); }
+				}
+			}
 		} else {
 			console.log("GameView: failed to load battle", id);
 		}
@@ -1248,15 +1256,6 @@ Item {
 					}
 				} else {
 					playerObj.pos = Qt.point(centerX, centerY);
-				}
-			}
-			// 尝试切换到游戏音乐;若不存在则回退到主菜单音乐
-			if (typeof window !== 'undefined' && typeof window.playMusic === 'function') {
-				try {
-					window.playMusic("qrc:/resource/audio/bgm/fight.mp3");
-				} catch (e) {
-					console.log("切换到游戏音乐失败,使用主菜单音乐作为回退", e);
-					window.playMusic("qrc:/resource/audio/bgm/mainmenu.mp3");
 				}
 			}
 			// expose playerObj to window so SaveLoad UI can read current player state when saving

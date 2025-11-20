@@ -2,7 +2,8 @@
   "battleId": "battle02",
   "meta": {
     "title": "深渊回响",
-    "description": "第二场战斗"
+    "description": "第二场战斗",
+    "bgm": "battle02.mp3"
   },
   "mapData": [
     [-1,-1, 4,-1,-1,-1, 4,-1,-1],
