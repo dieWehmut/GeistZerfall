@@ -116,6 +116,100 @@ Item {
 		onTriggered: cleanupDeadEnemies()
 	}
 
+	// Battle end detection: when player HP reaches 0 (lose) or all enemies dead (win)
+	property bool battleEnded: false
+
+	function applyBattleResult(resultType) {
+		if (battleEnded) return;
+		battleEnded = true;
+		console.log('GameView: applying battle result', resultType);
+		try { if (window && typeof window.stopMusic === 'function') window.stopMusic(); } catch(eStop) {}
+		// stop periodic checks to avoid duplicate triggers
+		try { battleEndCheckTimer.running = false; } catch(e) {}
+		try { enemyCleanupTimer.running = false; } catch(e) {}
+		var resObj = null;
+		try { if (battleData && battleData.onResult && battleData.onResult[resultType]) resObj = battleData.onResult[resultType]; } catch(eR) { console.log('read onResult failed', eR); }
+		// If result specifies a lore target (nextChapter/nextNode), set lore state then navigate to LoreView
+		if (resObj && (resObj.nextChapter || resObj.nextNode)) {
+			var chap = resObj.nextChapter || resObj.chapter || "";
+			var node = resObj.nextNode || resObj.node || "";
+			try { if (typeof WindowState !== 'undefined' && WindowState.setLoreState) {
+				WindowState.setLoreState({ chapter: chap, node: node, index: 0, mode: "auto", auto: true });
+			} } catch(e) { console.log('setLoreState failed', e); }
+			// navigate to Lore view
+			try {
+				if (window && typeof window.smoothReplaceSource === 'function') {
+					window.smoothReplaceSource("qml/window/Lore/LoreView.qml", 600);
+				} else if (window && typeof window.replaceSource === 'function') {
+					window.replaceSource("qml/window/Lore/LoreView.qml");
+				} else if (window && typeof window.pushSource === 'function') {
+					window.pushSource("qml/window/Lore/LoreView.qml");
+				} else {
+					console.log('No navigation API found to open LoreView');
+				}
+			} catch(eNav) { console.log('navigate to Lore failed', eNav); }
+			return;
+		}
+		// Otherwise, check action strings
+		if (resObj && resObj.action) {
+			var a = resObj.action;
+			if (a === 'gameOver') {
+				console.log('GameView: lose -> navigate to MainMenu');
+				try {
+					if (window && typeof window.replaceSource === 'function') window.replaceSource("qml/window/MainMenu.qml");
+					else if (window && typeof window.pushSource === 'function') window.pushSource("qml/window/MainMenu.qml");
+				} catch(eNav) { console.log('navigate to MainMenu failed', eNav); }
+				return;
+			} else if (a === 'nextLevel') {
+				// try to call host-provided advance function if present
+				try {
+					if (window && typeof window.advanceToNextLevel === 'function') {
+						window.advanceToNextLevel();
+						return;
+					}
+				} catch(eAdv) { console.log('advanceToNextLevel failed', eAdv); }
+				// fallback: go to MainMenu
+				try { if (window && typeof window.replaceSource === 'function') window.replaceSource("qml/window/MainMenu.qml"); } catch(eF) {}
+				return;
+			} else {
+				console.log('GameView: unhandled onResult.action', a);
+				try { if (window && typeof window.replaceSource === 'function') window.replaceSource("qml/window/MainMenu.qml"); } catch(e) {}
+				return;
+			}
+		}
+		// Default fallback: go back to main menu
+		try { if (window && typeof window.replaceSource === 'function') window.replaceSource("qml/window/MainMenu.qml"); } catch(e) { console.log('default navigate failed', e); }
+	}
+
+	// Periodic check for battle end conditions
+	Timer {
+		id: battleEndCheckTimer
+		interval: 250
+		repeat: true
+		running: true
+		onTriggered: {
+			if (battleEnded) return;
+			// lose: player HP <= 0
+			try {
+				if (playerObj && (typeof playerObj.hp !== 'undefined') && playerObj.hp <= 0) {
+					applyBattleResult('lose');
+					return;
+				}
+			} catch(e) { console.log('check player hp failed', e); }
+			// win: all enemies dead
+			try {
+				var aliveCount = 0;
+				for (var i = 0; i < enemyBackends.length; ++i) {
+					var b = enemyBackends[i];
+					if (!isEnemyDead(b)) { aliveCount++; break; }
+				}
+				if (aliveCount === 0 && enemyBackends.length > 0) {
+					applyBattleResult('win');
+				}
+			} catch(e2) { console.log('check enemies failed', e2); }
+		}
+	}
+
 	function clearEnemies() {
 		for (var i = 0; i < enemyVisuals.length; ++i) { try { enemyVisuals[i].destroy(); } catch(e){} }
 		enemyVisuals = [];
@@ -153,6 +247,23 @@ Item {
 			out.push({ type: typeName, x: posPoint.x, y: posPoint.y, hp: hpVal, maxHp: maxHpVal, mp: mpVal, maxMp: maxMpVal, alive: aliveVal });
 		}
 		return out;
+	}
+
+	// Check immediately whether all enemies are already dead and trigger win if appropriate
+	function checkVictoryNow() {
+		try {
+			// Only consider win when rule expects allEnemiesDead (defensive)
+			var wantAllDead = !(battleData && battleData.rules && battleData.rules.winCondition) ? true : (battleData.rules.winCondition.type === 'allEnemiesDead');
+			if (!wantAllDead) return;
+			var anyAlive = false;
+			for (var i = 0; i < enemyBackends.length; ++i) {
+				if (!isEnemyDead(enemyBackends[i])) { anyAlive = true; break; }
+			}
+			if (!anyAlive && enemyBackends.length > 0) {
+				console.log('checkVictoryNow: no alive enemies -> applying win');
+				applyBattleResult('win');
+			}
+		} catch(e) { console.log('checkVictoryNow failed', e); }
 	}
 
 	function spawnEnemiesFromMap() {
@@ -565,6 +676,8 @@ Item {
 			}
 		}
 		console.log("spawnEnemiesFromMap: total enemies", enemyBackends.length);
+		// after spawning, check if victory condition already met (e.g., enemies restored as dead)
+		Qt.callLater(function(){ checkVictoryNow(); });
 		// refresh global snapshot of enemies for SaveLoad UI via WindowState
 		try {
 			WindowState.setGameEnemies && WindowState.setGameEnemies(serializeEnemies());
@@ -1229,6 +1342,8 @@ Item {
 								// persist snapshot for SaveLoad UI
 								try { WindowState.setGameEnemies && WindowState.setGameEnemies(serializeEnemies()); } catch(eSS) {}
 								appliedSaveLoad = true;
+								// after restoring enemies from save, ensure we trigger win if all enemies are already dead
+								Qt.callLater(function(){ checkVictoryNow(); });
 							} else {
 								console.log('GameView: no saved enemies list; will spawn from map normally');
 							}
@@ -1252,7 +1367,39 @@ Item {
 							playerObj.hp = autoHp;
 						}
 					} else {
-						playerObj.pos = Qt.point(centerX, centerY);
+						// If battle JSON provides an explicit spawn.playerPos, honor it (tile coords assumed)
+						if (battleData && battleData.spawn && battleData.spawn.playerPos) {
+							try {
+								var p = battleData.spawn.playerPos;
+								// assume p.x/p.y are tile coordinates (col,row). Place player at tile center,
+								// convert to top-left world coords used by playerObj.pos
+								var spawnWorldX = (p.x * tileSize) + (tileSize/2) - (playerItem.width/2);
+								var spawnWorldY = (p.y * tileSize) + (tileSize/2) - (playerItem.height/2);
+								playerObj.pos = Qt.point(spawnWorldX, spawnWorldY);
+							} catch(ePos) { console.log('apply explicit spawn.playerPos failed', ePos); playerObj.pos = Qt.point(centerX, centerY); }
+						} else {
+							// No explicit spawn provided: scan mapData for tile==0 and use its center if found
+							var used = false;
+							try {
+								if (tileManager && tileManager.curMapData) {
+									var rows2 = tileManager.curMapData.length;
+									for (var rr = 0; rr < rows2 && !used; ++rr) {
+										var cols2 = tileManager.curMapData[rr].length;
+										for (var cc = 0; cc < cols2; ++cc) {
+											var tt = tileManager.getTileType(rr, cc);
+											if (tt === 0) {
+												var wx = cc * tileSize + tileSize/2 - (playerItem.width/2);
+												var wy = rr * tileSize + tileSize/2 - (playerItem.height/2);
+												playerObj.pos = Qt.point(wx, wy);
+												used = true;
+												break;
+											}
+										}
+									}
+								}
+							} catch(eScan) { console.log('scan for tile==0 failed', eScan); }
+							if (!used) playerObj.pos = Qt.point(centerX, centerY);
+						}
 					}
 				} else {
 					playerObj.pos = Qt.point(centerX, centerY);

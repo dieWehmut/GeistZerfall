@@ -1,31 +1,123 @@
 {
   "meta": {
-    "chapterId": "chapter01",
-    "title": "第一章",
-    "startNode": "start",
+    "chapterId": "prologue",
+    "title": "序章",
+    "startNode": "title",
     "mode": "scene"
   },
   "nodes": {
-    "start": {
-      "background": "qrc:/resource/image/helpPage.png",
-      "characters": [
-        { "image": "qrc:/resource/image/king.png", "position": "center", "scale": 1.0 }
-      ],
+    "title": {
+      "background": "qrc:/resource/image/bg/lore/shenLinGate.png",
       "contents": [
         {
-          "type": "text",
-          "text": "第一章开始..."
+          "type": "title",
+          "text": "序章",
+          "isTitle": true,
+          "mode": "scene",
+          "music": "qrc:/resource/audio/bgm/nervous.mp3",
+          "musicLoops": -1
         }
       ],
-      "nextNode": "end"
+      "nextNode": "start"
     },
-    "end": {
+    "start": {
+      "characters": [
+        { "name": "南雲 時", "position": "left", "scale": 1.0 }
+      ],
       "contents": [
         {
           "type": "text",
-          "text": "待续..."
+          "text": "好黑...",
+          "mode": "circle",
+          "speaker": 0
         }
-      ]
+      ],
+      "nextNode": "awake"
+    },
+    "awake": {
+      "background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+      "characters": [
+        { "name": "藤田 旦治", "position": "left", "scale": 1.0 },
+        { "name": "清原 凛", "position": "right", "scale": 1.0 }
+      ],
+      "contents": [
+        {
+          "type": "text",
+          "text": "1",
+          "mode": "scene",
+          "speaker": 0
+        }
+      ],
+      "nextNode": "sound"
+    },
+    "sound": {
+      "background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+      "characters": [
+        { "name": "折原 蓮", "position": "left", "scale": 1.0 },
+        { "name": "東堂 陽葵", "position": "right", "scale": 1.0 }
+      ],
+      "contents": [
+        {
+          "type": "text",
+          "text": "2。",
+          "mode": "scene",
+          "speaker": 0
+        }
+      ],
+      "nextNode": "approach"
+    },
+    "approach": {
+      "background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+      "characters": [
+        { "name": "南雲 時", "position": "left", "scale": 1.0 },
+        { "name": "常夏 航", "position": "right", "scale": 1.0 }
+      ],
+      "contents": [
+        {
+          "type": "text",
+          "text": "3",
+          "mode": "scene",
+          "speaker": 0
+        }
+      ],
+      "nextNode": "closer"
+    },
+    "closer": {
+      "background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+      "characters": [
+        { "name": "南雲 時", "position": "left", "scale": 1.0 },
+        { "name": "清原 凛", "position": "right", "scale": 1.0 }
+      ],
+      "contents": [
+        {
+          "type": "text",
+          "text": "4",
+          "mode": "scene",
+          "speaker": 0
+        }
+      ],
+      "nextNode": "toBattle"
+    },
+    "toBattle": {
+      "background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+      "characters": [
+        { "name": "南雲 時", "position": "left", "scale": 1.0 },
+        { "name": "東堂 陽葵", "position": "right", "scale": 1.0 }
+      ],
+      "contents": [
+        {
+          "type": "text",
+          "text": "5",
+          "mode": "scene",
+          "music": "qrc:/resource/audio/bgm/fight.mp3",
+          "musicLoops": -1,
+          "speaker": 0
+        }
+      ],
+      "action": "startBattle",
+      "actionParams": {
+        "battleId": "battle02"
+      }
     }
   }
 }
