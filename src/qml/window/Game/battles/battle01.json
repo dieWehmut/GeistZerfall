@@ -1,8 +1,6 @@
 {
   "battleId": "battle01",
   "meta": {
-    "title": "leap01",
-    "description": "First Battle",
     "bgm": "battle01.mp3"
   },
   "mapData": [

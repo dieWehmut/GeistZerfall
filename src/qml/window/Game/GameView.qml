@@ -67,9 +67,27 @@ Item {
 				}
 				if (tl && tl > 0) {
 					timeLimitSeconds = tl;
-					timeLeftSeconds = tl;
-					countdownTimer.running = true;
-					console.log('GameView: starting countdown, seconds=', tl);
+					// Prefer any previously-restored remaining time (from SaveLoadManager or prior state).
+					var restored = false;
+					try {
+						if (typeof SaveLoadManager !== 'undefined' && SaveLoadManager && typeof SaveLoadManager.timeLeftSeconds !== 'undefined' && SaveLoadManager.timeLeftSeconds !== null) {
+							// Only restore saved remaining time if the save belongs to this battle and has positive time
+							if (SaveLoadManager.battleId === battleId && SaveLoadManager.timeLeftSeconds > 0) {
+								timeLeftSeconds = SaveLoadManager.timeLeftSeconds;
+								restored = true;
+							}
+						}
+					} catch(e) { /* ignore */ }
+					// If nothing restored and current timeLeftSeconds is not set, initialize to full length
+					if (!restored && (!timeLeftSeconds || timeLeftSeconds <= 0)) {
+						timeLeftSeconds = tl;
+						countdownTimer.running = true;
+						console.log('GameView: starting countdown, seconds=', tl);
+					} else {
+						// If restored or existing, ensure timer is running only if positive
+						countdownTimer.running = (timeLeftSeconds > 0);
+						console.log('GameView: countdown restored or preserved, timeLeftSeconds=', timeLeftSeconds);
+					}
 				}
 			} catch(eTL) { console.log('setup timeLimit failed', eTL); }
 			// 播放对应的BGM（通过宿主 window 提供的播放函数）
@@ -144,6 +162,96 @@ Item {
 		return (mm < 10 ? "0" + mm : mm) + ":" + (ss < 10 ? "0" + ss : ss);
 	}
 
+	// Centered overlay to display Win/Lose messages
+	Item {
+		id: resultOverlayRoot
+		anchors.fill: parent
+		visible: false
+		z: 10000
+		Rectangle {
+			id: resultOverlayBg
+			anchors.centerIn: parent
+			color: "#000000cc"
+			radius: 8
+			width: resultOverlayText.width + 80
+			height: resultOverlayText.height + 40
+			transformOrigin: Item.Center
+			scale: 1.0
+			opacity: 1.0
+		}
+		Text {
+			id: resultOverlayText
+			anchors.centerIn: resultOverlayBg
+			color: "white"
+			font.pixelSize: 72
+			font.bold: true
+			text: ""
+			transformOrigin: Item.Center
+			scale: 1.0
+			opacity: 1.0
+		}
+	}
+
+	property var resultOverlayCallback: null
+	Timer {
+		id: resultOverlayTimer
+		repeat: false
+		running: false
+		onTriggered: {
+			// start hide animation; callback will be invoked by hideAnim.onFinished
+			try { resultHideAnim.start(); } catch(e) { console.log('start hideAnim failed', e); }
+		}
+	}
+
+	function showResultOverlay(message, durationMs, callback) {
+		try {
+			resultOverlayText.text = message;
+			resultOverlayRoot.visible = true;
+			// prepare initial animated state
+			resultOverlayBg.scale = 0.6; resultOverlayBg.opacity = 0.0;
+			resultOverlayText.scale = 0.6; resultOverlayText.opacity = 0.0;
+			resultOverlayCallback = callback || null;
+			resultOverlayTimer.stop();
+			resultOverlayTimer.interval = durationMs || 1200;
+			resultOverlayTimer.running = true;
+			// play entry animation
+			try { resultShowAnim.start(); } catch(e) { console.log('start showAnim failed', e); }
+		} catch (e) { console.log('showResultOverlay failed', e); if (typeof callback === 'function') callback(); }
+	}
+
+	// show animation: pop + settle
+	SequentialAnimation {
+		id: resultShowAnim
+		running: false
+		ParallelAnimation {
+			PropertyAnimation { target: resultOverlayBg; property: "scale"; from: 0.6; to: 1.12; duration: 220; easing.type: Easing.OutBack }
+			PropertyAnimation { target: resultOverlayBg; property: "opacity"; from: 0.0; to: 1.0; duration: 220 }
+			PropertyAnimation { target: resultOverlayText; property: "scale"; from: 0.6; to: 1.12; duration: 220; easing.type: Easing.OutBack }
+			PropertyAnimation { target: resultOverlayText; property: "opacity"; from: 0.0; to: 1.0; duration: 220 }
+		}
+		PauseAnimation { duration: 100 }
+		ParallelAnimation {
+			PropertyAnimation { target: resultOverlayBg; property: "scale"; to: 1.0; duration: 140; easing.type: Easing.OutQuad }
+			PropertyAnimation { target: resultOverlayText; property: "scale"; to: 1.0; duration: 140; easing.type: Easing.OutQuad }
+		}
+	}
+
+	// hide animation: shrink & fade
+	ParallelAnimation {
+		id: resultHideAnim
+		running: false
+		PropertyAnimation { target: resultOverlayBg; property: "scale"; to: 0.9; duration: 160; easing.type: Easing.InQuad }
+		PropertyAnimation { target: resultOverlayBg; property: "opacity"; to: 0.0; duration: 160 }
+		PropertyAnimation { target: resultOverlayText; property: "scale"; to: 0.9; duration: 160; easing.type: Easing.InQuad }
+		PropertyAnimation { target: resultOverlayText; property: "opacity"; to: 0.0; duration: 160 }
+		onFinished: {
+			resultOverlayRoot.visible = false;
+			if (resultOverlayCallback && typeof resultOverlayCallback === 'function') {
+				var cb2 = resultOverlayCallback; resultOverlayCallback = null; try { cb2(); } catch(eCb2) { console.log('result overlay callback failed', eCb2); }
+			}
+		}
+	}
+
 	function applyBattleResult(resultType) {
 		if (battleEnded) return;
 		battleEnded = true;
@@ -154,56 +262,63 @@ Item {
 		try { enemyCleanupTimer.running = false; } catch(e) {}
 		var resObj = null;
 		try { if (battleData && battleData.onResult && battleData.onResult[resultType]) resObj = battleData.onResult[resultType]; } catch(eR) { console.log('read onResult failed', eR); }
-		// If result specifies a lore target (nextChapter/nextNode), set lore state then navigate to LoreView
-		if (resObj && (resObj.nextChapter || resObj.nextNode)) {
-			var chap = resObj.nextChapter || resObj.chapter || "";
-			var node = resObj.nextNode || resObj.node || "";
-			try { if (typeof WindowState !== 'undefined' && WindowState.setLoreState) {
-				WindowState.setLoreState({ chapter: chap, node: node, index: 0, mode: "auto", auto: true });
-			} } catch(e) { console.log('setLoreState failed', e); }
-			// navigate to Lore view
+
+		// Helper: navigate according to a result object (nextChapter/nextNode preferred, then action nextLevel)
+		function navigateByResult(obj) {
+			if (!obj) return false;
 			try {
-				if (window && typeof window.smoothReplaceSource === 'function') {
-					window.smoothReplaceSource("qml/window/Lore/LoreView.qml", 600);
-				} else if (window && typeof window.replaceSource === 'function') {
-					window.replaceSource("qml/window/Lore/LoreView.qml");
-				} else if (window && typeof window.pushSource === 'function') {
-					window.pushSource("qml/window/Lore/LoreView.qml");
-				} else {
-					console.log('No navigation API found to open LoreView');
-				}
-			} catch(eNav) { console.log('navigate to Lore failed', eNav); }
-			return;
-		}
-		// Otherwise, check action strings
-		if (resObj && resObj.action) {
-			var a = resObj.action;
-			if (a === 'gameOver') {
-				console.log('GameView: lose -> navigate to MainMenu');
-				try {
-					if (window && typeof window.replaceSource === 'function') window.replaceSource("qml/window/MainMenu.qml");
-					else if (window && typeof window.pushSource === 'function') window.pushSource("qml/window/MainMenu.qml");
-				} catch(eNav) { console.log('navigate to MainMenu failed', eNav); }
-				return;
-			} else if (a === 'nextLevel') {
-				// try to call host-provided advance function if present
-				try {
-					if (window && typeof window.advanceToNextLevel === 'function') {
-						window.advanceToNextLevel();
-						return;
+				if (obj.nextChapter || obj.nextNode) {
+					var chap = obj.nextChapter || obj.chapter || "";
+					var node = obj.nextNode || obj.node || "";
+					try { if (typeof WindowState !== 'undefined' && WindowState.setLoreState) {
+						WindowState.setLoreState({ chapter: chap, node: node, index: 0, mode: "auto", auto: true });
+					} } catch(e) { console.log('setLoreState failed', e); }
+					try {
+						if (window && typeof window.smoothReplaceSource === 'function') {
+							window.smoothReplaceSource("qml/window/Lore/LoreView.qml", 600);
+						} else if (window && typeof window.replaceSource === 'function') {
+							window.replaceSource("qml/window/Lore/LoreView.qml");
+						} else if (window && typeof window.pushSource === 'function') {
+							window.pushSource("qml/window/Lore/LoreView.qml");
+						} else {
+							console.log('No navigation API found to open LoreView');
+						}
+					} catch(eNav) { console.log('navigate to Lore failed', eNav); }
+					return true;
+				} else if (obj.action) {
+					if (obj.action === 'nextLevel') {
+						try {
+							if (window && typeof window.advanceToNextLevel === 'function') { window.advanceToNextLevel(); return true; }
+						} catch(e) { console.log('advanceToNextLevel failed', e); }
+						// fallback: try replacing source to MainMenu as last resort
+						try { if (window && typeof window.replaceSource === 'function') window.replaceSource("qml/window/MainMenu.qml"); } catch(e) {}
+						return true;
 					}
-				} catch(eAdv) { console.log('advanceToNextLevel failed', eAdv); }
-				// fallback: go to MainMenu
-				try { if (window && typeof window.replaceSource === 'function') window.replaceSource("qml/window/MainMenu.qml"); } catch(eF) {}
-				return;
-			} else {
-				console.log('GameView: unhandled onResult.action', a);
-				try { if (window && typeof window.replaceSource === 'function') window.replaceSource("qml/window/MainMenu.qml"); } catch(e) {}
-				return;
-			}
+				}
+			} catch(eNavAll) { console.log('navigateByResult failed', eNavAll); }
+			return false;
 		}
-		// Default fallback: go back to main menu
-		try { if (window && typeof window.replaceSource === 'function') window.replaceSource("qml/window/MainMenu.qml"); } catch(e) { console.log('default navigate failed', e); }
+
+		// Show overlay (Win/Lose) then navigate—always prefer result object; for 'lose' avoid gameOver action
+		var overlayText = (resultType === 'win') ? "Win!" : "Lose!";
+		showResultOverlay(overlayText, 1200, function() {
+			// try using resObj (for lose it may be action:gameOver which we will ignore)
+			var used = false;
+			if (resObj && resObj.action === 'gameOver') {
+				// prefer win target if lose mapping is gameOver
+				try { if (battleData && battleData.onResult && battleData.onResult.win) { used = navigateByResult(battleData.onResult.win); } } catch(e) {}
+			} else {
+				used = navigateByResult(resObj);
+			}
+			// If not used yet, try win mapping as general fallback
+			if (!used) {
+				try { if (battleData && battleData.onResult && battleData.onResult.win) { used = navigateByResult(battleData.onResult.win); } } catch(e) {}
+			}
+			// final fallback: replace to MainMenu
+			if (!used) {
+				try { if (window && typeof window.replaceSource === 'function') window.replaceSource("qml/window/MainMenu.qml"); } catch(e) { console.log('final fallback navigate failed', e); }
+			}
+		});
 	}
 
 	// Periodic check for battle end conditions
@@ -283,7 +398,8 @@ Item {
 			id: textTime
 			anchors.centerIn: timeBg
 			color: "white"
-			font.pixelSize: 20
+			font.pixelSize: 34
+			font.bold: true
 			text: formatTimeLeft()
 		}
 	}
@@ -755,11 +871,14 @@ Item {
 			// restore saved countdown time if present
 			try {
 				if (typeof SaveLoadManager.timeLeftSeconds !== 'undefined' && SaveLoadManager.timeLeftSeconds !== null) {
-					timeLeftSeconds = SaveLoadManager.timeLeftSeconds;
-					if (timeLeftSeconds > 0) {
-						countdownTimer.running = true;
+					// Only restore if the save is for this battle and saved time is positive
+					if (SaveLoadManager.battleId === battleId && SaveLoadManager.timeLeftSeconds > 0) {
+						timeLeftSeconds = SaveLoadManager.timeLeftSeconds;
+						if (timeLeftSeconds > 0) {
+							countdownTimer.running = true;
+						}
+						console.log('spawnEnemiesFromMap: restored countdown timeLeftSeconds=', timeLeftSeconds);
 					}
-					console.log('spawnEnemiesFromMap: restored countdown timeLeftSeconds=', timeLeftSeconds);
 				}
 			} catch (eTL) { console.log('restore saved timeLeftSeconds failed', eTL); }
 		}
@@ -1461,9 +1580,12 @@ Item {
 						// restore countdown time from auto-save if present
 						try {
 							if (typeof SaveLoadManager.timeLeftSeconds !== 'undefined' && !isNaN(SaveLoadManager.timeLeftSeconds)) {
-								timeLeftSeconds = SaveLoadManager.timeLeftSeconds;
-								if (timeLeftSeconds > 0) countdownTimer.running = true;
-								console.log('GameView: restored timeLeftSeconds from auto-save', timeLeftSeconds);
+								// Only restore auto-save time if it belongs to this battle and has positive remaining time
+								if (SaveLoadManager.battleId === battleId && SaveLoadManager.timeLeftSeconds > 0) {
+									timeLeftSeconds = SaveLoadManager.timeLeftSeconds;
+									if (timeLeftSeconds > 0) countdownTimer.running = true;
+									console.log('GameView: restored timeLeftSeconds from auto-save', timeLeftSeconds);
+								}
 							}
 						} catch(eTL) { console.log('restore timeLeftSeconds from auto-save failed', eTL); }
 					} else {

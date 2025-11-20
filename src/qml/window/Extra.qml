@@ -41,22 +41,79 @@ Item {
             styleColor: "black"
         }
 
-        // 中间占位：暂不实现具体内容
-        Column {
+        // 回想入口：2行 x 3列 的白色格子（编号 1-6）
+        Item {
+            id: extraGridRoot
+            width: parent.width
+            height: 360
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.verticalCenter: parent.verticalCenter
-            spacing: 40
             z: 10
 
-            // 占位文本
-            Text {
-                text: "(EXTRA 内容待实现)"
-                font.pixelSize: 28
-                color: "white"
-                horizontalAlignment: Text.AlignHCenter
-                anchors.horizontalCenter: parent.horizontalCenter
-                style: Text.Outline
-                styleColor: "black"
+            property int cols: 3
+            property int rows: 2
+            property real gap: 28
+            property real boxW: 240
+            property real boxH: 120
+
+            Grid {
+                anchors.centerIn: parent
+                rows: extraGridRoot.rows
+                columns: extraGridRoot.cols
+                rowSpacing: extraGridRoot.gap
+                columnSpacing: extraGridRoot.gap
+
+                Repeater {
+                    model: extraGridRoot.rows * extraGridRoot.cols
+                    Rectangle {
+                        id: boxRect
+                        width: extraGridRoot.boxW
+                        height: extraGridRoot.boxH
+                        radius: 8
+                        border.color: "#333"
+                        border.width: 2
+                        opacity: 0.98
+
+                        property int number: index + 1
+                        property string battleId: "battle" + (number < 10 ? ("0" + number) : number)
+                        property bool hovered: false
+                        property bool pressed: false
+                        property real currentScale: pressed ? 0.96 : (hovered ? 1.03 : 1.0)
+
+                        color: (hovered || pressed) ? "#111" : "white"
+
+                        Behavior on color { ColorAnimation { duration: 160 } }
+                        Behavior on currentScale { NumberAnimation { duration: 140; easing.type: Easing.InOutQuad } }
+
+                        transform: Scale { xScale: boxRect.currentScale; yScale: boxRect.currentScale; origin.x: boxRect.width/2; origin.y: boxRect.height/2 }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            onEntered: boxRect.hovered = true
+                            onExited: { boxRect.hovered = false; boxRect.pressed = false }
+                            onPressed: boxRect.pressed = true
+                            onReleased: boxRect.pressed = false
+                            onCanceled: boxRect.pressed = false
+                            onClicked: {
+                                try { SaveLoadManager.battleId = boxRect.battleId; } catch (e1) {}
+                                try { window.currentBattleId = boxRect.battleId; } catch (e2) {}
+                                try {
+                                    if (window && window.replaceSource) window.replaceSource("qml/window/Game/GameView.qml");
+                                    else if (window && window.pushSource) window.pushSource("qml/window/Game/GameView.qml");
+                                } catch (en) { console.log('Extra: nav to GameView failed', en); }
+                            }
+                        }
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: boxRect.number.toString()
+                            font.pixelSize: 44
+                            color: (boxRect.hovered || boxRect.pressed) ? "white" : "#060606"
+                            font.bold: true
+                        }
+                    }
+                }
             }
         }
 

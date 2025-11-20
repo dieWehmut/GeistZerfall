@@ -1,26 +1,26 @@
 {
-  "battleId": "battle02",
+  "battleId": "battle06",
   "meta": {
-    "bgm": "battle02.mp3"
+    "bgm": "battle06.mp3"
   },
   "mapData": [
-    [-1,-1, 4,-1,-1,-1, 4,-1,-1],
+    [ 1,-1, 2,-1,-1,-1,-1,-1,-1],
     [-1,-1,-1,-1,-1,-1,-1,-1,-1],
-    [ 7,-1,-1,-1,-1,-1,-1,-1, 5],
+    [-1,-1,-1,-1,-1,-1,-1,-1,-1],
     [-1,-1,-1,-1,-1,-1,-1,-1,-1],
     [-1,-1,-1,-1, 0,-1,-1,-1,-1],
     [-1,-1,-1,-1,-1,-1,-1,-1,-1],
-    [ 7,-1,-1,-1,-1,-1,-1,-1, 5],
     [-1,-1,-1,-1,-1,-1,-1,-1,-1],
-    [-1,-1, 6,-1,-1,-1, 6,-1,-1]
+    [-1,-1,-1,-1,-1,-1,-1,-1,-1],
+    [-1,-1,-1,-1,-1,-1,-1,-1,-1]
   ],
   "rules": {
     "winCondition": { "type": "allEnemiesDead" },
     "loseCondition": { "type": "playerHpZero" },
-    "timeLimitSeconds": 15
+    "timeLimitSeconds": 10
   },
   "onResult": {
-    "win": { "action": "nextLevel" },
+    "win": { "nextChapter": "chapter01", "nextNode": "start" },
     "lose": { "action": "gameOver" }
   }
 }

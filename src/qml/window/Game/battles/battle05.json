@@ -1,7 +1,7 @@
 {
-  "battleId": "battle02",
+  "battleId": "battle05",
   "meta": {
-    "bgm": "battle02.mp3"
+    "bgm": "battle05.mp3"
   },
   "mapData": [
     [-1,-1, 4,-1,-1,-1, 4,-1,-1],
