@@ -84,6 +84,41 @@ void Player::snipe(double px, double py, double dirx, double diry) {
 	emit playerLaserCreated(l);
 }
 
+void Player::setTeleportMode(bool enabled) {
+	if (teleportModeActive == enabled)
+		return;
+	teleportModeActive = enabled;
+	emit teleportModeChanged();
+}
+
+void Player::toggleTeleportMode() {
+	setTeleportMode(!teleportModeActive);
+}
+
+void Player::enterTeleportMode() {
+	setTeleportMode(true);
+}
+
+void Player::exitTeleportMode() {
+	setTeleportMode(false);
+}
+
+void Player::teleportTo(double x, double y) {
+	double clampedX = x;
+	double clampedY = y;
+	if (getMapWidth() > 0) {
+		if (clampedX < 0.0) clampedX = 0.0;
+		if (clampedX > getMapWidth()) clampedX = getMapWidth();
+	}
+	if (getMapHeight() > 0) {
+		if (clampedY < 0.0) clampedY = 0.0;
+		if (clampedY > getMapHeight()) clampedY = getMapHeight();
+	}
+	setPos(QPointF(clampedX, clampedY));
+	emit teleported(QPointF(clampedX, clampedY));
+	exitTeleportMode();
+}
+
 PlayerSaveData Player::toSaveData() const {
 	PlayerSaveData d;
 	d.pos = getPos();

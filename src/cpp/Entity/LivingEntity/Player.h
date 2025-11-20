@@ -9,6 +9,7 @@ class Player : public Entity {
     Q_OBJECT
     Q_PROPERTY(int hp READ getHp WRITE setHp NOTIFY hpChanged)
     Q_PROPERTY(int maxHp READ getMaxHp WRITE setMaxHp NOTIFY maxHpChanged)
+    Q_PROPERTY(bool teleportMode READ isTeleportModeActive WRITE setTeleportMode NOTIFY teleportModeChanged)
 
 public:
     explicit Player(QObject *parent = nullptr);
@@ -26,9 +27,15 @@ public:
     Q_INVOKABLE void snipeStop();
     Q_INVOKABLE void shootStart();
     Q_INVOKABLE void shootStop();
+    Q_INVOKABLE void toggleTeleportMode();
+    Q_INVOKABLE void enterTeleportMode();
+    Q_INVOKABLE void exitTeleportMode();
+    Q_INVOKABLE void teleportTo(double x, double y);
 
     Q_PROPERTY(bool snipeActive READ isSnipeActive NOTIFY snipeChanged)
     bool isSnipeActive() const { return snipeActive; }
+    bool isTeleportModeActive() const { return teleportModeActive; }
+    void setTeleportMode(bool enabled);
 
     // Convert to/from saveable struct. Keeps save/load responsibilities separated.
     PlayerSaveData toSaveData() const;
@@ -44,16 +51,19 @@ signals:
     void hpChanged();
     void maxHpChanged();
     void damaged(int amount);
+    void teleportModeChanged();
+    void teleported(const QPointF &pos);
 
 
 
 private:
-    int hp{10000};
-    int maxHp{10000};
+    int hp{50000};
+    int maxHp{50000};
     bool snipeActive{false};
     bool shootingActive{false};
     double savedSight{0};
     double savedSpeed{0};
+    bool teleportModeActive{false};
 signals:
     void snipeChanged();
 };

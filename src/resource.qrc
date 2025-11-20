@@ -29,6 +29,8 @@
         <file>qml/components/BottomButtonBar.qml</file>
         <file>qml/components/ConfirmDialog.qml</file>
         <file>qml/components/AppButton.qml</file>
+        <file>qml/window/Game/Entity/TeleportCircle.qml</file>
+        <file>qml/window/Game/Entity/TeleportOverlay.qml</file>
         <file>qml/components/qmldir</file>
         <file>resource/image/bg/battle/default.png</file>
         <file>resource/image/bg/battle/playerSpawn.png</file>

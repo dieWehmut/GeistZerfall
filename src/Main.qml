@@ -142,18 +142,7 @@ Window {
         property alias mainLoader: mainLoader
     }
 
-    // Top-level controls panel loader: only active when GameView is displayed
-    Loader {
-        id: topControlsLoader
-        source: "qml/window/Game/ControlsPanel.qml"
-        active: mainLoader.source ? mainLoader.source.toString().indexOf("Game/GameView.qml") !== -1 : false
-        onLoaded: {
-            if (!item) return;
-            try { item.parent = window; } catch(e) {}
-            try { item.x = 8; item.y = 8; } catch(e) {}
-            try { item.z = 9999; } catch(e) {}
-        }
-    }
+
 
     // 屏幕切换覆盖层（用于平滑过渡）
     Rectangle {
