@@ -16,9 +16,6 @@
     [-1,-1,-1,-1,-1,-1,-1,-1,-1],
     [-1,-1, 6,-1,-1,-1, 6,-1,-1]
   ],
-  "spawn": {
-    "playerPos": { "x": 1, "y": 1 }
-  },
   "rules": {
     "winCondition": { "type": "allEnemiesDead" },
     "loseCondition": { "type": "playerHpZero" }
