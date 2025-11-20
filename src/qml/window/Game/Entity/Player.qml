@@ -181,6 +181,17 @@ Item {
 			}
 		}
 
+		// Debug text (optional) to avoid undefined reference when logging hp
+		Text {
+			id: hpDebugText
+			anchors.right: parent.right
+			anchors.bottom: parent.bottom
+			text: ""
+			color: "#ffffff"
+			font.pixelSize: 10
+			visible: false
+		}
+
 
 		Connections {
 			id: playerConnections

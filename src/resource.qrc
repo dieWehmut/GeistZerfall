@@ -21,6 +21,10 @@
         <file>qml/window/Lore/chapters/chapter01.json</file>
         <file>qml/window/Game/battles/battle01.json</file>
         <file>qml/window/Game/battles/battle02.json</file>
+        <file>qml/window/Game/battles/battle03.json</file>
+        <file>qml/window/Game/battles/battle04.json</file>
+        <file>qml/window/Game/battles/battle05.json</file>
+        <file>qml/window/Game/battles/battle06.json</file>
         <file>qml/window/Lore/components/HistoryPanel.qml</file>
         <file>qml/window/Lore/components/LoreControlButton.qml</file>
         <file>qml/window/Lore/components/LoreControlBar.qml</file>
