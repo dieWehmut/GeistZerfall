@@ -53,8 +53,9 @@ Item {
             property int cols: 3
             property int rows: 2
             property real gap: 28
-            property real boxW: 240
-            property real boxH: 120
+            // 增大格子尺寸，3列×2行在当前布局下仍然适配
+            property real boxW: 320
+            property real boxH: 160
 
             Grid {
                 anchors.centerIn: parent
@@ -78,7 +79,8 @@ Item {
                         property string battleId: "battle" + (number < 10 ? ("0" + number) : number)
                         property bool hovered: false
                         property bool pressed: false
-                        property real currentScale: pressed ? 0.96 : (hovered ? 1.03 : 1.0)
+                        // 悬浮时放大更明显，按下时略微回缩更自然
+                        property real currentScale: pressed ? 0.98 : (hovered ? 1.08 : 1.0)
 
                         color: (hovered || pressed) ? "#111" : "white"
 
@@ -108,7 +110,8 @@ Item {
                         Text {
                             anchors.centerIn: parent
                             text: boxRect.number.toString()
-                            font.pixelSize: 44
+                            // 增大数字字号以适配更大格子
+                            font.pixelSize: 56
                             color: (boxRect.hovered || boxRect.pressed) ? "white" : "#060606"
                             font.bold: true
                         }
