@@ -12,9 +12,14 @@ Item {
 	property real thickness: 24
 	property int damage: backend && backend.damage !== undefined ? backend.damage : 20
 	property real collisionRadius: baseSize * 0.35
+	property real knockbackDistance: 50
 
 	width: baseSize * tileScaleRef
 	height: baseSize * tileScaleRef
+	transformOrigin: Item.Center
+	property real pulsateScale: 1.0
+	property int pulsateDuration: 1200
+	scale: pulsateScale
 
 	function updateScreenPos() {
 		if (!backend || !backend.pos) return;
@@ -78,23 +83,51 @@ Item {
 	}
 
 	function checkCollision() {
-		if (!backend || !backend.pos || !enemiesRef || enemiesRef.length === 0) return;
+		if (!backend || !backend.pos) return;
 		var bpos = backend.pos;
 		var bx = bpos.x;
 		var by = bpos.y;
 		var bulletRadius = collisionRadius;
-		for (var i = 0; i < enemiesRef.length; ++i) {
-			var enemy = enemiesRef[i];
-			if (!enemy || enemy.alive === false || !enemy.pos) continue;
-			var enemyPos = enemy.pos;
-			var ex = enemyPos.x;
-			var ey = enemyPos.y;
-			var enemyRadius = enemy.collisionRadius !== undefined ? enemy.collisionRadius : 28;
-			var dx = ex - bx;
-			var dy = ey - by;
-			var combined = enemyRadius + bulletRadius;
-			if ((dx * dx + dy * dy) <= (combined * combined)) {
-				try { if (typeof enemy.receiveDamage === 'function') enemy.receiveDamage(damage); } catch(e){}
+		if (enemiesRef && enemiesRef.length > 0) {
+			for (var i = 0; i < enemiesRef.length; ++i) {
+				var enemy = enemiesRef[i];
+				if (!enemy || enemy.alive === false || !enemy.pos) continue;
+				var enemyPos = enemy.pos;
+				var ex = enemyPos.x;
+				var ey = enemyPos.y;
+				var enemyRadius = enemy.collisionRadius !== undefined ? enemy.collisionRadius : 28;
+				var dx = ex - bx;
+				var dy = ey - by;
+				var combined = enemyRadius + bulletRadius;
+				if ((dx * dx + dy * dy) <= (combined * combined)) {
+					// 要求：按敌人当前移动方向的相反方向击退
+					// 这里仅传入击退距离，让 C++ 侧用 -dirX/-dirY 自动计算
+					try { if (typeof enemy.receiveDamage === 'function') enemy.receiveDamage(damage, 0, 0, knockbackDistance); } catch(e){}
+					try { if (typeof backend.deleteLater === 'function') backend.deleteLater(); } catch(e){}
+					collisionTimer.stop();
+					return;
+				}
+			}
+		}
+		handleEnemyProjectileCollisions(bx, by, bulletRadius);
+	}
+
+	function handleEnemyProjectileCollisions(bx, by, bulletRadius) {
+		if (!mapWrapperRef || !mapWrapperRef.enemyProjectileVisuals || mapWrapperRef.enemyProjectileVisuals.length === 0) return;
+		var list = mapWrapperRef.enemyProjectileVisuals;
+		for (var j = list.length - 1; j >= 0; --j) {
+			var enemyProj = list[j];
+			if (!enemyProj) continue;
+			var backendObj = enemyProj.backend;
+			if (!backendObj || !backendObj.pos) continue;
+			var ex = backendObj.pos.x;
+			var ey = backendObj.pos.y;
+			var enemyRadius = enemyProj.collisionRadius !== undefined ? enemyProj.collisionRadius : (enemyProj.baseSize ? enemyProj.baseSize * 0.35 : 24);
+			var dxp = ex - bx;
+			var dyp = ey - by;
+			var combinedRadius = enemyRadius + bulletRadius;
+			if ((dxp * dxp + dyp * dyp) <= (combinedRadius * combinedRadius)) {
+				neutralizeEnemyProjectile(enemyProj);
 				try { if (typeof backend.deleteLater === 'function') backend.deleteLater(); } catch(e){}
 				collisionTimer.stop();
 				return;
@@ -102,5 +135,45 @@ Item {
 		}
 	}
 
+	function neutralizeEnemyProjectile(enemyProj) {
+		if (!enemyProj) return;
+		try {
+			if (enemyProj.backend && typeof enemyProj.backend.deleteLater === 'function') {
+				enemyProj.backend.deleteLater();
+			}
+		} catch(e) {}
+		try {
+			if (typeof enemyProj.destroy === 'function') enemyProj.destroy();
+		} catch(e) {}
+	}
+
 	Component.onDestruction: collisionTimer.stop()
+
+	NumberAnimation {
+		target: bulletRoot
+		property: "rotation"
+		from: 0
+		to: 360
+		duration: 360
+		loops: Animation.Infinite
+		running: true
+	}
+
+	Component.onCompleted: {
+		// assign a pseudo-unique duration different from enemy pulsate (1600)
+		try {
+			var d = 1000 + Math.floor(Math.random() * 800);
+			if (d === 1600) d += 137;
+			pulsateDuration = d;
+			if (pulseAnimBullets.running) pulseAnimBullets.stop();
+			pulseAnimBullets.start();
+		} catch(e) {}
+	}
+
+	SequentialAnimation {
+		id: pulseAnimBullets
+		loops: Animation.Infinite
+		NumberAnimation { target: bulletRoot; property: "pulsateScale"; from: 1.0; to: 1.5; duration: pulsateDuration; easing.type: Easing.InOutSine }
+		NumberAnimation { target: bulletRoot; property: "pulsateScale"; from: 1.5; to: 1.0; duration: pulsateDuration; easing.type: Easing.InOutSine }
+	}
 }

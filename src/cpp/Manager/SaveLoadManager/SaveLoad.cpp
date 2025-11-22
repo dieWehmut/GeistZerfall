@@ -85,6 +85,8 @@ bool SaveLoad::savePlayer(const QString &folderPath) {
     QDataStream out(&f);
     out.setVersion(QDataStream::Qt_5_15);
     last.write(out);
+    // append remaining countdown seconds for compatibility (written after SaveData block)
+    out << static_cast<qint32>(last.timeLeftSeconds);
     f.close();
     emit saved();
     // update internal state and notify only if changed
@@ -131,6 +133,8 @@ bool SaveLoad::saveSlot(int slot, const QString &folderPath) {
     QDataStream out(&f);
     out.setVersion(QDataStream::Qt_5_15);
     last.write(out);
+    // append remaining countdown seconds for compatibility
+    out << static_cast<qint32>(last.timeLeftSeconds);
     f.close();
 
     qDebug() << "SaveLoad: saved slot" << slot << "to" << filePath << "pos=" << last.player.pos << "speed=" << last.player.speed << "sight=" << last.player.sight;
@@ -258,6 +262,17 @@ bool SaveLoad::loadSlot(int slot, const QString &folderPath) {
     QDataStream in(&f);
     in.setVersion(QDataStream::Qt_5_15);
     bool ok = last.read(in);
+    // attempt to read appended timeLeftSeconds (if present)
+    if (ok) {
+        if (in.device()) {
+            qint64 available = in.device()->bytesAvailable();
+            if (available >= static_cast<qint64>(sizeof(qint32))) {
+                qint32 t = 0;
+                in >> t;
+                last.timeLeftSeconds = static_cast<int>(t);
+            }
+        }
+    }
     f.close();
     if (ok) {
         // update properties so QML bindings can read them
@@ -279,6 +294,7 @@ bool SaveLoad::loadSlot(int slot, const QString &folderPath) {
         emit loreMusicLoopsChanged();
         emit loreMusicStoppedChanged();
         emit battleIdChanged();
+        emit timeLeftSecondsChanged();
         emit loaded();
     }
     return ok;
@@ -319,6 +335,17 @@ bool SaveLoad::loadPlayer(const QString &folderPath) {
     QDataStream in(&f);
     in.setVersion(QDataStream::Qt_5_15);
     bool ok = last.read(in);
+    // attempt to read appended timeLeftSeconds (if present)
+    if (ok) {
+        if (in.device()) {
+            qint64 available = in.device()->bytesAvailable();
+            if (available >= static_cast<qint64>(sizeof(qint32))) {
+                qint32 t = 0;
+                in >> t;
+                last.timeLeftSeconds = static_cast<int>(t);
+            }
+        }
+    }
     f.close();
     if (ok) {
         emit posXChanged();
@@ -337,6 +364,7 @@ bool SaveLoad::loadPlayer(const QString &folderPath) {
         emit loreMusicLoopsChanged();
         emit loreMusicStoppedChanged();
         emit battleIdChanged();
+        emit timeLeftSecondsChanged();
         emit loaded();
     }
     return ok;

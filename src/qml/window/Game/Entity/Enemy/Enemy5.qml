@@ -1,104 +1,170 @@
 import QtQuick 2.15
-import GeistZerfall.Game 1.0  // 项目后端模块
+import GeistZerfall.Game 1.0
 
 Item {
-    id: enemy5
-    property BackendEnemy5 backend: null  // 绑定后端实例
+    id: enemy5Root
+    property int baseSize: 128
+    width: baseSize * tileScaleRef
+    height: baseSize * tileScaleRef
+    property var backend: null
+    property var playerObjRef: null
+    property var playerItemRef: null
+    property var mapWrapperRef: null
+    property real tileScaleRef: 1.0
+    z: 120
+    transformOrigin: Item.Center
+    property real pulsateScale: 1.0
+    property real impactScale: 1.0
+    property int pulsateDuration: 1600
+    scale: pulsateScale * impactScale
 
-    // 基础属性（位置、可见性与后端同步）
-    visible: backend !== null && backend.alive
-    x: backend ? backend.posX : 0
-    y: backend ? backend.posY : 0
-    width: 64  // 素材宽度
-    height: 64  // 素材高度
-
-    // 敌人精灵动画（QtQuick 2.15 中 Sprite 仍可用）
-    Sprite {
-        anchors.fill: parent
-        source: "qrc:/resource/image/enemy/enemy5.png"  // 实际资源路径
-        frameCount: 4  // 帧数量
-        frameWidth: 64  // 单帧宽度
-        frameHeight: 64  // 单帧高度
-        frameDuration: 200  // 每帧时长(ms)
-        running: visible  // 可见时播放动画
+    Image {
+        id: sprite
+        anchors.centerIn: parent
+        source: "qrc:/resource/image/entity/enemy5.png"
+        width: parent.width
+        height: parent.height
     }
 
-    // 生命值条
-    Rectangle {
-        id: hpBar
-        anchors.bottom: parent.top
+    Item {
+        id: hudRoot
+        width: enemy5Root.width
+        height: 20
         anchors.horizontalCenter: parent.horizontalCenter
-        width: parent.width * 0.8
-        height: 4
-        color: "red"
-        clip: true
+        y: -hudRoot.height - 6
+
+        Rectangle { anchors.fill: parent; color: "transparent" }
 
         Rectangle {
-            width: backend ? (backend.hp / backend.maxHp) * parent.width : 0
-            height: parent.height
-            color: "green"
+            id: hpBarBg
+            x: 4
+            y: 0
+            width: parent.width - 8
+            height: 8
+            radius: 3
+            color: "#3a0b0b"
+            border.color: "#000000"
+            Rectangle {
+                anchors.left: parent.left
+                width: backend ? (hpBarBg.width * Math.max(0, backend.hp) / Math.max(1, backend.maxHp)) : 0
+                height: parent.height
+                color: "#ff3333"
+                radius: parent.radius
+            }
+        }
+
+        Rectangle {
+            id: mpBarBg
+            x: 4
+            y: 10
+            width: parent.width - 8
+            height: 6
+            radius: 3
+            color: "#071028"
+            Rectangle {
+                anchors.left: parent.left
+                width: backend ? (mpBarBg.width * Math.max(0, backend.mp) / Math.max(1, backend.maxMp)) : 0
+                height: parent.height
+                color: "#3399ff"
+                radius: parent.radius
+            }
         }
     }
 
-    // 法力值条（Enemy5 特有）
-    Rectangle {
-        id: mpBar
-        anchors.top: parent.bottom
-        anchors.horizontalCenter: parent.horizontalCenter
-        width: parent.width * 0.8
-        height: 3
-        color: "black"
-        clip: true
+    function updateScreenPos() {
+        if (!backend) return;
+        enemy5Root.x = backend.pos.x * tileScaleRef - enemy5Root.width / 2;
+        enemy5Root.y = backend.pos.y * tileScaleRef - enemy5Root.height / 2;
+    }
 
-        Rectangle {
-            width: backend ? (backend.mp / backend.maxMp) * parent.width : 0
-            height: parent.height
-            color: "blue"
+    function syncForcedRevealRegistration() {
+        if (!mapWrapperRef) return;
+        if (backend && backend.forcedReveal) {
+            if (typeof mapWrapperRef.registerRevealedEnemy === 'function') {
+                mapWrapperRef.registerRevealedEnemy(enemy5Root);
+            }
+        } else if (typeof mapWrapperRef.unregisterRevealedEnemy === 'function') {
+            mapWrapperRef.unregisterRevealedEnemy(enemy5Root);
         }
     }
 
-    // 攻击动画（缩放效果）
+    onTileScaleRefChanged: updateScreenPos()
+
+    onBackendChanged: {
+        if (!backend) return;
+        try { backend.setProperty("collisionRadius", baseSize * 0.45); } catch (e) {}
+        try { backend.posChanged.connect(updateScreenPos); } catch (e) {}
+        try {
+            backend.enemyProjectileCreated.connect(function(pr) {
+                if (!pr) return;
+                var comp = Qt.createComponent("./Enemy5Bullet.qml");
+                if (comp.status === Component.Ready) {
+                    var obj = comp.createObject(mapWrapperRef, {
+                        backend: pr,
+                        playerObjRef: playerObjRef,
+                        playerItemRef: playerItemRef,
+                        mapWrapperRef: mapWrapperRef,
+                        tileScaleRef: tileScaleRef
+                    });
+                    if (obj) {
+                        obj.tileScaleRef = Qt.binding(function() { return tileScaleRef; });
+                    }
+                } else {
+                    console.log("Enemy5: Enemy5Bullet component error", comp.errorString());
+                }
+            });
+        } catch (e) {}
+        updateScreenPos();
+        syncForcedRevealRegistration();
+    }
+
     SequentialAnimation {
         id: attackAnim
-        PropertyAnimation {
-            target: enemy5
-            property: "scale"
-            to: 1.1
-            duration: 100
-        }
-        PropertyAnimation {
-            target: enemy5
-            property: "scale"
-            to: 1.0
-            duration: 100
-        }
+        PropertyAnimation { target: enemy5Root; property: "impactScale"; to: 1.08; duration: 100 }
+        PropertyAnimation { target: enemy5Root; property: "impactScale"; to: 1.0; duration: 100 }
     }
 
-    // 后端事件绑定（QtQuick 2.15 中 Connections 用法不变）
+    SequentialAnimation {
+        id: dieAnim
+        PropertyAnimation { target: enemy5Root; property: "opacity"; to: 0; duration: 420 }
+        onStopped: enemy5Root.destroy()
+    }
+
+    SequentialAnimation {
+        id: pulsateAnim
+        loops: Animation.Infinite
+        running: false
+        NumberAnimation { target: enemy5Root; property: "pulsateScale"; from: 1.0; to: 2.0; duration: pulsateDuration; easing.type: Easing.InOutSine }
+        NumberAnimation { target: enemy5Root; property: "pulsateScale"; from: 2.0; to: 1.0; duration: pulsateDuration; easing.type: Easing.InOutSine }
+    }
+
+	Timer { id: pulsateStarter; interval: 0; repeat: false; onTriggered: pulsateAnim.start() }
+
+	Component.onCompleted: {
+		try {
+			var d = 1200 + Math.floor(Math.random() * 1000);
+			pulsateDuration = d;
+			var offset = Math.floor(Math.random() * pulsateDuration);
+			pulsateStarter.interval = offset;
+			pulsateStarter.start();
+		} catch(e) {}
+		syncForcedRevealRegistration();
+	}
+
+	Component.onDestruction: {
+		if (mapWrapperRef && typeof mapWrapperRef.unregisterRevealedEnemy === 'function') {
+			mapWrapperRef.unregisterRevealedEnemy(enemy5Root);
+		}
+	}
+
     Connections {
         target: backend
-        onAttacked: {
-            attackAnim.restart()
-        }
-        onDied: {
-            // 死亡消失动画
-            SequentialAnimation {
-            PropertyAnimation {
-                target: enemy5
-                property: "opacity"
-                to: 0
-                duration: 500
-            }
-            onStopped: enemy5.destroy()
-        }.start()
-        }
-        // 生成子弹时创建视觉元素
-        onEnemyProjectileCreated: function(bullet) {
-            if (bullet.visualType !== "bullet") return
-            Enemy5Bullet {
-                backend: bullet
-                parent: enemy5.parent
+        onAttacked: attackAnim.restart()
+        onAliveChanged: {
+            if (backend && !backend.alive) {
+                dieAnim.restart();
             }
         }
+        onForcedRevealChanged: syncForcedRevealRegistration()
     }
 }
