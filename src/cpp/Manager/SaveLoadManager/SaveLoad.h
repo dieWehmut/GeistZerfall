@@ -26,6 +26,7 @@ class SaveLoad : public QObject {
     Q_PROPERTY(int loreMusicLoops READ loreMusicLoops WRITE setLoreMusicLoops NOTIFY loreMusicLoopsChanged)
     Q_PROPERTY(bool loreMusicStopped READ loreMusicStopped WRITE setLoreMusicStopped NOTIFY loreMusicStoppedChanged)
     Q_PROPERTY(QString battleId READ battleId WRITE setBattleId NOTIFY battleIdChanged)
+    Q_PROPERTY(int timeLeftSeconds READ timeLeftSeconds WRITE setTimeLeftSeconds NOTIFY timeLeftSecondsChanged)
 public:
     explicit SaveLoad(QObject *parent = nullptr);
 
@@ -79,6 +80,8 @@ public:
     bool loreMusicStopped() const { return last.loreMusicStopped; }
     QString battleId() const { return last.battleId; }
 
+    int timeLeftSeconds() const { return last.timeLeftSeconds; }
+
     bool autoExists() const;
 
     void setPosX(double x) { if (last.player.pos.x() != x) { last.player.pos.setX(x); emit posXChanged(); } }
@@ -97,6 +100,7 @@ public:
     void setLoreMusicLoops(int loops) { if (last.loreMusicLoops != loops) { last.loreMusicLoops = loops; emit loreMusicLoopsChanged(); } }
     void setLoreMusicStopped(bool stopped) { if (last.loreMusicStopped != stopped) { last.loreMusicStopped = stopped; emit loreMusicStoppedChanged(); } }
     void setBattleId(const QString &id) { if (last.battleId != id) { last.battleId = id; emit battleIdChanged(); } }
+    void setTimeLeftSeconds(int secs) { if (last.timeLeftSeconds != secs) { last.timeLeftSeconds = secs; emit timeLeftSecondsChanged(); } }
 
 signals:
     void loaded();
@@ -118,6 +122,7 @@ signals:
     void loreMusicLoopsChanged();
     void loreMusicStoppedChanged();
     void battleIdChanged();
+    void timeLeftSecondsChanged();
 private:
     SaveData last;
     bool m_autoExists{false};

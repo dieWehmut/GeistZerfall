@@ -3,7 +3,7 @@
 
 #include "../Enemy.h"
 
-// 敌人6：向周围6个方向发射子弹，每个方向两个子弹
+// 敌人6：向玩家方向发射波形光波
 class Enemy6 : public Enemy {
   Q_OBJECT
 public:

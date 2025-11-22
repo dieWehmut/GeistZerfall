@@ -21,7 +21,7 @@ signals:
 private:
     double vx{0};
     double vy{0};
-    int laserDamage{50};
+    int laserDamage{250};
     void startTick();
     void stopTick();
 };

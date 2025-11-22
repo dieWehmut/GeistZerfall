@@ -1,0 +1,26 @@
+{
+  "battleId": "battle06",
+  "meta": {
+    "bgm": "battle06.mp3"
+  },
+  "mapData": [
+    [ 1,-1, 2,-1,-1,-1,-1,-1,-1],
+    [-1,-1,-1,-1,-1,-1,-1,-1,-1],
+    [-1,-1,-1,-1,-1,-1,-1,-1,-1],
+    [-1,-1,-1,-1,-1,-1,-1,-1,-1],
+    [-1,-1,-1,-1, 0,-1,-1,-1,-1],
+    [-1,-1,-1,-1,-1,-1,-1,-1,-1],
+    [-1,-1,-1,-1,-1,-1,-1,-1,-1],
+    [-1,-1,-1,-1,-1,-1,-1,-1,-1],
+    [-1,-1,-1,-1,-1,-1,-1,-1,-1]
+  ],
+  "rules": {
+    "winCondition": { "type": "allEnemiesDead" },
+    "loseCondition": { "type": "playerHpZero" },
+    "timeLimitSeconds": 10
+  },
+  "onResult": {
+    "win": { "nextChapter": "chapter01", "nextNode": "start" },
+    "lose": { "action": "gameOver" }
+  }
+}

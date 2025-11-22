@@ -48,6 +48,8 @@ struct SaveData {
         bool read(QDataStream &in);
     };
     QList<EnemySaveData> enemies;
+    // Remaining countdown seconds for battle saves (0 = none)
+    int timeLeftSeconds{0};
 
     void write(QDataStream &out) const;
     bool read(QDataStream &in);

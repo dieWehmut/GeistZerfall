@@ -98,8 +98,9 @@ Item {
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.verticalCenter: parent.verticalCenter
             opacity: 0
-            font.pixelSize: 64
-            font.weight: Font.Weight.Bold
+            Component.onCompleted: {
+                try { mainTitle.font.pixelSize = 64; mainTitle.font.bold = true; } catch(e) {}
+            }
             color: "white"
             z: 10
         }
