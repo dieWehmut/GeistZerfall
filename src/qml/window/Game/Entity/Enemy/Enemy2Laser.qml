@@ -28,7 +28,7 @@ Item {
             var ex = sx + backend.maxDist * backend.dirx * tileScaleRef;
             var ey = sy + backend.maxDist * backend.diry * tileScaleRef;
             ctx.strokeStyle = '#ff2222';
-            ctx.lineWidth = 18 * tileScaleRef;
+            ctx.lineWidth = 15 * tileScaleRef;
             ctx.beginPath();
             ctx.moveTo(sx, sy);
             ctx.lineTo(ex, ey);

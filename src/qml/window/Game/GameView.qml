@@ -1112,7 +1112,7 @@ Item {
 		// use path relative to this QML file so component can be found in the project tree
 		var comp = Qt.createComponent("./Entity/PlayerBullet.qml");
 		if (comp.status === Component.Ready) {
-		var obj = comp.createObject(mapWrapper, { x: x - 32, y: y - 32 });
+		var obj = comp.createObject(mapWrapper, { x: x - 32, y: y - 32, playerObjRef: playerObj, playerItemRef: playerItem });
 			if (obj) {
 				// fallback visual-only bullet: start local motion if start exists, otherwise ensure it self-destructs
 				try { if (typeof obj.start === 'function') obj.start(dirx, diry); } catch (e) {}
@@ -1725,7 +1725,7 @@ Item {
 			// create bullet visual and bind
 			var comp = Qt.createComponent("./Entity/PlayerBullet.qml");
 				if (comp.status === Component.Ready) {
-					var obj = comp.createObject(mapWrapper, { backend: bullet, enemiesRef: enemyBackends, mapWrapperRef: mapWrapper, tileScaleRef: tileScale });
+					var obj = comp.createObject(mapWrapper, { backend: bullet, enemiesRef: enemyBackends, mapWrapperRef: mapWrapper, tileScaleRef: tileScale, playerObjRef: playerObj, playerItemRef: playerItem });
 				if (!obj) console.log('Failed to create PlayerBullet visual');
 				else {
 					obj.tileScaleRef = Qt.binding(function(){ return tileScale; });
@@ -1749,6 +1749,8 @@ Item {
 				// and pass a reference to mapWrapper so the visual can compute screen coords
 				var obj = comp.createObject(gameViewRoot, {
 					backend: laser,
+					// pass spreadIndex from backend (if available) to let visual tweak appearance
+					spreadIndex: (typeof laser.spreadIndex !== 'undefined') ? laser.spreadIndex : 0,
 					thickness: 6,
 					mapWrapperRef: mapWrapper,
 					tileScaleRef: Qt.binding(function() { return tileScale; }),

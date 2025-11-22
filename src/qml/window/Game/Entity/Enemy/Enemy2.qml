@@ -15,7 +15,8 @@ Item {
 	transformOrigin: Item.Center
 	property real pulsateScale: 1.0
 	property real impactScale: 1.0
-	property int pulsateDuration: 1600
+	// speed up pulsating animation
+	property int pulsateDuration: 800
 	scale: pulsateScale * impactScale
 
 	Image {
@@ -43,62 +44,107 @@ Item {
 	/* Line from enemy center to player when player is in sight. Implemented as a Canvas for continuous drawing. */
 	Canvas {
 		id: sightLine
-		anchors.fill: parent
+		anchors.centerIn: parent
+		width: visionCircle.width
+		height: visionCircle.height
 		z: 125
-		visible: false
-
-		property real dx: (function(){
-			if (!playerItemRef) return 0;
-			try {
-				var pt = playerItemRef.mapToItem(enemy2Root, playerItemRef.width/2, playerItemRef.height/2);
-				return pt.x - enemy2Root.width/2;
-			} catch(e) { return 0; }
-		})()
-		property real dy: (function(){
-			if (!playerItemRef) return 0;
-			try {
-				var pt = playerItemRef.mapToItem(enemy2Root, playerItemRef.width/2, playerItemRef.height/2);
-				return pt.y - enemy2Root.height/2;
-			} catch(e) { return 0; }
-		})()
-		property real dist: Math.sqrt(dx*dx + dy*dy)
+		
+		// vector from enemy center to player's center (in canvas coordinates)
+		property real targetDx: 0
+		property real targetDy: 0
+		property real targetDist: 0
+		// extended endpoint (so the line "penetrates" the player) => same distance beyond player
+		property real targetExtDx: 0
+		property real targetExtDy: 0
+		// moving ball progress [0..1] along the vector to the player center (stops at player position)
+		property real ballProgress: 0
+		property int ballTravelMs: 700  // how long the ball takes to reach player (ms)
+		
+		visible: (backend && playerItemRef) ? (targetDist <= (backend.sight * tileScaleRef)) : false
 
 		onPaint: {
 			var ctx = getContext('2d');
 			ctx.clearRect(0, 0, width, height);
 			try {
-				if (!backend || !playerItemRef || !mapWrapperRef) return;
-				var sx = enemy2Root.width / 2;
-				var sy = enemy2Root.height / 2;
-				var tx = sx + dx;
-				var ty = sy + dy;
-				// glow layers for red line
+				if (!visible) return;
+				var sx = width / 2;
+				var sy = height / 2;
+				// endpoint should extend past player by the same distance: e = enemy + 2*(player - enemy)
+				var tx = sx + targetExtDx;
+				var ty = sy + targetExtDy;
+				// glow layers for red line (slightly thinner)
 				for (var g = 6; g >= 1; --g) {
 					ctx.beginPath();
 					ctx.strokeStyle = 'rgba(255,0,0,' + (0.10 * g).toFixed(3) + ')';
-					ctx.lineWidth = 3 * g;
+					ctx.lineWidth = 2 * g;
 					ctx.lineCap = 'round';
 					ctx.moveTo(sx, sy);
 					ctx.lineTo(tx, ty);
 					ctx.stroke();
 				}
-				// solid core
+				// solid core (thinner)
 				ctx.beginPath();
 				ctx.strokeStyle = 'rgba(255,0,0,1.0)';
-				ctx.lineWidth = 8;
+				ctx.lineWidth = 5;
 				ctx.lineCap = 'round';
 				ctx.moveTo(sx, sy);
 				ctx.lineTo(tx, ty);
 				ctx.stroke();
+
+				// rolling orb along the line from enemy center -> player center
+				try {
+					// ball only up to player center (targetDx/targetDy), not the extended endpoint
+					var bx = sx + targetDx * ballProgress;
+					var by = sy + targetDy * ballProgress;
+					// make the rolling ball larger and scale with tileScaleRef
+					var ballRadius = Math.max(36, 48 * (tileScaleRef || 1));
+					ctx.beginPath();
+					ctx.fillStyle = '#890505ff'; // different color than the beam
+					ctx.arc(bx, by, ballRadius, 0, Math.PI*2);
+					ctx.fill();
+				} catch(e) {}
 			} catch(e) {}
 		}
 
 		Timer {
-			id: linePainter
-			interval: 50
+			id: trackingTimer
+			interval: 30
 			repeat: true
-			running: false
-			onTriggered: sightLine.requestPaint()
+			running: backend && backend.alive
+			onTriggered: {
+				if (!playerItemRef) {
+					sightLine.targetDist = 999999;
+					return;
+				}
+				try {
+					var pt = playerItemRef.mapToItem(sightLine, playerItemRef.width/2, playerItemRef.height/2);
+					// vector from canvas center (enemy center) to player center
+					sightLine.targetDx = pt.x - sightLine.width/2;
+					sightLine.targetDy = pt.y - sightLine.height/2;
+					sightLine.targetDist = Math.sqrt(sightLine.targetDx*sightLine.targetDx + sightLine.targetDy*sightLine.targetDy);
+					// extended endpoint is simply double the vector so the line passes through and continues same distance
+					sightLine.targetExtDx = sightLine.targetDx * 2;
+					sightLine.targetExtDy = sightLine.targetDy * 2;
+					if (sightLine.visible) sightLine.requestPaint();
+				} catch(e) {
+					sightLine.targetDist = 999999;
+				}
+			}
+		}
+
+		// ball animation timer: advance progress from 0->1 then loop back
+		Timer {
+			id: ballTimer
+			interval: 30
+			repeat: true
+			running: sightLine.visible
+			onTriggered: {
+				if (!sightLine.visible || sightLine.targetDist <= 0) { sightLine.ballProgress = 0; return; }
+				var delta = ballTimer.interval / Math.max(1, sightLine.ballTravelMs);
+				sightLine.ballProgress += delta;
+				if (sightLine.ballProgress > 1.0) sightLine.ballProgress = 0.0;
+				sightLine.requestPaint();
+			}
 		}
 	}
 
@@ -130,24 +176,7 @@ Item {
 		}
 	}
 
-	// update sightLine visibility based on computed distance
-	Binding {
-		target: sightLine
-		property: "visible"
-		value: (backend && playerItemRef) ? (sightLine.dist <= (backend.sight * tileScaleRef)) : false
-	}
 
-	// start/stop line painter together with sightLine visibility
-	Binding {
-		target: sightLine.linePainter
-		property: "running"
-		value: sightLine.visible
-	}
-
-	Connections {
-		target: sightLine
-		onVisibleChanged: if (sightLine.visible) sightLine.requestPaint()
-	}
 
 	// start/stop aura timer together with sightLine visibility
 	// keep aura timer running while player is in sight
@@ -261,7 +290,8 @@ Item {
 
 	Component.onCompleted: {
 		try {
-			var d = 1200 + Math.floor(Math.random() * 1000);
+			// shorter, faster pulsate period
+			var d = 600 + Math.floor(Math.random() * 400);
 			pulsateDuration = d;
 			var offset = Math.floor(Math.random() * pulsateDuration);
 			pulsateStarter.interval = offset;

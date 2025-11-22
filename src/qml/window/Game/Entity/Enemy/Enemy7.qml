@@ -16,7 +16,8 @@ Item {
     transformOrigin: Item.Center
     property real pulsateScale: 1.0
     property real impactScale: 1.0
-    property int pulsateDuration: 1600
+    // speed up pulsating animation
+    property int pulsateDuration: 800
     scale: pulsateScale * impactScale
 
     Image {
@@ -118,7 +119,8 @@ Item {
 
     Component.onCompleted: {
         try {
-            var d = 1200 + Math.floor(Math.random() * 1000);
+            // shorter, faster pulsate period
+            var d = 600 + Math.floor(Math.random() * 400);
             pulsateDuration = d;
             var offset = Math.floor(Math.random() * pulsateDuration);
             pulsateStarter.interval = offset;

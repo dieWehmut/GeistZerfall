@@ -18,7 +18,7 @@ Item {
     visible: backend !== null
     transformOrigin: Item.Center
     property real pulsateScale: 1.0
-    property int pulsateDuration: 1200
+    property int pulsateDuration: 600
     scale: pulsateScale
 
     Image {
@@ -119,7 +119,7 @@ Item {
             mapWrapperRef.registerEnemyProjectile(root);
         }
         try {
-            var d = 1000 + Math.floor(Math.random() * 800);
+            var d = 500 + Math.floor(Math.random() * 400);
             if (d === 1600) d += 73;
             pulsateDuration = d;
             if (pulsateAnimBul.running) pulsateAnimBul.stop();

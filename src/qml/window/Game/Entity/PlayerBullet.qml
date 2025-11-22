@@ -5,6 +5,8 @@ Item {
 	id: bulletRoot
 	property int baseSize: 64
 	property var backend: null
+	property var playerObjRef: null
+	property var playerItemRef: null
 	property var enemiesRef: null
 	property var mapWrapperRef: null
 	property real tileScaleRef: 1.0
@@ -18,7 +20,8 @@ Item {
 	height: baseSize * tileScaleRef
 	transformOrigin: Item.Center
 	property real pulsateScale: 1.0
-	property int pulsateDuration: 1200
+	// make bullet pulse faster
+	property int pulsateDuration: 600
 	scale: pulsateScale
 
 	function updateScreenPos() {
@@ -46,6 +49,7 @@ Item {
 
 	function handleBackendAssigned() {
 		updateScreenPos();
+		console.log('PlayerBullet: handleBackendAssigned backend:', backend, 'playerObjRef:', playerObjRef, 'playerItemRef:', playerItemRef);
 		try { backend.posChanged.connect(updateScreenPos); } catch(e){}
 		try {
 			backend.destroyed.connect(function() {
@@ -104,6 +108,25 @@ Item {
 					// 要求：按敌人当前移动方向的相反方向击退
 					// 这里仅传入击退距离，让 C++ 侧用 -dirX/-dirY 自动计算
 					try { if (typeof enemy.receiveDamage === 'function') enemy.receiveDamage(damage, 0, 0, knockbackDistance); } catch(e){}
+					// heal player on hit: +500 HP, cap at maxHp
+					try {
+						if (playerObjRef) {
+							// compute current and max (try property read first)
+							var cur = (typeof playerObjRef.hp === 'number') ? playerObjRef.hp : (playerObjRef.getHp ? playerObjRef.getHp() : 0);
+							var maxv = (typeof playerObjRef.maxHp === 'number') ? playerObjRef.maxHp : (playerObjRef.getMaxHp ? playerObjRef.getMaxHp() : cur + 500);
+							var newHp = Math.min(maxv, cur + 500);
+							// attempt direct assignment first (calls Q_PROPERTY setter when available)
+							try { playerObjRef.hp = newHp; console.log('PlayerBullet: healed backend player to', newHp); }
+							catch(e) {
+								// fallback to calling setter if exposed
+								try { if (typeof playerObjRef.setHp === 'function') { playerObjRef.setHp(newHp); console.log('PlayerBullet: called setHp, healed to', newHp); } }
+								catch(e) { /* ignore */ }
+							}
+						} else if (playerItemRef && playerItemRef.playerObj) {
+							// as last resort update the front-end player's playerObj if present
+							try { var pcur = typeof playerItemRef.playerObj.hp === 'number' ? playerItemRef.playerObj.hp : 0; var pmax = typeof playerItemRef.playerObj.maxHp === 'number' ? playerItemRef.playerObj.maxHp : pcur + 500; playerItemRef.playerObj.hp = Math.min(pmax, pcur + 500); console.log('PlayerBullet: healed front-end playerObj to', playerItemRef.playerObj.hp); } catch(e) {}
+						}
+					} catch(e) { console.log('PlayerBullet: heal failed', e); }
 					try { if (typeof backend.deleteLater === 'function') backend.deleteLater(); } catch(e){}
 					collisionTimer.stop();
 					return;
@@ -155,7 +178,7 @@ Item {
 		property: "rotation"
 		from: 0
 		to: 360
-		duration: 360
+		duration: 180
 		loops: Animation.Infinite
 		running: true
 	}
@@ -163,7 +186,8 @@ Item {
 	Component.onCompleted: {
 		// assign a pseudo-unique duration different from enemy pulsate (1600)
 		try {
-			var d = 1000 + Math.floor(Math.random() * 800);
+			// faster, shorter random period
+			var d = 100 + Math.floor(Math.random() * 400);
 			if (d === 1600) d += 137;
 			pulsateDuration = d;
 			if (pulseAnimBullets.running) pulseAnimBullets.stop();

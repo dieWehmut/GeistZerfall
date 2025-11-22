@@ -23,7 +23,9 @@ Item {
 	property int damage: backend && backend.damage !== undefined ? backend.damage : 800
 	// How far the laser should knock enemies back (in world units)
 	property real knockbackDistance: 300
-	property var damagedEnemies: []
+	// Track per-enemy knockback timestamps and whether they were damaged already
+	// Elements: { enemy: <backendEnemy>, last: <ms-since-epoch>, damaged: <bool> }
+	property var knockMap: []
 	// animated end point (used to gradually extend the beam)
 	property real endX: 0
 	property real endY: 0
@@ -31,6 +33,8 @@ Item {
 	property real beamOpacity: 1.0
 	// debug helper (disabled by default)
 	property bool debugLaser: false
+	// spreadIndex: -2 .. 0 .. 2 (outer beams have higher abs index)
+	property int spreadIndex: 0
 
 	function distanceSqToSegment(px, py, sx, sy, ex, ey) {
 		var dx = ex - sx;
@@ -87,12 +91,14 @@ Item {
 			// stronger glow: more layers, larger widths and higher alpha
 			// base glow color - deeper blue (#3399CC) for stronger contrast
 			var baseColor = '51,153,204'; // rgb for #3399CC
+			// slightly reduce intensity for outer beams using spreadIndex
+			var alphaMul = 1.0 - Math.min(0.7, Math.abs(spreadIndex) * 0.18);
 			// increase layers and make inner layers brighter
 			var glowLayers = 14;
 			for (var i = glowLayers; i >= 1; --i) {
 				ctx.beginPath();
 				// stronger alpha for inner layers and scale with i
-				var a = 0.03 * (i + 2);
+				var a = 0.03 * (i + 2) * alphaMul;
 				ctx.strokeStyle = 'rgba(' + baseColor + ',' + Math.min(a, 0.95).toFixed(3) + ')';
 				ctx.lineWidth = thickness * (i * 0.6);
 				ctx.lineCap = 'round';
@@ -103,7 +109,9 @@ Item {
 
 			// bright core line
 			ctx.beginPath();
-			ctx.strokeStyle = '#eaffff';
+			// brighten the core for center beam; dim slightly for outer beams
+			var coreAlpha = 1.0 * alphaMul;
+			ctx.strokeStyle = 'rgba(234,255,255,' + coreAlpha.toFixed(3) + ')';
 			ctx.lineWidth = Math.max(3, thickness * 0.6);
 			ctx.lineCap = 'round';
 			ctx.moveTo(sx, sy);
@@ -177,18 +185,46 @@ Item {
 		var ey = (endY !== 0 && endY !== undefined && endY !== null) ? endY : (backend.pos ? backend.pos.y : sy);
 		var scale = tileScaleRef <= 0 ? 1.0 : tileScaleRef;
 		var beamHalfWidth = (thickness / scale) * 0.5;
+		// prune stale entries and removed enemies from knockMap
+		for (var ki = knockMap.length - 1; ki >= 0; --ki) {
+			var ke = knockMap[ki];
+			if (!ke || !ke.enemy || ke.enemy.alive === false) knockMap.splice(ki, 1);
+		}
+
 		if (enemiesRef && enemiesRef.length > 0) {
 			for (var idx = 0; idx < enemiesRef.length; ++idx) {
 				var enemy = enemiesRef[idx];
 				if (!enemy || enemy.alive === false || !enemy.pos) continue;
-				if (damagedEnemies.indexOf(enemy) !== -1) continue;
 				var enemyPos = enemy.pos;
 				var enemyRadius = enemy.collisionRadius !== undefined ? enemy.collisionRadius : 28;
 				var distSq = distanceSqToSegment(enemyPos.x, enemyPos.y, sx, sy, ex, ey);
 				var limit = enemyRadius + beamHalfWidth;
 				if (distSq <= limit * limit) {
-					try { if (typeof enemy.receiveDamage === 'function') enemy.receiveDamage(damage, 0, 0, knockbackDistance); } catch(e){}
-					damagedEnemies.push(enemy);
+					// find per-enemy entry
+					var entryIndex = -1;
+					for (var j = 0; j < knockMap.length; ++j) if (knockMap[j].enemy === enemy) { entryIndex = j; break; }
+					var now = Date.now();
+					// compute knock direction (prefer radial from beam start toward enemy)
+					var kdx = enemyPos.x - sx;
+					var kdy = enemyPos.y - sy;
+					var klen = Math.sqrt(kdx*kdx + kdy*kdy);
+					if (klen === 0) { kdx = ex - sx; kdy = ey - sy; klen = Math.sqrt(kdx*kdx + kdy*kdy); }
+					if (klen !== 0) { kdx /= klen; kdy /= klen; } else { kdx = 0; kdy = 0; }
+
+					// first contact: apply damage + knockback and record timestamp
+					if (entryIndex === -1) {
+						try { if (typeof enemy.receiveDamage === 'function') enemy.receiveDamage(damage, kdx, kdy, knockbackDistance); } catch(e){}
+						knockMap.push({ enemy: enemy, last: now, damaged: true });
+					} else {
+						// subsequent contacts: only apply knockback at interval
+						var entry = knockMap[entryIndex];
+						var interval = (backend && backend.knockIntervalMs !== undefined) ? backend.knockIntervalMs : 1000;
+						if (!entry.last || (now - entry.last >= interval)) {
+							try { if (typeof enemy.receiveDamage === 'function') enemy.receiveDamage(0, kdx, kdy, knockbackDistance); } catch(e){}
+							entry.last = now;
+						}
+						// otherwise we skip until interval passes
+					}
 				}
 			}
 		}
@@ -230,7 +266,7 @@ Item {
 	}
 
 	onBackendChanged: {
-		damagedEnemies = [];
+		knockMap = [];
 		if (!backend) return;
 		if (debugLaser) {
 			try { console.log('PlayerLaser.onPaint coords: start', backend.startX, backend.startY, 'pos', backend.pos ? backend.pos.x + ',' + backend.pos.y : 'no pos'); } catch(e) {}

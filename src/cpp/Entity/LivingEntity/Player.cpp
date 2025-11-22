@@ -4,6 +4,7 @@
 #include <QtCore/QTimer>
 #include <QVariant>
 #include <cmath>
+#include <QtMath>
 #include "../../Manager/SaveLoadManager/SaveData.h"
 #include "../Projectile/PlayerBullet.h"
 #include "../Projectile/PlayerLaser.h"
@@ -74,17 +75,28 @@ void Player::snipeStop() {
 
 void Player::snipe(double px, double py, double dirx, double diry) {
 	qDebug() << "Player::snipe called px,py,dir:" << px << py << dirx << diry;
-	PlayerLaser *l = new PlayerLaser(this->parent());
+	// spawn 5 laser backends along directions: 0, -15, -30, 15, 30 degrees
+	const double anglesDeg[5] = {0.0, -15.0, -30.0, 15.0, 30.0};
 	const int laserDamage = 50;
-	l->setDamage(laserDamage);
-	l->setStartPos(QPointF(px, py));
-	l->setDirection(dirx, diry);
-	// expose start coordinates so QML visuals can draw beam from origin to current pos
-	l->setProperty("startX", QVariant(px));
-	l->setProperty("startY", QVariant(py));
-	connect(l, &PlayerLaser::backendDestroyed, this, [this](PlayerLaser* self){ Q_UNUSED(self); qDebug() << "Player::snipe: backendDestroyed for" << self; });
-	l->setProperty("visualType", QVariant("laser"));
-	emit playerLaserCreated(l);
+	for (int i = 0; i < 5; ++i) {
+		double ang = qDegreesToRadians(anglesDeg[i]);
+		// rotate original direction vector by ang
+		double nx = dirx * std::cos(ang) - diry * std::sin(ang);
+		double ny = dirx * std::sin(ang) + diry * std::cos(ang);
+		PlayerLaser *l = new PlayerLaser(this->parent());
+		l->setDamage(laserDamage);
+		l->setStartPos(QPointF(px, py));
+		l->setDirection(nx, ny);
+		// expose start coordinates so QML visuals can draw beam from origin to current pos
+		l->setProperty("startX", QVariant(px));
+		l->setProperty("startY", QVariant(py));
+		// mark spread index (-2..2) so visuals can slightly vary appearance
+		int spreadIndex = static_cast<int>(std::round(anglesDeg[i] / 15.0));
+		l->setSpreadIndex(spreadIndex);
+		connect(l, &PlayerLaser::backendDestroyed, this, [this](PlayerLaser* self){ Q_UNUSED(self); qDebug() << "Player::snipe: backendDestroyed for" << self; });
+		l->setProperty("visualType", QVariant("laser"));
+		emit playerLaserCreated(l);
+	}
 }
 
 void Player::setTeleportMode(bool enabled) {
