@@ -4,7 +4,7 @@
 #include <QtMath>
 
 Enemy6::Enemy6(QObject *parent) : Enemy(parent) {
-  setSpeed(5);
+  setSpeed(7);
   setSight(380);
   setMaxHp(1200);
   setHp(getMaxHp());

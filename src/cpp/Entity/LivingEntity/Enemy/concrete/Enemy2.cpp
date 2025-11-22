@@ -4,7 +4,7 @@
 #include <QVariant>
 
 Enemy2::Enemy2(QObject *parent) : Enemy(parent) {
-	setSpeed(6);
+	setSpeed(10);
 	setSight(340);
 	setMaxHp(1000);
 	setHp(getMaxHp());

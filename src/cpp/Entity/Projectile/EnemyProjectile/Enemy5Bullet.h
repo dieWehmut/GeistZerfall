@@ -30,7 +30,7 @@ private:
     QPointF origin{0,0};
     double dirx{0};
     double diry{0};
-    double velocity{800};
+    double velocity{1000};
     double trackingStrength{0.2}; // 追踪强度（0-1，值越小转向越平滑）
     QTimer *updateTimer{nullptr};
     int spriteIdx{1};
