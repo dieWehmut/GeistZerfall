@@ -2,7 +2,7 @@
 #include <QtMath>
 
 Enemy5Bullet::Enemy5Bullet(QObject *parent) : Projectile(parent) {
-    setMaxDist(800);
+    setMaxDist(1200);
     setTraveledDist(0);
     updateTimer = new QTimer(this);
     updateTimer->setInterval(16); // 相同的更新频率
