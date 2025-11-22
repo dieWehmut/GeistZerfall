@@ -5,7 +5,7 @@
 #include <cmath>
 
 Enemy3::Enemy3(QObject *parent) : Enemy(parent) {
-  setSpeed(5);
+  setSpeed(12);
   setSight(420);
   setMaxHp(1500);
   setHp(getMaxHp());

@@ -27,7 +27,7 @@ private:
     QPointF origin{0,0};
     double dirx{0};
     double diry{0};
-    double velocity{800};
+    double velocity{1000};
     QTimer *updateTimer{nullptr};
     int spriteIdx{2};
 };

@@ -2,7 +2,7 @@
 #include <QtMath>
 
 Enemy7Bullet::Enemy7Bullet(QObject *parent) : Projectile(parent) {
-    setMaxDist(500);
+    setMaxDist(600);
     setTraveledDist(0);
     updateTimer = new QTimer(this);
     updateTimer->setInterval(16); // 60FPS更新
