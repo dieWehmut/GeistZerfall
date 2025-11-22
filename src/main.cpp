@@ -7,6 +7,7 @@
 #include "cpp/Entity/LivingEntity/Player.h"
 #include "cpp/Manager/SaveLoadManager/SaveLoad.h"
 #include "cpp/Manager/EventManager/Transition.h"
+#include "cpp/Manager/EventManager/SeparationManager.h"
 #include "cpp/Manager/FileReader.h"
 #include "cpp/Entity/LivingEntity/Enemy/concrete/Enemy1.h"
 #include "cpp/Entity/LivingEntity/Enemy/concrete/Enemy2.h"
@@ -41,8 +42,6 @@ int main(int argc, char *argv[])
     qmlRegisterType<Enemy5>("GeistZerfall.Game", 1, 0, "BackendEnemy5");
     qmlRegisterType<Enemy6>("GeistZerfall.Game", 1, 0, "BackendEnemy6");
     qmlRegisterType<Enemy7>("GeistZerfall.Game", 1, 0, "BackendEnemy7");
-    // Projectiles are created from C++ and only used as QObject backends in QML visuals,
-    // but registering them is harmless and can help for debugging.
     qmlRegisterType<Enemy1Bullet>("GeistZerfall.Game", 1, 0, "BackendEnemy1Bullet");
     qmlRegisterType<Enemy2Laser>("GeistZerfall.Game", 1, 0, "BackendEnemy2Laser");
     qmlRegisterType<Enemy3MotherBullet>("GeistZerfall.Game", 1, 0, "BackendEnemy3MotherBullet");
@@ -66,6 +65,9 @@ int main(int argc, char *argv[])
     engine.rootContext()->setContextProperty("SaveLoadManager", saver);
     Transition *transitionMgr = new Transition(&engine);
     engine.rootContext()->setContextProperty("transitionManager", transitionMgr);
+    // expose the global SeparationManager singleton to QML so QML visuals can interact / query if needed
+    SeparationManager *sepMgr = SeparationManager::instance();
+    engine.rootContext()->setContextProperty("separationManager", sepMgr);
     FileReader *fileReader = new FileReader(&engine);
     engine.rootContext()->setContextProperty("fileReader", fileReader);
     engine.loadFromModule("GeistZerfall", "Main");

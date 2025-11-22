@@ -256,6 +256,14 @@ Item {
 		if (battleEnded) return;
 		battleEnded = true;
 		console.log('GameView: applying battle result', resultType);
+		// If the battle just ended (win or lose), delete the automatic save so the player
+		// won't resume into a finished battle via auto.dat.
+		try {
+			if (typeof SaveLoadManager !== 'undefined' && SaveLoadManager && typeof SaveLoadManager.removeAuto === 'function') {
+				SaveLoadManager.removeAuto();
+				console.log('GameView: removed auto.dat due to battle end');
+			}
+		} catch (eRem) { console.log('GameView: removeAuto failed', eRem); }
 		try { if (window && typeof window.stopMusic === 'function') window.stopMusic(); } catch(eStop) {}
 		// stop periodic checks to avoid duplicate triggers
 		try { battleEndCheckTimer.running = false; } catch(e) {}
@@ -962,7 +970,8 @@ Item {
 			var snapshot = serializeEnemies();
 			try { SaveLoadManager.setEnemies(snapshot); } catch (e) { console.log('setEnemies before save failed', e); }
 			try { WindowState.setGameEnemies && WindowState.setGameEnemies(snapshot); } catch (e) { console.log('update enemies in state failed', e); }
-			SaveLoadManager.saveAuto();
+			// Don't auto-save if the battle has ended (we remove auto.dat on end to avoid resuming a finished battle)
+			if (!battleEnded) SaveLoadManager.saveAuto();
 		}
 		// clear global pointer to player when leaving game view so other pages don't hold stale refs
 		try { if (window && window.currentPlayer) window.currentPlayer = undefined; } catch (e) {}
@@ -999,7 +1008,8 @@ Item {
 				var snapshot = serializeEnemies();
 				try { SaveLoadManager.setEnemies(snapshot); } catch (e) { console.log('setEnemies before save failed', e); }
 				try { WindowState.setGameEnemies && WindowState.setGameEnemies(snapshot); } catch (e) { console.log('update enemies in state failed', e); }
-				SaveLoadManager.saveAuto();
+				// Avoid creating an auto save for a finished battle: only save when battle still active
+				if (!battleEnded) SaveLoadManager.saveAuto();
 			}
 		}
 	}
@@ -1466,6 +1476,8 @@ Item {
 						// reasonable defaults for a new game
 						var defaultSpeed = 0;
 						var defaultSight = 180;
+						// Ensure default auto-save records which battle this belongs to when possible
+						try { SaveLoadManager.battleId = battleId || (typeof window !== 'undefined' && window.currentBattleId ? window.currentBattleId : ""); } catch(eBid) {}
 						SaveLoadManager.createDefaultAuto("save", centerX, centerY, defaultSpeed, defaultSight);
 					}
 				} else if (tm === "loadFromSave") {
@@ -1563,70 +1575,99 @@ Item {
 				}
 			} catch (e) { /* ignore if windowState not available */ }
 			// If we didn't just apply a save load, try loading auto save as before; otherwise default to center
-			if (!appliedSaveLoad) {
-				if (typeof SaveLoadManager !== 'undefined' && SaveLoadManager) {
-					if (SaveLoadManager.loadAuto() && (typeof SaveLoadManager.view === 'undefined' || SaveLoadManager.view !== 'lore')) {
-						console.log('Loaded auto save');
-						if (!isNaN(SaveLoadManager.posX) && !isNaN(SaveLoadManager.posY) && (SaveLoadManager.posX !== 0 || SaveLoadManager.posY !== 0)) {
-							playerObj.pos = Qt.point(SaveLoadManager.posX, SaveLoadManager.posY);
-						}
-						if (!isNaN(SaveLoadManager.speed) && SaveLoadManager.speed > 0) playerObj.setSpeed(SaveLoadManager.speed);
-						if (!isNaN(SaveLoadManager.sight) && SaveLoadManager.sight > 0) playerObj.setSight(SaveLoadManager.sight);
-						if (!isNaN(SaveLoadManager.maxHp) && SaveLoadManager.maxHp > 0) playerObj.maxHp = SaveLoadManager.maxHp;
-						if (!isNaN(SaveLoadManager.hp)) {
-							var autoHp = Math.max(0, Math.min(SaveLoadManager.hp, playerObj.maxHp));
-							playerObj.hp = autoHp;
-						}
-						// restore countdown time from auto-save if present
-						try {
-							if (typeof SaveLoadManager.timeLeftSeconds !== 'undefined' && !isNaN(SaveLoadManager.timeLeftSeconds)) {
-								// Only restore auto-save time if it belongs to this battle and has positive remaining time
-								if (SaveLoadManager.battleId === battleId && SaveLoadManager.timeLeftSeconds > 0) {
-									timeLeftSeconds = SaveLoadManager.timeLeftSeconds;
-									if (timeLeftSeconds > 0) countdownTimer.running = true;
-									console.log('GameView: restored timeLeftSeconds from auto-save', timeLeftSeconds);
+			// Defer the heavy restore/spawn logic so the tile map is reliably available (avoid running
+			// this too early which can leave player at 0,0). Using Qt.callLater schedules after
+			// object completion & map setup.
+			if (!appliedSaveLoad) Qt.callLater(function() {
+				// Attempt to apply auto-save restore when present and matching the current battleId.
+				// Otherwise fall back to explicit spawn position (from JSON), then scan map for
+				// a tile==0 spawn spot, then finally use center as a last resort.
+				var handled = false;
+				try {
+					if (typeof SaveLoadManager !== 'undefined' && SaveLoadManager) {
+						if (SaveLoadManager.loadAuto() && (typeof SaveLoadManager.view === 'undefined' || SaveLoadManager.view !== 'lore')) {
+							if (SaveLoadManager.battleId === battleId) {
+								console.log('Loaded auto save');
+								if (!isNaN(SaveLoadManager.posX) && !isNaN(SaveLoadManager.posY) && (SaveLoadManager.posX !== 0 || SaveLoadManager.posY !== 0)) {
+									playerObj.pos = Qt.point(SaveLoadManager.posX, SaveLoadManager.posY);
 								}
+								if (!isNaN(SaveLoadManager.speed) && SaveLoadManager.speed > 0) playerObj.setSpeed(SaveLoadManager.speed);
+								if (!isNaN(SaveLoadManager.sight) && SaveLoadManager.sight > 0) playerObj.setSight(SaveLoadManager.sight);
+								if (!isNaN(SaveLoadManager.maxHp) && SaveLoadManager.maxHp > 0) playerObj.maxHp = SaveLoadManager.maxHp;
+								if (!isNaN(SaveLoadManager.hp)) {
+									var autoHp = Math.max(0, Math.min(SaveLoadManager.hp, playerObj.maxHp));
+									playerObj.hp = autoHp;
+								}
+								// restore countdown time from auto-save if present
+								try {
+									if (typeof SaveLoadManager.timeLeftSeconds !== 'undefined' && !isNaN(SaveLoadManager.timeLeftSeconds)) {
+										if (SaveLoadManager.battleId === battleId && SaveLoadManager.timeLeftSeconds > 0) {
+											timeLeftSeconds = SaveLoadManager.timeLeftSeconds;
+											if (timeLeftSeconds > 0) countdownTimer.running = true;
+											console.log('GameView: restored timeLeftSeconds from auto-save', timeLeftSeconds);
+										}
+									}
+								} catch(eTL) { console.log('restore timeLeftSeconds from auto-save failed', eTL); }
+								appliedSaveLoad = true;
+								handled = true;
+							} else {
+								console.log('GameView: auto save exists, but belongs to different battle (auto:' + SaveLoadManager.battleId + ' != ' + battleId + '), skipping auto-restore');
+								handled = false;
 							}
-						} catch(eTL) { console.log('restore timeLeftSeconds from auto-save failed', eTL); }
-					} else {
-						// If battle JSON provides an explicit spawn.playerPos, honor it (tile coords assumed)
+						}
+					}
+				} catch (e) { console.log('auto-restore check failed', e); }
+
+				if (!handled) {
+					// Try explicit spawn coordinate in battle JSON
+					var didSpawn = false;
+					try {
 						if (battleData && battleData.spawn && battleData.spawn.playerPos) {
-							try {
-								var p = battleData.spawn.playerPos;
-								// assume p.x/p.y are tile coordinates (col,row). Place player at tile center,
-								// convert to top-left world coords used by playerObj.pos
-								var spawnWorldX = (p.x * tileSize) + (tileSize/2) - (playerItem.width/2);
-								var spawnWorldY = (p.y * tileSize) + (tileSize/2) - (playerItem.height/2);
-								playerObj.pos = Qt.point(spawnWorldX, spawnWorldY);
-							} catch(ePos) { console.log('apply explicit spawn.playerPos failed', ePos); playerObj.pos = Qt.point(centerX, centerY); }
-						} else {
-							// No explicit spawn provided: scan mapData for tile==0 and use its center if found
-							var used = false;
-							try {
-								if (tileManager && tileManager.curMapData) {
-									var rows2 = tileManager.curMapData.length;
-									for (var rr = 0; rr < rows2 && !used; ++rr) {
-										var cols2 = tileManager.curMapData[rr].length;
-										for (var cc = 0; cc < cols2; ++cc) {
-											var tt = tileManager.getTileType(rr, cc);
-											if (tt === 0) {
-												var wx = cc * tileSize + tileSize/2 - (playerItem.width/2);
-												var wy = rr * tileSize + tileSize/2 - (playerItem.height/2);
-												playerObj.pos = Qt.point(wx, wy);
-												used = true;
-												break;
-											}
+							var p = battleData.spawn.playerPos;
+							var spawnWorldX = (p.x * tileSize) + (tileSize/2) - (playerItem.width/2);
+							var spawnWorldY = (p.y * tileSize) + (tileSize/2) - (playerItem.height/2);
+							playerObj.pos = Qt.point(spawnWorldX, spawnWorldY);
+							didSpawn = true;
+						}
+					} catch (ePos) { console.log('apply explicit spawn.playerPos failed', ePos); }
+
+					// If no explicit spawn, scan map for a tile==0 and pick its center
+					if (!didSpawn) {
+						try {
+							if (tileManager && tileManager.curMapData) {
+								var rows2 = tileManager.curMapData.length;
+								var found = false;
+								for (var rr = 0; rr < rows2 && !found; ++rr) {
+									var cols2 = tileManager.curMapData[rr].length;
+									for (var cc = 0; cc < cols2; ++cc) {
+										var tt = tileManager.getTileType(rr, cc);
+										if (tt === 0) {
+											var wx = cc * tileSize + tileSize/2 - (playerItem.width/2);
+											var wy = rr * tileSize + tileSize/2 - (playerItem.height/2);
+											playerObj.pos = Qt.point(wx, wy);
+											found = true;
+											didSpawn = true;
+											break;
 										}
 									}
 								}
-							} catch(eScan) { console.log('scan for tile==0 failed', eScan); }
-							if (!used) playerObj.pos = Qt.point(centerX, centerY);
-						}
+								if (!found) {
+									// fallback to center if no tile==0 found
+									playerObj.pos = Qt.point(centerX, centerY);
+									didSpawn = true;
+								}
+							} else {
+								// no map yet - fallback to map center
+								playerObj.pos = Qt.point(centerX, centerY);
+								didSpawn = true;
+							}
+						} catch (eScan) { console.log('scan for tile==0 failed', eScan); playerObj.pos = Qt.point(centerX, centerY); didSpawn = true; }
 					}
-				} else {
-					playerObj.pos = Qt.point(centerX, centerY);
+
+					// Mark that we handled spawn/default state so we won't attempt auto-restore again
+					appliedSaveLoad = true;
 				}
-			}
+			});
 			// expose playerObj to window so SaveLoad UI can read current player state when saving
 			try { if (window) window.currentPlayer = playerObj; } catch (e) {}
 			// persist enemy snapshot via WindowState for SaveLoad UI

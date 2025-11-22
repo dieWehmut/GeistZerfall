@@ -140,6 +140,8 @@ qt_add_qml_module(GeistZerfall
         src/cpp/Manager/SaveLoadManager/SaveLoad.h
         src/cpp/Manager/EventManager/Transition.cpp
         src/cpp/Manager/EventManager/Transition.h
+        src/cpp/Manager/EventManager/SeparationManager.cpp
+        src/cpp/Manager/EventManager/SeparationManager.h
         src/cpp/Manager/FileReader.cpp
         src/cpp/Manager/FileReader.h
 )
