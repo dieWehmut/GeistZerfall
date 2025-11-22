@@ -7,11 +7,13 @@ Item {
     property real tileScale: 1.0
     property bool active: false
     property real teleportDistance: 300
+    // multiplier to slightly reduce teleport marker distance from the player
+    property real teleportDistanceMultiplier: 0.85
     // If a sightMaskRef is provided, prefer its current radius (screen px) converted to world units.
     property var sightMaskRef: null
     readonly property real effectiveTeleportDistance: (
         sightMaskRef && typeof sightMaskRef.radius !== 'undefined'
-    ) ? (sightMaskRef.radius / tileScale) : ((playerObj && typeof playerObj.sight !== 'undefined') ? playerObj.sight : teleportDistance)
+    ) ? (sightMaskRef.radius / tileScale) * teleportDistanceMultiplier : ((playerObj && typeof playerObj.sight !== 'undefined') ? playerObj.sight * teleportDistanceMultiplier : teleportDistance * teleportDistanceMultiplier)
     property var mapWrapperRef: null
     property var mapClamp: ({ width: 0, height: 0 })
     property string teleportSprite: "qrc:/resource/image/entity/playerNormal.png"
@@ -29,6 +31,10 @@ Item {
         Qt.point(1, 1)
     ]
         property real rotationAngle: 0
+        // Teleport visual line (keeps a thick blue line after teleport for 5s)
+        property bool teleportLineVisible: false
+        property var teleportLineStartWorld: Qt.point(0, 0)
+        property var teleportLineEndWorld: Qt.point(0, 0)
 
     visible: active && playerObj
     z: 2090
@@ -97,8 +103,7 @@ Item {
             x: worldPoint.x * teleportOverlay.tileScale - width / 2
             y: worldPoint.y * teleportOverlay.tileScale - height / 2
             onClicked: function(pt) {
-                if (!teleportOverlay.playerObj || typeof teleportOverlay.playerObj.teleportTo !== 'function') return;
-                teleportOverlay.playerObj.teleportTo(pt.x, pt.y);
+                teleportOverlay.handleTeleportClick(pt);
             }
         }
     }
@@ -109,10 +114,30 @@ Item {
             target: teleportOverlay
             property: "rotationAngle"
             from: 0; to: 360
-            duration: 6000
+            duration: 1000
             loops: Animation.Infinite
             running: teleportOverlay.active
         }
+
+    // Ensure markers recompute when rotationAngle changes so rotation is real-time
+    onRotationAngleChanged: forceUpdate()
+
+    signal teleportRequested(var pt)
+    // Handle teleport click: draw persistent blue line (backend teleport is done by caller after animation)
+    function handleTeleportClick(pt) {
+        if (!teleportOverlay.playerObj) return;
+        // compute and clamp world endpoints
+        teleportOverlay.teleportLineStartWorld = teleportOverlay.playerCenterWorld();
+        teleportOverlay.teleportLineEndWorld = teleportOverlay.clampPoint(pt);
+        teleportOverlay.teleportLineVisible = true;
+        if (teleportLineTimer.running) teleportLineTimer.stop();
+        teleportLineTimer.start();
+        // request paint immediately
+        if (typeof teleportLineCanvas !== 'undefined') teleportLineCanvas.requestPaint();
+        // notify parent that user requested a teleport to pt (GameView will perform animated move)
+        try { teleportOverlay.teleportRequested(pt); } catch(e) { /* ignore */ }
+    }
+
 
     Connections {
         target: playerObj
@@ -127,6 +152,39 @@ Item {
         target: sightMaskRef
         enabled: !!sightMaskRef
         function onRadiusChanged() { teleportOverlay.forceUpdate(); }
+    }
+
+    Timer {
+        id: teleportLineTimer
+        interval: 5000
+        repeat: false
+        running: false
+        onTriggered: {
+            teleportOverlay.teleportLineVisible = false;
+            if (typeof teleportLineCanvas !== 'undefined') teleportLineCanvas.requestPaint();
+        }
+    }
+
+    Canvas {
+        id: teleportLineCanvas
+        anchors.fill: parent
+        visible: teleportOverlay.teleportLineVisible
+        onPaint: {
+            var ctx = getContext('2d');
+            ctx.reset();
+            if (!teleportOverlay.teleportLineVisible) return;
+            var sx = teleportOverlay.teleportLineStartWorld.x * teleportOverlay.tileScale;
+            var sy = teleportOverlay.teleportLineStartWorld.y * teleportOverlay.tileScale;
+            var ex = teleportOverlay.teleportLineEndWorld.x * teleportOverlay.tileScale;
+            var ey = teleportOverlay.teleportLineEndWorld.y * teleportOverlay.tileScale;
+            ctx.beginPath();
+            ctx.moveTo(sx, sy);
+            ctx.lineTo(ex, ey);
+            ctx.lineWidth = Math.max(6, 8 * teleportOverlay.tileScale);
+            ctx.strokeStyle = '#3399FF';
+            ctx.lineCap = 'round';
+            ctx.stroke();
+        }
     }
 
     function forceUpdate() {

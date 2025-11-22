@@ -1349,19 +1349,17 @@ Item {
 		acceptedButtons: Qt.LeftButton
 		cursorShape: Qt.PointingHandCursor
 		onClicked: function(mouse) {
-			if (!playerObj || !mapWrapper) return;
+			if (!playerObj || !mapWrapper || !teleportOverlay) return;
 			var localX = mouse.x - mapWrapper.x;
 			var localY = mouse.y - mapWrapper.y;
 			var worldX = localX / tileScale;
 			var worldY = localY / tileScale;
 			var clampedX = Math.max(0, Math.min(worldX, mapCols * tileSize));
 			var clampedY = Math.max(0, Math.min(worldY, mapRows * tileSize));
-			// Start a high-speed animated move instead of instant teleport
+			// Draw persistent teleport line and then (GameView via teleportRequested signal) will start animated move
 			try {
-				startTeleportMove(clampedX, clampedY);
-			} catch (e) {
-				console.log('teleportClickArea teleport failed', e);
-			}
+				teleportOverlay.handleTeleportClick(Qt.point(clampedX, clampedY));
+			} catch (e) { console.log('handleTeleportClick failed', e); }
 		}
 	}
 
@@ -1420,9 +1418,10 @@ Item {
 		teleportParallel.start();
 
 		teleportMover.finished.connect(function() {
-			// ensure final pos set exactly
+			// ensure final pos set exactly and notify backend via teleportTo so
+			// the backend can emit teleported() (and related handlers can run).
 			try { playerObj.pos = Qt.point(targetWorldX, targetWorldY); } catch(e) {}
-			try { if (typeof playerObj.exitTeleportMode === 'function') playerObj.exitTeleportMode(); } catch(e) {}
+			try { if (typeof playerObj.teleportTo === 'function') playerObj.teleportTo(targetWorldX, targetWorldY); } catch(e) {}
 		});
 	}
 
@@ -1441,6 +1440,15 @@ Item {
 		playerVisualWidth: playerItem ? playerItem.width : 0
 		playerVisualHeight: playerItem ? playerItem.height : 0
 		mapClamp: ({ width: mapCols * tileSize, height: mapRows * tileSize })
+	}
+
+	// Start animated teleport when overlay emits the request (marker clicks or viewport clicks)
+	Connections {
+		target: teleportOverlay
+		enabled: !!teleportOverlay
+		function onTeleportRequested(pt) {
+			try { startTeleportMove(pt.x, pt.y); } catch(e) { console.log('onTeleportRequested failed', e); }
+		}
 	}
 	Connections {
 		target: playerObj

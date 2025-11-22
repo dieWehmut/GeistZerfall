@@ -31,7 +31,7 @@ private:
   QPointF origin{0, 0};
   double dirx{0};
   double diry{0};
-  double velocity{360}; // 每秒像素
+  double velocity{1000}; // 每秒像素
   QTimer *updateTimer{nullptr};
   int spriteIdx{1};
 };

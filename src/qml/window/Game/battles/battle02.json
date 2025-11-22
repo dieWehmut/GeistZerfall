@@ -17,7 +17,7 @@
   "rules": {
     "winCondition": { "type": "allEnemiesDead" },
     "loseCondition": { "type": "playerHpZero" },
-    "timeLimitSeconds": 60
+    "timeLimitSeconds": 70
   },
   "onResult": {
     "win": { "action": "nextLevel" },

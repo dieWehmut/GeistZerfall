@@ -28,7 +28,7 @@ private:
   QPointF origin{0, 0};
   double dirx{0};
   double diry{0};
-  double velocity{500}; // 每秒像素，母弹速度较慢
+  double velocity{1000}; // 每秒像素，母弹速度较慢
   QTimer *updateTimer{nullptr};
   int flightTimeMs{0};                 // 已飞行时间（毫秒）
   static const int splitTimeMs = 2000; // 2秒后分裂

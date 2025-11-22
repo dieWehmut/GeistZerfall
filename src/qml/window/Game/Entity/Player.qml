@@ -217,6 +217,25 @@ Item {
 		}
 	}
 
+	// Listen for backend teleported signal to consume laserCd resource
+	Connections {
+		target: playerObj
+		enabled: !!playerObj
+		function onTeleported(pos) {
+			try {
+				if (typeof laserCdMax !== 'undefined' && typeof laserCd !== 'undefined') {
+					var cost = Math.round(laserCdMax * 0.05);
+					laserCd = Math.max(0, laserCd - cost);
+					// ensure laser starts recharging automatically after teleport use
+					if (laserCd < laserCdMax) {
+						laserRecharging = true;
+						if (!laserCdTimer.running) laserCdTimer.start();
+					}
+				}
+			} catch (e) { console.log('onTeleported handler error', e); }
+		}
+	}
+
 	// CD properties and timers (client-side visual & guard)
 	property int bulletCd: 3000
 	property int bulletCdMax: 3000
@@ -226,6 +245,21 @@ Item {
 	property int laserRechargeStep: 100
 	property bool bulletRecharging: false
 	property bool laserRecharging: false
+
+	// Always ensure laserCd automatically starts recharging when not full.
+	// onLaserCdChanged handles any manual deductions (e.g. teleport) or usage.
+	onLaserCdChanged: {
+		if (laserCd < laserCdMax) {
+			laserRecharging = true;
+			if (!laserCdTimer.running) laserCdTimer.start();
+		} else {
+			// fully recharged
+			if (laserCd >= laserCdMax) {
+				laserRecharging = false;
+				if (laserCdTimer.running) laserCdTimer.stop();
+			}
+		}
+	}
 
 	Timer {
 		id: bulletCdTimer

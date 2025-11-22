@@ -131,7 +131,9 @@ void Player::teleportTo(double x, double y) {
 	}
 	setPos(QPointF(clampedX, clampedY));
 	emit teleported(QPointF(clampedX, clampedY));
-	exitTeleportMode();
+	// NOTE: do not exit teleport mode here. Keep teleport mode active until
+	// the player explicitly toggles it off (pressing F again). This allows
+	// the UI to remain active and only cancel on user action.
 }
 
 PlayerSaveData Player::toSaveData() const {
