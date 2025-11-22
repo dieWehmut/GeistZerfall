@@ -1,7 +1,9 @@
 ﻿#include "Enemy.h"
+#include "Manager/EventManager/SeparationManager.h"
 #include <QtMath>
 
 Enemy::Enemy(QObject *parent) : Entity(parent) {
+	SeparationManager::instance()->registerEnemy(this);
 	setSpeed(24);      // 默认比玩家慢一些
 	setSight(350);     // 默认视野
 	setMaxHp(100);
@@ -45,6 +47,7 @@ Enemy::Enemy(QObject *parent) : Entity(parent) {
 }
 
 Enemy::~Enemy() {
+	SeparationManager::instance()->unregisterEnemy(this);
 }
 
 void Enemy::startLogicLoop() {

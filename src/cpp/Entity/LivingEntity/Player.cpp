@@ -1,4 +1,5 @@
 #include "Player.h"
+#include "Manager/EventManager/SeparationManager.h"
 #include <QDebug>
 #include <QtCore/QTimer>
 #include <QVariant>
@@ -7,6 +8,7 @@
 #include "../Projectile/PlayerBullet.h"
 #include "../Projectile/PlayerLaser.h"
 Player::Player(QObject *parent) : Entity(parent) {
+	SeparationManager::instance()->setPlayer(this);
 	setSpeed(36);
 	setSight(500);
 	setMaxHp(10000);
@@ -15,6 +17,7 @@ Player::Player(QObject *parent) : Entity(parent) {
 }
 
 Player::~Player() {
+	SeparationManager::instance()->setPlayer(nullptr);
 }
 
 void Player::shoot(double px, double py, double dirx, double diry) {
