@@ -54,3 +54,33 @@ void PlayerLaser::setDamage(int value) {
     laserDamage = value;
     emit damageChanged();
 }
+
+int PlayerLaser::spreadIndex() const {
+    return _spreadIndex;
+}
+
+void PlayerLaser::setSpreadIndex(int idx) {
+    if (_spreadIndex == idx) return;
+    _spreadIndex = idx;
+    emit spreadIndexChanged();
+}
+
+double PlayerLaser::knockbackDistance() const {
+    return _knockbackDistance;
+}
+
+void PlayerLaser::setKnockbackDistance(double d) {
+    if (qFuzzyCompare(_knockbackDistance + 1.0, d + 1.0)) return;
+    _knockbackDistance = d;
+    emit knockbackDistanceChanged();
+}
+
+int PlayerLaser::knockIntervalMs() const {
+    return _knockIntervalMs;
+}
+
+void PlayerLaser::setKnockIntervalMs(int ms) {
+    if (_knockIntervalMs == ms) return;
+    _knockIntervalMs = ms;
+    emit knockIntervalMsChanged();
+}

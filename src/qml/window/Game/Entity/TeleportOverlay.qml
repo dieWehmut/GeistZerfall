@@ -58,16 +58,17 @@ Item {
         return Qt.point(x, y);
     }
 
+    function playerCenterWorld() {
+        if (!playerObj || !playerObj.pos) return Qt.point(0, 0);
+        // playerVisualWidth/Height already describe world-size geometry (Player.qml width/height),
+        // so avoid scaling them by tileScale again or the overlay drifts when zooming.
+        var widthWorld = (playerVisualWidth && playerVisualWidth > 0) ? playerVisualWidth : playerSpriteSize;
+        var heightWorld = (playerVisualHeight && playerVisualHeight > 0) ? playerVisualHeight : playerSpriteSize;
+        return Qt.point(playerObj.pos.x + widthWorld / 2, playerObj.pos.y + heightWorld / 2);
+    }
+
     function worldPointForDirection(dir) {
-        if (!playerObj) return Qt.point(0, 0);
-        var base = playerObj.pos ? Qt.point(playerObj.pos.x, playerObj.pos.y) : Qt.point(0, 0);
-        // playerVisualWidth/Height are provided from the visual (screen pixels).
-        // Convert to world units by dividing by tileScale so the center computation remains correct
-        // regardless of zoom/scale.
-        var halfWWorld = 0.5 * ((tileScale > 0 && playerVisualWidth) ? (playerVisualWidth / tileScale) : playerSpriteSize);
-        var halfHWorld = 0.5 * ((tileScale > 0 && playerVisualHeight) ? (playerVisualHeight / tileScale) : playerSpriteSize);
-        base.x += halfWWorld;
-        base.y += halfHWorld;
+        var base = playerCenterWorld();
         var normLen = Math.sqrt(dir.x * dir.x + dir.y * dir.y);
         var mul = (normLen > 0) ? (effectiveTeleportDistance / normLen) : effectiveTeleportDistance;
         return clampPoint(Qt.point(base.x + dir.x * mul, base.y + dir.y * mul));
