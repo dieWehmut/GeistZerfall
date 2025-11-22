@@ -1,6 +1,6 @@
 import QtQuick
 
-// Image.qml - 图片内容显示
+// ContentImage.qml - 图片内容显示 (renamed from Image.qml to avoid name clash with built-in Image)
 Item {
     id: root
     anchors.fill: parent

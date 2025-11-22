@@ -13,7 +13,8 @@ Item {
         id: player
         source: root.audioSource
         audioOutput: AudioOutput {
-            volume: root.volume
+            // 将本地 volume 与全局 window 音量合并
+            volume: root.volume * (typeof window !== 'undefined' ? window.masterVolume * window.bgmVolume : 1.0)
         }
         onErrorOccurred: {
             console.log("AudioEffect: error", errorString);

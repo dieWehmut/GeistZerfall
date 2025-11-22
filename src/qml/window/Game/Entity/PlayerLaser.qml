@@ -10,7 +10,7 @@ Item {
 	SoundEffect {
 		id: laserSfx
 		source: "qrc:/resource/audio/SoundEffect/playerLaser.wav"
-		volume: 0.9
+		volume: 0.9 * (typeof window !== 'undefined' ? window.masterVolume * window.sfxVolume : 1.0)
 	}
 
 	property var backend: null

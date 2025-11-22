@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import "windowState.js" as WindowState
 import "../components"
+import "Lore/components"
 
 Item {
 	anchors.fill: parent
@@ -63,9 +64,9 @@ Item {
 		Text {
 			text: "CONFIG"
 			anchors.left: parent.left
-			anchors.leftMargin: 40
+			anchors.leftMargin: 24
 			anchors.top: parent.top
-			anchors.topMargin: 60
+			anchors.topMargin: 24
 			font.pixelSize: 48
 			color: "white"
 			font.bold: true
@@ -75,48 +76,207 @@ Item {
 		}
 
 		// 中间设置内容
-		Column {
+		Row {
 			anchors.horizontalCenter: parent.horizontalCenter
-			anchors.verticalCenter: parent.verticalCenter
-			spacing: 40
-			z: 10
+			anchors.top: parent.top
+			anchors.topMargin: 120
+			spacing: 60
 
-			Text {
-				text: "画面尺寸"
-				font.pixelSize: 32
-				color: "white"
-				font.bold: true
-				horizontalAlignment: Text.AlignHCenter
-				anchors.horizontalCenter: parent.horizontalCenter
-				style: Text.Outline
-				styleColor: "black"
-			}
-			Row {
-				spacing: 40
-				anchors.horizontalCenter: parent.horizontalCenter
-				AppButton {
-					id: windowBtn
-					text: "标准窗口"
-					width: 180; height: 60
-					fontPixelSize: 22
-					checkable: true
-					checked: !fullscreenBtn.checked
-					onClicked: {
-						window.showNormal && window.showNormal();
-						fullscreenBtn.checked = false;
+			// 左列
+			Column {
+				spacing: 20
+
+				// 画面尺寸
+				Column {
+					spacing: 8
+					Text {
+						text: "画面尺寸"
+						font.pixelSize: 28
+						color: "white"
+						font.bold: true
+						style: Text.Outline; styleColor: "black"
+					}
+					Row {
+						spacing: 12
+						AppButton {
+							id: windowBtn
+							text: "窗口"
+							width: 140; height: 50
+							fontPixelSize: 20
+							checkable: true
+							checked: !fullscreenBtn.checked
+							onClicked: {
+								window.showNormal && window.showNormal();
+								fullscreenBtn.checked = false;
+							}
+						}
+						AppButton {
+							id: fullscreenBtn
+							text: "全屏"
+							width: 140; height: 50
+							fontPixelSize: 20
+							checkable: true
+							checked: false
+							onClicked: {
+								window.showFullScreen && window.showFullScreen();
+								windowBtn.checked = false;
+							}
+						}
 					}
 				}
-				AppButton {
-					id: fullscreenBtn
-					text: "全屏"
-					width: 180; height: 60
-					fontPixelSize: 22
-					checkable: true
-					checked: false
-					onClicked: {
-						window.showFullScreen && window.showFullScreen();
-						windowBtn.checked = false;
+
+				// 文本跳过
+				Column {
+					spacing: 8
+					Text {
+						text: "文本跳过"
+						font.pixelSize: 28
+						color: "white"
+						font.bold: true
+						style: Text.Outline; styleColor: "black"
 					}
+					Row {
+						spacing: 12
+						AppButton {
+							text: "已读"
+							width: 140; height: 50
+							fontPixelSize: 20
+							checkable: true
+							checked: true
+							onClicked: { checked = true; parent.children[1].checked = false }
+						}
+						AppButton {
+							text: "全部"
+							width: 140; height: 50
+							fontPixelSize: 20
+							checkable: true
+							checked: false
+							onClicked: { checked = true; parent.children[0].checked = false }
+						}
+					}
+				}
+
+				// 选项后快进
+				Column {
+					spacing: 8
+					Text {
+						text: "选项后快进"
+						font.pixelSize: 28
+						color: "white"
+						font.bold: true
+						style: Text.Outline; styleColor: "black"
+					}
+					Row {
+						spacing: 12
+						AppButton {
+							text: "YES"
+							width: 140; height: 50
+							fontPixelSize: 20
+							checkable: true
+							checked: false
+							onClicked: { checked = true; parent.children[1].checked = false }
+						}
+						AppButton {
+							text: "NO"
+							width: 140; height: 50
+							fontPixelSize: 20
+							checkable: true
+							checked: true
+							onClicked: { checked = true; parent.children[0].checked = false }
+						}
+					}
+				}
+
+				// 选项后继续自动模式
+				Column {
+					spacing: 8
+					Text {
+						text: "选项后继续自动模式"
+						font.pixelSize: 28
+						color: "white"
+						font.bold: true
+						style: Text.Outline; styleColor: "black"
+					}
+					Row {
+						spacing: 12
+						AppButton {
+							text: "YES"
+							width: 140; height: 50
+							fontPixelSize: 20
+							checkable: true
+							checked: false
+							onClicked: { checked = true; parent.children[1].checked = false }
+						}
+						AppButton {
+							text: "NO"
+							width: 140; height: 50
+							fontPixelSize: 20
+							checkable: true
+							checked: true
+							onClicked: { checked = true; parent.children[0].checked = false }
+						}
+					}
+				}
+			}
+
+			// 中间列：音量相关
+			Column {
+				spacing: 12
+				anchors.verticalCenter: parent.verticalCenter
+
+				// 主音量
+				Column { spacing: 5
+					Text { text: "主音量"; font.pixelSize: 24; color: "white"; font.bold: true; style: Text.Outline; styleColor: "black" }
+					ConfigSlider {
+						id: masterSlider
+						Component.onCompleted: value = Math.round((typeof window !== 'undefined' ? window.masterVolume : 1.0) * 100);
+						onValueChanged: { if (typeof window !== 'undefined') window.masterVolume = value / 100.0; }
+					}
+					Row { spacing: 8
+						AppButton { id: masterOnBtn; text: "ON"; width: 100; height: 40; fontPixelSize: 18; checkable: true; checked: (typeof window !== 'undefined' ? window.masterVolume > 0.0 : true)
+							onClicked: { if (typeof window !== 'undefined') { window.masterVolume = 1.0; masterOnBtn.checked = true; masterOffBtn.checked = false; masterSlider.value = Math.round(window.masterVolume * 100); } }
+						}
+						AppButton { id: masterOffBtn; text: "OFF"; width: 100; height: 40; fontPixelSize: 18; checkable: true; checked: (typeof window !== 'undefined' ? window.masterVolume === 0.0 : false)
+							onClicked: { if (typeof window !== 'undefined') { window.masterVolume = 0.0; masterOffBtn.checked = true; masterOnBtn.checked = false; masterSlider.value = Math.round(window.masterVolume * 100); } }
+						}
+					}
+				}
+
+				// 背景音乐
+				Column { spacing: 5
+					Text { text: "背景音乐"; font.pixelSize: 24; color: "white"; font.bold: true; style: Text.Outline; styleColor: "black" }
+					ConfigSlider { id: bgmSlider; Component.onCompleted: value = Math.round((typeof window !== 'undefined' ? window.bgmVolume : 1.0) * 100); onValueChanged: if (typeof window !== 'undefined') window.bgmVolume = value / 100.0 }
+					Row { spacing: 10
+						AppButton { id: bgmOnBtn; text: "ON"; width: 100; height: 40; fontPixelSize: 18; checkable: true; checked: (typeof window !== 'undefined' ? window.bgmVolume > 0.0 : true); onClicked: { if (typeof window !== 'undefined') { window.bgmVolume = 1.0; bgmOnBtn.checked = true; bgmOffBtn.checked = false; bgmSlider.value = Math.round(window.bgmVolume * 100); } } }
+						AppButton { id: bgmOffBtn; text: "OFF"; width: 100; height: 40; fontPixelSize: 18; checkable: true; checked: (typeof window !== 'undefined' ? window.bgmVolume === 0.0 : false); onClicked: { if (typeof window !== 'undefined') { window.bgmVolume = 0.0; bgmOffBtn.checked = true; bgmOnBtn.checked = false; bgmSlider.value = Math.round(window.bgmVolume * 100); } } }
+					}
+				}
+
+				// 音效
+				Column { spacing: 5
+					Text { text: "效果音"; font.pixelSize: 24; color: "white"; font.bold: true; style: Text.Outline; styleColor: "black" }
+					ConfigSlider { id: sfxSlider; Component.onCompleted: value = Math.round((typeof window !== 'undefined' ? window.sfxVolume : 1.0) * 100); onValueChanged: if (typeof window !== 'undefined') window.sfxVolume = value / 100.0 }
+					Row { spacing: 8
+						AppButton { id: sfxOnBtn; text: "ON"; width: 100; height: 40; fontPixelSize: 18; checkable: true; checked: (typeof window !== 'undefined' ? window.sfxVolume > 0.0 : true); onClicked: { if (typeof window !== 'undefined') { window.sfxVolume = 1.0; sfxOnBtn.checked = true; sfxOffBtn.checked = false; sfxSlider.value = Math.round(window.sfxVolume * 100); } } }
+						AppButton { id: sfxOffBtn; text: "OFF"; width: 100; height: 40; fontPixelSize: 18; checkable: true; checked: (typeof window !== 'undefined' ? window.sfxVolume === 0.0 : false); onClicked: { if (typeof window !== 'undefined') { window.sfxVolume = 0.0; sfxOffBtn.checked = true; sfxOnBtn.checked = false; sfxSlider.value = Math.round(window.sfxVolume * 100); } } }
+					}
+				}
+
+			}
+
+			// 右侧第3列：文字显示速度 与 自动模式速度
+			Column {
+				spacing: 12
+				anchors.verticalCenter: parent.verticalCenter
+
+				Column { spacing: 5
+					Text { text: "文字显示速度"; font.pixelSize: 24; color: "white"; font.bold: true; style: Text.Outline; styleColor: "black" }
+					ConfigSlider { value: 50 }
+				}
+
+				Column { spacing: 5
+					Text { text: "自动模式速度"; font.pixelSize: 24; color: "white"; font.bold: true; style: Text.Outline; styleColor: "black" }
+					ConfigSlider { value: 50 }
 				}
 			}
 		}
@@ -125,7 +285,7 @@ Item {
 		BottomButtonBar {
 			anchors.horizontalCenter: parent.horizontalCenter
 			anchors.bottom: parent.bottom
-			anchors.bottomMargin: 40
+			anchors.bottomMargin: 20
 			buttons: [
 				{text: "SAVE", action: function() {
 					WindowState.setTargetMode("save")
