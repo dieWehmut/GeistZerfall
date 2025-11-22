@@ -4,9 +4,9 @@
 #include <cmath>
 
 PlayerBullet::PlayerBullet(QObject *parent) : Projectile(parent) {
-    setSpeed(16);
-    setMaxDist(400);
-    setDamage(20);
+    setSpeed(28);
+    setMaxDist(1000);
+    setDamage(100);
     // reuse inherited moveTimer (from Entity) to avoid duplicating timers
     if (!moveTimer) {
         moveTimer = new QTimer(this);

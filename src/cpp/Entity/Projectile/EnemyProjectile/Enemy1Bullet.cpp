@@ -36,11 +36,11 @@ void Enemy1Bullet::updateStep() {
 	}
 }
 
-	void Enemy1Bullet::setSpriteIndex(int value) {
-	 int clamped = value;
-	 if (clamped < 1) clamped = 1;
-	 else if (clamped > 9) clamped = 9;
-	 if (spriteIdx == clamped) return;
-	 spriteIdx = clamped;
-	 emit spriteIndexChanged();
-	}
+void Enemy1Bullet::setSpriteIndex(int value) {
+	int clamped = value;
+	if (clamped < 1) clamped = 1;
+	else if (clamped > 9) clamped = 9;
+	if (spriteIdx == clamped) return;
+	spriteIdx = clamped;
+	emit spriteIndexChanged();
+}

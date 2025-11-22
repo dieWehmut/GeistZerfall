@@ -18,6 +18,7 @@ class Enemy : public Entity {
 	Q_PROPERTY(int mp READ getMp WRITE setMp NOTIFY mpChanged)
 	Q_PROPERTY(int maxMp READ getMaxMp WRITE setMaxMp NOTIFY maxMpChanged)
 	Q_PROPERTY(bool alive READ isAlive NOTIFY aliveChanged)
+	Q_PROPERTY(bool forcedReveal READ isForcedReveal NOTIFY forcedRevealChanged)
 	Q_PROPERTY(int attackCooldownMs READ getAttackCooldownMs WRITE setAttackCooldownMs)
 public:
 	explicit Enemy(QObject *parent = nullptr);
@@ -46,6 +47,7 @@ public:
 
 	int getAttackCooldownMs() const { return attackCooldownMs; }
 	void setAttackCooldownMs(int ms) { attackCooldownMs = ms; }
+	bool isForcedReveal() const { return forcedReveal; }
 
 	// 指定/更新追踪的玩家对象。
 	Q_INVOKABLE void setPlayerTarget(Player *p) { playerTarget = p; }
@@ -55,7 +57,9 @@ public:
 	Q_INVOKABLE void tryAttack();
 
 	// 受击（被玩家或其他来源伤害）。Enemy 之间不会互相伤害，调用前应在外部过滤。
-	Q_INVOKABLE void receiveDamage(int amount);
+	Q_INVOKABLE void receiveDamage(int amount, double knockbackDirX = 0, double knockbackDirY = 0, double knockbackDistance = 0);
+	void setForcedReveal(bool value);
+	void triggerForcedReveal(int durationMs = 3000);
 
 signals:
 	void hpChanged();
@@ -68,6 +72,7 @@ signals:
 	// 由派生类在 performAttack 中发射后触发，供 QML 侧创建对应的可视对象
 	void enemyProjectileCreated(QObject* projectile);
 	void enemyLaserCreated(QObject* laser);
+	void forcedRevealChanged();
 
 protected:
 	// 派生类必须实现：实际攻击行为（创建弹幕 / 激光等）。返回消耗的 MP 数值；若返回 0 视为未攻击。
@@ -87,6 +92,8 @@ protected:
 	bool alive{true};
 	int attackCooldownMs{1200};
 	QElapsedTimer lastAttackTimer; // 用于冷却判断
+	bool forcedReveal{false};
+	QTimer *forcedRevealTimer{nullptr};
 
 	QTimer *logicTimer{nullptr};   // 追踪+判定计时器
 	QTimer *mpRegenTimer{nullptr}; // MP 恢复计时器

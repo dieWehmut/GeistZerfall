@@ -2,15 +2,80 @@
 #include "Entity/Projectile/EnemyProjectile/Enemy1Bullet.h"
 #include <QtMath>
 #include <QVariant>
+#include <QDebug>
 
 Enemy1::Enemy1(QObject *parent) : Enemy(parent) {
 	setSpeed(6);
 	setSight(360);
-	setMaxHp(80);
-	setHp(80);
+	setMaxHp(1000);
+	setHp(getMaxHp());
 	setMaxMp(100);
 	setMp(100);
 	setAttackCooldownMs(1200);
+
+	// create a teleport-behind-player timer (fires every 5s)
+	teleportTimer = new QTimer(this);
+	teleportTimer->setInterval(5000);
+	connect(teleportTimer, &QTimer::timeout, this, &Enemy1::initiateMoveBehind);
+	teleportTimer->start();
+
+	// delay timer for the 2s warning before teleport
+	teleportDelayTimer = new QTimer(this);
+	teleportDelayTimer->setSingleShot(true);
+	connect(teleportDelayTimer, &QTimer::timeout, this, [this]() {
+		// perform actual teleport now
+		if (!playerTarget) { teleportPending = false; return; }
+		QPointF p = getPos();
+		QPointF t = playerTarget->getPos();
+		double newX = 2.0 * t.x() - p.x();
+		double newY = 2.0 * t.y() - p.y();
+		if (getMapWidth() > 0) {
+			if (newX < 0) newX = 0;
+			if (newX > getMapWidth()) newX = getMapWidth();
+		}
+		if (getMapHeight() > 0) {
+			if (newY < 0) newY = 0;
+			if (newY > getMapHeight()) newY = getMapHeight();
+		}
+		setPos(QPointF(newX, newY));
+		teleportPending = false;
+		emit teleported(QPointF(newX, newY));
+		qDebug() << "Enemy1: teleported to" << QPointF(newX, newY);
+	});
+
+	// create an owning logic timer so we can temporarily direct movement to behindTarget
+	// stop base logicTimer (created in Enemy) to avoid duplicate movement; then provide equivalent behavior
+	if (logicTimer && logicTimer->isActive()) logicTimer->stop();
+	ownLogicTimer = new QTimer(this);
+	ownLogicTimer->setInterval(20);
+	connect(ownLogicTimer, &QTimer::timeout, this, [this]() {
+		if (!alive) return;
+		// if currently moving to behind target, move towards it
+		if (movingToBehind) {
+			QPointF p = getPos();
+			double dx = behindTarget.x() - p.x();
+			double dy = behindTarget.y() - p.y();
+			double dist = std::sqrt(dx*dx + dy*dy);
+			if (dist <= 8.0) {
+				// reached target
+				movingToBehind = false;
+				if (behindStopTimer && behindStopTimer->isActive()) behindStopTimer->stop();
+			} else {
+				// request movement toward behindTarget
+				move(int(std::round(dx)), int(std::round(dy)));
+			}
+		} else {
+			// default chase behavior
+			chasePlayerStep();
+		}
+		// attack attempts run regardless
+		tryAttack();
+	});
+	ownLogicTimer->start();
+
+	behindStopTimer = new QTimer(this);
+	behindStopTimer->setSingleShot(true);
+	connect(behindStopTimer, &QTimer::timeout, this, [this]() { movingToBehind = false; });
 }
 
 Enemy1::~Enemy1() {}
@@ -45,4 +110,29 @@ int Enemy1::performAttack() {
 int Enemy1::mpRegenRatePerSec() const {
 	// 1s 恢复 5%
 	return qMax(1, getMaxMp() * 5 / 100);
+}
+
+void Enemy1::initiateMoveBehind() {
+	if (!playerTarget) return;
+	if (teleportPending) return; // already scheduled
+	// compute reflection point now and emit warning
+	QPointF p = getPos();
+	QPointF t = playerTarget->getPos();
+	double newX = 2.0 * t.x() - p.x();
+	double newY = 2.0 * t.y() - p.y();
+	// clamp to map boundaries
+	if (getMapWidth() > 0) {
+		if (newX < 0) newX = 0;
+		if (newX > getMapWidth()) newX = getMapWidth();
+	}
+	if (getMapHeight() > 0) {
+		if (newY < 0) newY = 0;
+		if (newY > getMapHeight()) newY = getMapHeight();
+	}
+
+	teleportPending = true;
+	emit aboutToTeleport(QPointF(newX, newY));
+	// start 2s delay then actual teleport happens in teleportDelayTimer handler
+	teleportDelayTimer->start(2000);
+	qDebug() << "Enemy1: about to teleport to" << QPointF(newX, newY);
 }

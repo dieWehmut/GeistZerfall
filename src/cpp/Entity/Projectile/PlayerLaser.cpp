@@ -7,7 +7,7 @@ PlayerLaser::PlayerLaser(QObject *parent) : Projectile(parent) {
     // Reduce visual travel speed and increase max distance so the laser remains visible longer
     setSpeed(48);
     setMaxDist(3000);
-    setDamage(50);
+    setDamage(250);
     moveTimer = nullptr; // Initialize moveTimer
     if (!moveTimer) {
         moveTimer = new QTimer(this);

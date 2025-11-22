@@ -6,11 +6,13 @@
 Enemy2::Enemy2(QObject *parent) : Enemy(parent) {
 	setSpeed(6);
 	setSight(340);
-	setMaxHp(120);
-	setHp(120);
+	setMaxHp(1000);
+	setHp(getMaxHp());
 	setMaxMp(100);
 	setMp(100);
 	setAttackCooldownMs(1800); // 激光稍慢
+	// aura damage per second (can be read from QML via backend.auraDPS or backend.auraDPS())
+	setProperty("auraDPS", QVariant(20)); // 20 HP per second by default
 }
 
 Enemy2::~Enemy2() {}
@@ -40,4 +42,9 @@ int Enemy2::performAttack() {
 
 int Enemy2::mpRegenRatePerSec() const {
 	return qMax(1, getMaxMp() * 10 / 100); // 每秒 10%
+}
+
+int Enemy2::auraDPS() const {
+	// keep simple: return the same default as the dynamic property
+	return 20;
 }
