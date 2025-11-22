@@ -7,8 +7,8 @@
 Enemy4::Enemy4(QObject *parent) : Enemy(parent) {
   setSpeed(6);
   setSight(360);
-  setMaxHp(100);
-  setHp(100);
+  setMaxHp(2000);
+  setHp(getMaxHp());
   setMaxMp(100);
   setMp(100);
   setAttackCooldownMs(2000); // 机关枪攻击冷却2秒

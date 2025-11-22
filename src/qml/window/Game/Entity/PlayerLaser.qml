@@ -20,7 +20,9 @@ Item {
 	// visual thickness in pixels (can be passed from creator, e.g. 24 * tileScale)
 	property real thickness: 15
 	property var enemiesRef: null
-	property int damage: backend && backend.damage !== undefined ? backend.damage : 50
+	property int damage: backend && backend.damage !== undefined ? backend.damage : 800
+	// How far the laser should knock enemies back (in world units)
+	property real knockbackDistance: 300
 	property var damagedEnemies: []
 	// animated end point (used to gradually extend the beam)
 	property real endX: 0
@@ -168,33 +170,62 @@ Item {
 	}
 
 	function checkLaserCollisions() {
-		if (!backend || !backend.pos || !enemiesRef || enemiesRef.length === 0) return;
+		if (!backend || !backend.pos) return;
 		var sx = (backend.startX !== undefined && backend.startX !== null) ? backend.startX : (backend.pos ? backend.pos.x : 0);
 		var sy = (backend.startY !== undefined && backend.startY !== null) ? backend.startY : (backend.pos ? backend.pos.y : 0);
-		var exWorld = backend.pos ? backend.pos.x : sx;
-		var eyWorld = backend.pos ? backend.pos.y : sy;
+		var ex = (endX !== 0 && endX !== undefined && endX !== null) ? endX : (backend.pos ? backend.pos.x : sx);
+		var ey = (endY !== 0 && endY !== undefined && endY !== null) ? endY : (backend.pos ? backend.pos.y : sy);
 		var scale = tileScaleRef <= 0 ? 1.0 : tileScaleRef;
 		var beamHalfWidth = (thickness / scale) * 0.5;
-		for (var idx = 0; idx < enemiesRef.length; ++idx) {
-			var enemy = enemiesRef[idx];
-			if (!enemy || enemy.alive === false || !enemy.pos) continue;
-			if (damagedEnemies.indexOf(enemy) !== -1) continue;
-			var enemyPos = enemy.pos;
-			var enemyRadius = enemy.collisionRadius !== undefined ? enemy.collisionRadius : 28;
-			var distSq = distanceSqToSegment(enemyPos.x, enemyPos.y, sx, sy, exWorld, eyWorld);
+		if (enemiesRef && enemiesRef.length > 0) {
+			for (var idx = 0; idx < enemiesRef.length; ++idx) {
+				var enemy = enemiesRef[idx];
+				if (!enemy || enemy.alive === false || !enemy.pos) continue;
+				if (damagedEnemies.indexOf(enemy) !== -1) continue;
+				var enemyPos = enemy.pos;
+				var enemyRadius = enemy.collisionRadius !== undefined ? enemy.collisionRadius : 28;
+				var distSq = distanceSqToSegment(enemyPos.x, enemyPos.y, sx, sy, ex, ey);
+				var limit = enemyRadius + beamHalfWidth;
+				if (distSq <= limit * limit) {
+					try { if (typeof enemy.receiveDamage === 'function') enemy.receiveDamage(damage, 0, 0, knockbackDistance); } catch(e){}
+					damagedEnemies.push(enemy);
+				}
+			}
+		}
+		neutralizeEnemyProjectilesAlongBeam(sx, sy, ex, ey, beamHalfWidth);
+	}
+
+	function neutralizeEnemyProjectilesAlongBeam(sx, sy, ex, ey, beamHalfWidth) {
+		if (!mapWrapperRef || !mapWrapperRef.enemyProjectileVisuals || mapWrapperRef.enemyProjectileVisuals.length === 0) return;
+		var list = mapWrapperRef.enemyProjectileVisuals;
+		for (var i = list.length - 1; i >= 0; --i) {
+			var enemyProj = list[i];
+			if (!enemyProj || !enemyProj.backend || !enemyProj.backend.pos) continue;
+			var px = enemyProj.backend.pos.x;
+			var py = enemyProj.backend.pos.y;
+			var enemyRadius = enemyProj.collisionRadius !== undefined ? enemyProj.collisionRadius : (enemyProj.baseSize ? enemyProj.baseSize * 0.35 : 24);
 			var limit = enemyRadius + beamHalfWidth;
-			if (distSq <= limit * limit) {
-				try { if (typeof enemy.receiveDamage === 'function') enemy.receiveDamage(damage); } catch(e){}
-				damagedEnemies.push(enemy);
+			if (distanceSqToSegment(px, py, sx, sy, ex, ey) <= limit * limit) {
+				destroyEnemyProjectile(enemyProj);
 			}
 		}
 	}
 
+	function destroyEnemyProjectile(enemyProj) {
+		if (!enemyProj) return;
+		try {
+			if (enemyProj.backend && typeof enemyProj.backend.deleteLater === 'function') enemyProj.backend.deleteLater();
+		} catch(e) {}
+		try {
+			if (typeof enemyProj.destroy === 'function') enemyProj.destroy();
+		} catch(e) {}
+	}
+
 	Timer {
 		id: laserDamageTimer
-		interval: 80
+		interval: 16
 		repeat: true
-		running: backend && enemiesRef && enemiesRef.length > 0
+		running: backend !== null
 		onTriggered: checkLaserCollisions()
 	}
 

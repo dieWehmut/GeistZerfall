@@ -5,7 +5,7 @@
 #include <cmath>
 
 Enemy3MotherBullet::Enemy3MotherBullet(QObject *parent) : Projectile(parent) {
-  setMaxDist(1500);
+  setMaxDist(1000);
   setTraveledDist(0);
   flightTimeMs = 0;
   updateTimer = new QTimer(this);

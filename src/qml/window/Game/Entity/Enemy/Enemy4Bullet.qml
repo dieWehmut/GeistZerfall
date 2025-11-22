@@ -3,15 +3,20 @@ import QtMultimedia 6.5
 
 Item {
     id: root
-    property int baseSize: 48
+    property int baseSize: 64  // 子弹尺寸：64*64
     width: baseSize * tileScaleRef
     height: baseSize * tileScaleRef
+    transformOrigin: Item.Center
+    property real pulsateScale: 1.0
+    property int pulsateDuration: 1200
+    scale: pulsateScale
     property var backend: null
     property var playerItemRef: null
     property var playerObjRef: null
     property var mapWrapperRef: null
     property real tileScaleRef: 1.0
     property int damage: 12
+    property real collisionRadius: baseSize * 0.35
     z: 130
 
     property int spriteIndex: backend && backend.spriteIndex !== undefined ? Math.max(1, Math.min(5, backend.spriteIndex)) : 1
@@ -90,6 +95,40 @@ Item {
                     backend.deleteLater();
                 } catch (e) {}
             }
+        }
+    }
+
+    NumberAnimation {
+        target: root
+        property: "rotation"
+        from: 0
+        to: 360
+        duration: 550
+        loops: Animation.Infinite
+        running: true
+    }
+
+    SequentialAnimation { id: pulsateAnimBul; loops: Animation.Infinite
+        NumberAnimation { target: root; property: "pulsateScale"; from: 1.0; to: 1.5; duration: pulsateDuration; easing.type: Easing.InOutSine }
+        NumberAnimation { target: root; property: "pulsateScale"; from: 1.5; to: 1.0; duration: pulsateDuration; easing.type: Easing.InOutSine }
+    }
+
+    Component.onCompleted: {
+        if (mapWrapperRef && typeof mapWrapperRef.registerEnemyProjectile === 'function') {
+            mapWrapperRef.registerEnemyProjectile(root);
+        }
+        try {
+            var d = 1000 + Math.floor(Math.random() * 800);
+            if (d === 1600) d += 73;
+            pulsateDuration = d;
+            if (pulsateAnimBul.running) pulsateAnimBul.stop();
+            pulsateAnimBul.start();
+        } catch(e) {}
+    }
+
+    Component.onDestruction: {
+        if (mapWrapperRef && typeof mapWrapperRef.unregisterEnemyProjectile === 'function') {
+            mapWrapperRef.unregisterEnemyProjectile(root);
         }
     }
 }

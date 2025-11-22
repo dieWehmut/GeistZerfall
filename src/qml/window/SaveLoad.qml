@@ -331,12 +331,6 @@ Item {
 													window.pushSource("qml/window/Lore/LoreView.qml");
 												}
 											} else {
-												// 切换到游戏音乐，回退到主菜单
-												try {
-													if (window && typeof window.playMusic === 'function') window.playMusic("qrc:/resource/audio/bgm/fight.mp3");
-												} catch (em2) {
-													try { if (window && typeof window.playMusic === 'function') window.playMusic("qrc:/resource/audio/bgm/mainmenu.mp3"); } catch (e) {}
-												}
 												// 默认回到 GameView
 												if (window && window.replaceSource) {
 													window.replaceSource("qml/window/Game/GameView.qml");

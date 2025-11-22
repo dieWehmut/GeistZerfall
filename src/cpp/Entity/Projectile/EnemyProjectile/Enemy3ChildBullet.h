@@ -25,7 +25,7 @@ private:
   QPointF origin{0, 0};
   double dirx{0};
   double diry{0};
-  double velocity{320}; // 每秒像素，小子弹速度很快
+  double velocity{800}; // 每秒像素，小子弹速度很快
   QTimer *updateTimer{nullptr};
 };
 

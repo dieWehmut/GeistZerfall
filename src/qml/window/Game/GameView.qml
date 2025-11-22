@@ -59,6 +59,45 @@ Item {
 			// 设置地图数据
 			tileManager.setMapData(battleData.mapData);
 			spawnEnemiesFromMap();
+			// Setup optional time-limit rule from battle JSON. Support multiple possible field names for compatibility.
+			try {
+				var tl = 0;
+				if (battleData && battleData.rules) {
+					tl = battleData.rules.timeLimitSeconds || battleData.rules.timeLimit || battleData.rules.timeLimitSec || 0;
+				}
+				if (tl && tl > 0) {
+					timeLimitSeconds = tl;
+					// Prefer any previously-restored remaining time (from SaveLoadManager or prior state).
+					var restored = false;
+					try {
+						if (typeof SaveLoadManager !== 'undefined' && SaveLoadManager && typeof SaveLoadManager.timeLeftSeconds !== 'undefined' && SaveLoadManager.timeLeftSeconds !== null) {
+							// Only restore saved remaining time if the save belongs to this battle and has positive time
+							if (SaveLoadManager.battleId === battleId && SaveLoadManager.timeLeftSeconds > 0) {
+								timeLeftSeconds = SaveLoadManager.timeLeftSeconds;
+								restored = true;
+							}
+						}
+					} catch(e) { /* ignore */ }
+					// If nothing restored and current timeLeftSeconds is not set, initialize to full length
+					if (!restored && (!timeLeftSeconds || timeLeftSeconds <= 0)) {
+						timeLeftSeconds = tl;
+						countdownTimer.running = true;
+						console.log('GameView: starting countdown, seconds=', tl);
+					} else {
+						// If restored or existing, ensure timer is running only if positive
+						countdownTimer.running = (timeLeftSeconds > 0);
+						console.log('GameView: countdown restored or preserved, timeLeftSeconds=', timeLeftSeconds);
+					}
+				}
+			} catch(eTL) { console.log('setup timeLimit failed', eTL); }
+			// 播放对应的BGM（通过宿主 window 提供的播放函数）
+			if (battleData.meta && battleData.meta.bgm) {
+				if (typeof window !== 'undefined' && typeof window.playMusic === 'function') {
+					try {
+						window.playMusic("qrc:/resource/audio/bgm/" + battleData.meta.bgm);
+					} catch (e) { console.log('播放BGM失败', e); }
+				}
+			}
 		} else {
 			console.log("GameView: failed to load battle", id);
 		}
@@ -108,6 +147,263 @@ Item {
 		onTriggered: cleanupDeadEnemies()
 	}
 
+	// Battle end detection: when player HP reaches 0 (lose) or all enemies dead (win)
+	property bool battleEnded: false
+
+	// Optional time-limit rule: if set (>0) counts down every second. When reaches 0 and player HP>0, it's a win.
+	property int timeLimitSeconds: 0
+	property int timeLeftSeconds: 0
+	property bool countdownRunning: false
+
+	function formatTimeLeft() {
+		var s = Math.max(0, Math.round(timeLeftSeconds));
+		var mm = Math.floor(s/60);
+		var ss = s % 60;
+		return (mm < 10 ? "0" + mm : mm) + ":" + (ss < 10 ? "0" + ss : ss);
+	}
+
+	// Centered overlay to display Win/Lose messages
+	Item {
+		id: resultOverlayRoot
+		anchors.fill: parent
+		visible: false
+		z: 10000
+		Rectangle {
+			id: resultOverlayBg
+			anchors.centerIn: parent
+			color: "#000000cc"
+			radius: 8
+			width: resultOverlayText.width + 80
+			height: resultOverlayText.height + 40
+			transformOrigin: Item.Center
+			scale: 1.0
+			opacity: 1.0
+		}
+		Text {
+			id: resultOverlayText
+			anchors.centerIn: resultOverlayBg
+			color: "white"
+			font.pixelSize: 72
+			font.bold: true
+			text: ""
+			transformOrigin: Item.Center
+			scale: 1.0
+			opacity: 1.0
+		}
+	}
+
+	property var resultOverlayCallback: null
+	Timer {
+		id: resultOverlayTimer
+		repeat: false
+		running: false
+		onTriggered: {
+			// start hide animation; callback will be invoked by hideAnim.onFinished
+			try { resultHideAnim.start(); } catch(e) { console.log('start hideAnim failed', e); }
+		}
+	}
+
+	function showResultOverlay(message, durationMs, callback) {
+		try {
+			resultOverlayText.text = message;
+			resultOverlayRoot.visible = true;
+			// prepare initial animated state
+			resultOverlayBg.scale = 0.6; resultOverlayBg.opacity = 0.0;
+			resultOverlayText.scale = 0.6; resultOverlayText.opacity = 0.0;
+			resultOverlayCallback = callback || null;
+			resultOverlayTimer.stop();
+			resultOverlayTimer.interval = durationMs || 1200;
+			resultOverlayTimer.running = true;
+			// play entry animation
+			try { resultShowAnim.start(); } catch(e) { console.log('start showAnim failed', e); }
+		} catch (e) { console.log('showResultOverlay failed', e); if (typeof callback === 'function') callback(); }
+	}
+
+	// show animation: pop + settle
+	SequentialAnimation {
+		id: resultShowAnim
+		running: false
+		ParallelAnimation {
+			PropertyAnimation { target: resultOverlayBg; property: "scale"; from: 0.6; to: 1.12; duration: 220; easing.type: Easing.OutBack }
+			PropertyAnimation { target: resultOverlayBg; property: "opacity"; from: 0.0; to: 1.0; duration: 220 }
+			PropertyAnimation { target: resultOverlayText; property: "scale"; from: 0.6; to: 1.12; duration: 220; easing.type: Easing.OutBack }
+			PropertyAnimation { target: resultOverlayText; property: "opacity"; from: 0.0; to: 1.0; duration: 220 }
+		}
+		PauseAnimation { duration: 100 }
+		ParallelAnimation {
+			PropertyAnimation { target: resultOverlayBg; property: "scale"; to: 1.0; duration: 140; easing.type: Easing.OutQuad }
+			PropertyAnimation { target: resultOverlayText; property: "scale"; to: 1.0; duration: 140; easing.type: Easing.OutQuad }
+		}
+	}
+
+	// hide animation: shrink & fade
+	ParallelAnimation {
+		id: resultHideAnim
+		running: false
+		PropertyAnimation { target: resultOverlayBg; property: "scale"; to: 0.9; duration: 160; easing.type: Easing.InQuad }
+		PropertyAnimation { target: resultOverlayBg; property: "opacity"; to: 0.0; duration: 160 }
+		PropertyAnimation { target: resultOverlayText; property: "scale"; to: 0.9; duration: 160; easing.type: Easing.InQuad }
+		PropertyAnimation { target: resultOverlayText; property: "opacity"; to: 0.0; duration: 160 }
+		onFinished: {
+			resultOverlayRoot.visible = false;
+			if (resultOverlayCallback && typeof resultOverlayCallback === 'function') {
+				var cb2 = resultOverlayCallback; resultOverlayCallback = null; try { cb2(); } catch(eCb2) { console.log('result overlay callback failed', eCb2); }
+			}
+		}
+	}
+
+	function applyBattleResult(resultType) {
+		if (battleEnded) return;
+		battleEnded = true;
+		console.log('GameView: applying battle result', resultType);
+		try { if (window && typeof window.stopMusic === 'function') window.stopMusic(); } catch(eStop) {}
+		// stop periodic checks to avoid duplicate triggers
+		try { battleEndCheckTimer.running = false; } catch(e) {}
+		try { enemyCleanupTimer.running = false; } catch(e) {}
+		var resObj = null;
+		try { if (battleData && battleData.onResult && battleData.onResult[resultType]) resObj = battleData.onResult[resultType]; } catch(eR) { console.log('read onResult failed', eR); }
+
+		// Helper: navigate according to a result object (nextChapter/nextNode preferred, then action nextLevel)
+		function navigateByResult(obj) {
+			if (!obj) return false;
+			try {
+				if (obj.nextChapter || obj.nextNode) {
+					var chap = obj.nextChapter || obj.chapter || "";
+					var node = obj.nextNode || obj.node || "";
+					try { if (typeof WindowState !== 'undefined' && WindowState.setLoreState) {
+						WindowState.setLoreState({ chapter: chap, node: node, index: 0, mode: "auto", auto: true });
+					} } catch(e) { console.log('setLoreState failed', e); }
+					try {
+						if (window && typeof window.smoothReplaceSource === 'function') {
+							window.smoothReplaceSource("qml/window/Lore/LoreView.qml", 600);
+						} else if (window && typeof window.replaceSource === 'function') {
+							window.replaceSource("qml/window/Lore/LoreView.qml");
+						} else if (window && typeof window.pushSource === 'function') {
+							window.pushSource("qml/window/Lore/LoreView.qml");
+						} else {
+							console.log('No navigation API found to open LoreView');
+						}
+					} catch(eNav) { console.log('navigate to Lore failed', eNav); }
+					return true;
+				} else if (obj.action) {
+					if (obj.action === 'nextLevel') {
+						try {
+							if (window && typeof window.advanceToNextLevel === 'function') { window.advanceToNextLevel(); return true; }
+						} catch(e) { console.log('advanceToNextLevel failed', e); }
+						// fallback: try replacing source to MainMenu as last resort
+						try { if (window && typeof window.replaceSource === 'function') window.replaceSource("qml/window/MainMenu.qml"); } catch(e) {}
+						return true;
+					}
+				}
+			} catch(eNavAll) { console.log('navigateByResult failed', eNavAll); }
+			return false;
+		}
+
+		// Show overlay (Win/Lose) then navigate—always prefer result object; for 'lose' avoid gameOver action
+		var overlayText = (resultType === 'win') ? "Win!" : "Lose!";
+		showResultOverlay(overlayText, 1200, function() {
+			// try using resObj (for lose it may be action:gameOver which we will ignore)
+			var used = false;
+			if (resObj && resObj.action === 'gameOver') {
+				// prefer win target if lose mapping is gameOver
+				try { if (battleData && battleData.onResult && battleData.onResult.win) { used = navigateByResult(battleData.onResult.win); } } catch(e) {}
+			} else {
+				used = navigateByResult(resObj);
+			}
+			// If not used yet, try win mapping as general fallback
+			if (!used) {
+				try { if (battleData && battleData.onResult && battleData.onResult.win) { used = navigateByResult(battleData.onResult.win); } } catch(e) {}
+			}
+			// final fallback: replace to MainMenu
+			if (!used) {
+				try { if (window && typeof window.replaceSource === 'function') window.replaceSource("qml/window/MainMenu.qml"); } catch(e) { console.log('final fallback navigate failed', e); }
+			}
+		});
+	}
+
+	// Periodic check for battle end conditions
+	Timer {
+		id: battleEndCheckTimer
+		interval: 250
+		repeat: true
+		running: true
+		onTriggered: {
+			if (battleEnded) return;
+			// lose: player HP <= 0
+			try {
+				if (playerObj && (typeof playerObj.hp !== 'undefined') && playerObj.hp <= 0) {
+					applyBattleResult('lose');
+					return;
+				}
+			} catch(e) { console.log('check player hp failed', e); }
+			// win: all enemies dead
+			try {
+				var aliveCount = 0;
+				for (var i = 0; i < enemyBackends.length; ++i) {
+					var b = enemyBackends[i];
+					if (!isEnemyDead(b)) { aliveCount++; break; }
+				}
+				if (aliveCount === 0 && enemyBackends.length > 0) {
+					applyBattleResult('win');
+				}
+			} catch(e2) { console.log('check enemies failed', e2); }
+		}
+	}
+
+	// Countdown timer: ticks every second when a time limit is set.
+	Timer {
+		id: countdownTimer
+		interval: 1000
+		repeat: true
+		running: false
+		onTriggered: {
+			if (battleEnded) return;
+			try {
+				if (timeLeftSeconds > 0) {
+					timeLeftSeconds = Math.max(0, timeLeftSeconds - 1);
+					// reached zero
+					if (timeLeftSeconds <= 0) {
+						countdownTimer.running = false;
+						console.log('GameView: countdown reached zero');
+						// victory if player still alive (hp > 0)
+						if (playerObj && typeof playerObj.hp !== 'undefined' && playerObj.hp > 0) {
+							console.log('GameView: time-up victory triggered');
+							applyBattleResult('win');
+						}
+					}
+				}
+			} catch (e) { console.log('countdown onTriggered failed', e); }
+		}
+	}
+
+	// Top-right time display (visible only when a timeLimit is configured)
+	Item {
+		id: timeDisplayRoot
+		anchors.top: parent.top
+		anchors.right: parent.right
+		anchors.topMargin: 12
+		anchors.rightMargin: 12
+		z: 3000
+		visible: timeLimitSeconds > 0
+		Rectangle {
+			id: timeBg
+			anchors.top: parent.top
+			anchors.right: parent.right
+			color: "#00000080"
+			radius: 6
+			width: textTime.width + 24
+			height: textTime.height + 12
+		}
+		Text {
+			id: textTime
+			anchors.centerIn: timeBg
+			color: "white"
+			font.pixelSize: 34
+			font.bold: true
+			text: formatTimeLeft()
+		}
+	}
+
 	function clearEnemies() {
 		for (var i = 0; i < enemyVisuals.length; ++i) { try { enemyVisuals[i].destroy(); } catch(e){} }
 		enemyVisuals = [];
@@ -115,6 +411,18 @@ Item {
 		enemyBackends = [];
 		enemySpawnCenters = [];
 		enemyTypes = [];
+		if (mapWrapper && mapWrapper.enemyProjectileVisuals) {
+			for (var k = mapWrapper.enemyProjectileVisuals.length - 1; k >= 0; --k) {
+				var proj = mapWrapper.enemyProjectileVisuals[k];
+				try { if (proj && typeof proj.destroy === 'function') proj.destroy(); } catch(e){}
+			}
+			mapWrapper.enemyProjectileVisuals = [];
+		}
+		if (mapWrapper && mapWrapper.revealedEnemyVisuals) {
+			mapWrapper.revealedEnemyVisuals = [];
+			if (sightMask) sightMask.requestPaint();
+			if (revealRepaintTimer) revealRepaintTimer.running = false;
+		}
 	}
 
 	// Return a serializable snapshot of current backend enemies for saving
@@ -133,6 +441,23 @@ Item {
 			out.push({ type: typeName, x: posPoint.x, y: posPoint.y, hp: hpVal, maxHp: maxHpVal, mp: mpVal, maxMp: maxMpVal, alive: aliveVal });
 		}
 		return out;
+	}
+
+	// Check immediately whether all enemies are already dead and trigger win if appropriate
+	function checkVictoryNow() {
+		try {
+			// Only consider win when rule expects allEnemiesDead (defensive)
+			var wantAllDead = !(battleData && battleData.rules && battleData.rules.winCondition) ? true : (battleData.rules.winCondition.type === 'allEnemiesDead');
+			if (!wantAllDead) return;
+			var anyAlive = false;
+			for (var i = 0; i < enemyBackends.length; ++i) {
+				if (!isEnemyDead(enemyBackends[i])) { anyAlive = true; break; }
+			}
+			if (!anyAlive && enemyBackends.length > 0) {
+				console.log('checkVictoryNow: no alive enemies -> applying win');
+				applyBattleResult('win');
+			}
+		} catch(e) { console.log('checkVictoryNow failed', e); }
 	}
 
 	function spawnEnemiesFromMap() {
@@ -183,18 +508,39 @@ Item {
 			}
 			return true;
 		}
+
+		// chooseSpawn: radial sampling with multiple radii and random angles
 		function chooseSpawn(baseX, baseY) {
-			for (var o = 0; o < spawnOffsets.length; ++o) {
-				var offset = spawnOffsets[o];
-				var candidate = clampToMap(Qt.point(baseX + offset.x, baseY + offset.y));
-				if (isFarEnough(candidate)) return candidate;
+			// fast check at exact tile center
+			var center = clampToMap(Qt.point(baseX, baseY));
+			if (isFarEnough(center)) return center;
+
+			var maxRings = 6;
+			var attemptsPerRing = 12;
+			for (var ring = 1; ring <= maxRings; ++ring) {
+				var radius = minSeparation * ring;
+				for (var a = 0; a < attemptsPerRing; ++a) {
+					var angle = (2 * Math.PI) * (a / attemptsPerRing) + (Math.random() * 0.4 - 0.2);
+					var cand = Qt.point(baseX + Math.cos(angle) * radius, baseY + Math.sin(angle) * radius);
+					cand = clampToMap(cand);
+					if (isFarEnough(cand)) return cand;
+				}
+			}
+			// last resort: try small random jitter around tile until timeout
+			var randAttempts = 30;
+			for (var i = 0; i < randAttempts; ++i) {
+				var jitter = minSeparation * (0.5 + Math.random() * 2.0);
+				var ang = Math.random() * 2 * Math.PI;
+				var c = Qt.point(baseX + Math.cos(ang) * jitter, baseY + Math.sin(ang) * jitter);
+				c = clampToMap(c);
+				if (isFarEnough(c)) return c;
 			}
 			return null;
 		}
 		for (var r = 0; r < rows; ++r) {
 			for (var c = 0; c < cols; ++c) {
 				var t = tileManager.getTileType(r, c);
-					if (t === 1 || t === 2 || t === 3) {
+					if (t === 1 || t === 2 || t === 3 || t === 4 || t === 5 || t === 6 || t === 7) {
 					var worldX = c * tileSize + tileSize/2;
 					var worldY = r * tileSize + tileSize/2;
 					console.log("Tile type", t, "converted to world", worldX, worldY, "for tileSize", tileSize);
@@ -293,9 +639,180 @@ Item {
 								console.log("spawnEnemiesFromMap: Enemy3 component not ready:", comp3.status, comp3.errorString ? comp3.errorString() : "");
 							}
 						}
+					} else if (t === 4) {
+						var candidate4 = chooseSpawn(worldX, worldY);
+						if (!candidate4) {
+							console.log("spawnEnemiesFromMap: unable to place Enemy4 near", worldX, worldY, "due to spacing constraints");
+							continue;
+						}
+						var spawnX4 = candidate4.x;
+						var spawnY4 = candidate4.y;
+						if (Math.abs(spawnX4 - worldX) > 0.5 || Math.abs(spawnY4 - worldY) > 0.5) {
+							console.log("spawnEnemiesFromMap: adjusted Enemy4 spawn from", worldX, worldY, "to", spawnX4, spawnY4);
+						}
+						var e4 = Qt.createQmlObject('import GeistZerfall.Game 1.0; BackendEnemy4 {}', gameViewRoot);
+						if (e4) {
+							e4.mapWidth = w; e4.mapHeight = h;
+							e4.pos = Qt.point(spawnX4, spawnY4);
+							if (playerObj && typeof e4.setPlayerTarget === 'function') e4.setPlayerTarget(playerObj);
+							enemyBackends.push(e4);
+							enemyTypes.push("Enemy4");
+							enemySpawnCenters.push({ x: spawnX4, y: spawnY4 });
+							var comp4 = Qt.createComponent("./Entity/Enemy/Enemy4.qml");
+							if (comp4.status === Component.Ready) {
+								console.log("spawnEnemiesFromMap: creating Enemy4 at row", r, "col", c, "world", spawnX4, spawnY4, "tileScale", tileScale);
+								var v4 = comp4.createObject(mapWrapper, { backend: e4, playerObjRef: playerObj, playerItemRef: playerItem, mapWrapperRef: mapWrapper, tileScaleRef: tileScale });
+								if (v4) {
+									enemyVisuals.push(v4);
+									v4.tileScaleRef = Qt.binding(function(){ return tileScale; });
+									v4.playerItemRef = playerItem;
+									v4.updateScreenPos && v4.updateScreenPos();
+								}
+							}
+						}
+					} else if (t === 5) {
+						var candidate5 = chooseSpawn(worldX, worldY);
+						if (!candidate5) {
+							console.log("spawnEnemiesFromMap: unable to place Enemy5 near", worldX, worldY, "due to spacing constraints");
+							continue;
+						}
+						var spawnX5 = candidate5.x;
+						var spawnY5 = candidate5.y;
+						if (Math.abs(spawnX5 - worldX) > 0.5 || Math.abs(spawnY5 - worldY) > 0.5) {
+							console.log("spawnEnemiesFromMap: adjusted Enemy5 spawn from", worldX, worldY, "to", spawnX5, spawnY5);
+						}
+						var e5 = Qt.createQmlObject('import GeistZerfall.Game 1.0; BackendEnemy5 {}', gameViewRoot);
+						if (e5) {
+							e5.mapWidth = w; e5.mapHeight = h;
+							e5.pos = Qt.point(spawnX5, spawnY5);
+							if (playerObj && typeof e5.setPlayerTarget === 'function') e5.setPlayerTarget(playerObj);
+							enemyBackends.push(e5);
+							enemyTypes.push("Enemy5");
+							enemySpawnCenters.push({ x: spawnX5, y: spawnY5 });
+							var comp5 = Qt.createComponent("./Entity/Enemy/Enemy5.qml");
+							if (comp5.status === Component.Ready) {
+								console.log("spawnEnemiesFromMap: creating Enemy5 at row", r, "col", c, "world", spawnX5, spawnY5, "tileScale", tileScale);
+								var v5 = comp5.createObject(mapWrapper, { backend: e5, playerObjRef: playerObj, playerItemRef: playerItem, mapWrapperRef: mapWrapper, tileScaleRef: tileScale });
+								if (v5) {
+									enemyVisuals.push(v5);
+									v5.tileScaleRef = Qt.binding(function(){ return tileScale; });
+									v5.playerItemRef = playerItem;
+									v5.updateScreenPos && v5.updateScreenPos();
+								}
+							}
+						}
+					} else if (t === 6) {
+						var candidate6 = chooseSpawn(worldX, worldY);
+						if (!candidate6) {
+							console.log("spawnEnemiesFromMap: unable to place Enemy6 near", worldX, worldY, "due to spacing constraints");
+							continue;
+						}
+						var spawnX6 = candidate6.x;
+						var spawnY6 = candidate6.y;
+						if (Math.abs(spawnX6 - worldX) > 0.5 || Math.abs(spawnY6 - worldY) > 0.5) {
+							console.log("spawnEnemiesFromMap: adjusted Enemy6 spawn from", worldX, worldY, "to", spawnX6, spawnY6);
+						}
+						var e6 = Qt.createQmlObject('import GeistZerfall.Game 1.0; BackendEnemy6 {}', gameViewRoot);
+						if (e6) {
+							e6.mapWidth = w; e6.mapHeight = h;
+							e6.pos = Qt.point(spawnX6, spawnY6);
+							if (playerObj && typeof e6.setPlayerTarget === 'function') e6.setPlayerTarget(playerObj);
+							enemyBackends.push(e6);
+							enemyTypes.push("Enemy6");
+							enemySpawnCenters.push({ x: spawnX6, y: spawnY6 });
+							var comp6 = Qt.createComponent("./Entity/Enemy/Enemy6.qml");
+							if (comp6.status === Component.Ready) {
+								console.log("spawnEnemiesFromMap: creating Enemy6 at row", r, "col", c, "world", spawnX6, spawnY6, "tileScale", tileScale);
+								var v6 = comp6.createObject(mapWrapper, { backend: e6, playerObjRef: playerObj, playerItemRef: playerItem, mapWrapperRef: mapWrapper, tileScaleRef: tileScale });
+								if (v6) {
+									enemyVisuals.push(v6);
+									v6.tileScaleRef = Qt.binding(function(){ return tileScale; });
+									v6.playerItemRef = playerItem;
+									v6.updateScreenPos && v6.updateScreenPos();
+								}
+							}
+						}
+					} else if (t === 7) {
+						var candidate7 = chooseSpawn(worldX, worldY);
+						if (!candidate7) {
+							console.log("spawnEnemiesFromMap: unable to place Enemy7 near", worldX, worldY, "due to spacing constraints");
+							continue;
+						}
+						var spawnX7 = candidate7.x;
+						var spawnY7 = candidate7.y;
+						if (Math.abs(spawnX7 - worldX) > 0.5 || Math.abs(spawnY7 - worldY) > 0.5) {
+							console.log("spawnEnemiesFromMap: adjusted Enemy7 spawn from", worldX, worldY, "to", spawnX7, spawnY7);
+						}
+						var e7 = Qt.createQmlObject('import GeistZerfall.Game 1.0; BackendEnemy7 {}', gameViewRoot);
+						if (e7) {
+							e7.mapWidth = w; e7.mapHeight = h;
+							e7.pos = Qt.point(spawnX7, spawnY7);
+							if (playerObj && typeof e7.setPlayerTarget === 'function') e7.setPlayerTarget(playerObj);
+							enemyBackends.push(e7);
+							enemyTypes.push("Enemy7");
+							enemySpawnCenters.push({ x: spawnX7, y: spawnY7 });
+							var comp7 = Qt.createComponent("./Entity/Enemy/Enemy7.qml");
+							if (comp7.status === Component.Ready) {
+								console.log("spawnEnemiesFromMap: creating Enemy7 at row", r, "col", c, "world", spawnX7, spawnY7, "tileScale", tileScale);
+								var v7 = comp7.createObject(mapWrapper, { backend: e7, playerObjRef: playerObj, playerItemRef: playerItem, mapWrapperRef: mapWrapper, tileScaleRef: tileScale });
+								if (v7) {
+									enemyVisuals.push(v7);
+									v7.tileScaleRef = Qt.binding(function(){ return tileScale; });
+									v7.playerItemRef = playerItem;
+									v7.updateScreenPos && v7.updateScreenPos();
+								}
+							}
+						}
 					}
 				}
 			}
+		}
+		// Post-spawn: ensure minimum separation between spawned enemies (nudge pairs apart)
+		try {
+			for (var i = 0; i < enemyBackends.length; ++i) {
+				for (var j = i + 1; j < enemyBackends.length; ++j) {
+					var a = enemyBackends[i];
+					var b = enemyBackends[j];
+					if (!a || !b) continue;
+					var ax = (a.pos ? a.pos.x : (enemySpawnCenters[i] ? enemySpawnCenters[i].x : 0));
+					var ay = (a.pos ? a.pos.y : (enemySpawnCenters[i] ? enemySpawnCenters[i].y : 0));
+					var bx = (b.pos ? b.pos.x : (enemySpawnCenters[j] ? enemySpawnCenters[j].x : 0));
+					var by = (b.pos ? b.pos.y : (enemySpawnCenters[j] ? enemySpawnCenters[j].y : 0));
+					var dx = bx - ax;
+					var dy = by - ay;
+					var d2 = dx * dx + dy * dy;
+					if (d2 === 0) {
+						// perfectly overlapping — pick a small random direction to separate
+						var ang = Math.random() * Math.PI * 2;
+						dx = Math.cos(ang); dy = Math.sin(ang); d2 = 1.0;
+					}
+					if (d2 < minSeparationSq) {
+						var d = Math.sqrt(d2);
+						var need = Math.max(0, minSeparation - d);
+						var nx = dx / d;
+						var ny = dy / d;
+						var shift = need * 0.5;
+						var ax2 = ax - nx * shift;
+						var ay2 = ay - ny * shift;
+						var bx2 = bx + nx * shift;
+						var by2 = by + ny * shift;
+						// clamp to map bounds
+						ax2 = Math.max(0, Math.min(w - 1, ax2));
+						ay2 = Math.max(0, Math.min(h - 1, ay2));
+						bx2 = Math.max(0, Math.min(w - 1, bx2));
+						by2 = Math.max(0, Math.min(h - 1, by2));
+						try { a.pos = Qt.point(ax2, ay2); } catch(e) {}
+						try { b.pos = Qt.point(bx2, by2); } catch(e) {}
+						if (enemySpawnCenters[i]) enemySpawnCenters[i].x = ax2, enemySpawnCenters[i].y = ay2;
+						if (enemySpawnCenters[j]) enemySpawnCenters[j].x = bx2, enemySpawnCenters[j].y = by2;
+						// update visuals to reflect new backend positions
+						try { enemyVisuals[i] && enemyVisuals[i].updateScreenPos && enemyVisuals[i].updateScreenPos(); } catch(e) {}
+						try { enemyVisuals[j] && enemyVisuals[j].updateScreenPos && enemyVisuals[j].updateScreenPos(); } catch(e) {}
+					}
+				}
+			}
+		} catch (e) {
+			console.log('post-spawn separation pass failed', e);
 		}
 		// If there is saved enemy data, reconcile saved positions/states with the freshly created backends.
 		if (typeof SaveLoadManager !== 'undefined' && SaveLoadManager) {
@@ -351,8 +868,23 @@ Item {
 			} catch (e) {
 				console.log('apply saved enemies failed', e);
 			}
+			// restore saved countdown time if present
+			try {
+				if (typeof SaveLoadManager.timeLeftSeconds !== 'undefined' && SaveLoadManager.timeLeftSeconds !== null) {
+					// Only restore if the save is for this battle and saved time is positive
+					if (SaveLoadManager.battleId === battleId && SaveLoadManager.timeLeftSeconds > 0) {
+						timeLeftSeconds = SaveLoadManager.timeLeftSeconds;
+						if (timeLeftSeconds > 0) {
+							countdownTimer.running = true;
+						}
+						console.log('spawnEnemiesFromMap: restored countdown timeLeftSeconds=', timeLeftSeconds);
+					}
+				}
+			} catch (eTL) { console.log('restore saved timeLeftSeconds failed', eTL); }
 		}
 		console.log("spawnEnemiesFromMap: total enemies", enemyBackends.length);
+		// after spawning, check if victory condition already met (e.g., enemies restored as dead)
+		Qt.callLater(function(){ checkVictoryNow(); });
 		// refresh global snapshot of enemies for SaveLoad UI via WindowState
 		try {
 			WindowState.setGameEnemies && WindowState.setGameEnemies(serializeEnemies());
@@ -424,6 +956,8 @@ Item {
 			SaveLoadManager.sight = playerObj.getSight ? playerObj.getSight() : 0;
 			SaveLoadManager.maxHp = (typeof playerObj.maxHp !== 'undefined') ? playerObj.maxHp : SaveLoadManager.maxHp;
 			SaveLoadManager.hp = (typeof playerObj.hp !== 'undefined') ? playerObj.hp : SaveLoadManager.hp;
+			// Save remaining countdown time so a resumed battle can continue where it left off
+			try { SaveLoadManager.timeLeftSeconds = timeLeftSeconds; } catch(eTime) { console.log('cannot set SaveLoadManager.timeLeftSeconds', eTime); }
 			// ensure enemies snapshot is set before saving
 			var snapshot = serializeEnemies();
 			try { SaveLoadManager.setEnemies(snapshot); } catch (e) { console.log('setEnemies before save failed', e); }
@@ -459,6 +993,8 @@ Item {
 				SaveLoadManager.sight = playerObj.getSight ? playerObj.getSight() : 0;
 				SaveLoadManager.maxHp = (typeof playerObj.maxHp !== 'undefined') ? playerObj.maxHp : SaveLoadManager.maxHp;
 				SaveLoadManager.hp = (typeof playerObj.hp !== 'undefined') ? playerObj.hp : SaveLoadManager.hp;
+				// Save remaining countdown time so a resumed battle can continue where it left off
+				try { SaveLoadManager.timeLeftSeconds = timeLeftSeconds; } catch(eTime) { console.log('cannot set SaveLoadManager.timeLeftSeconds', eTime); }
 				// ensure enemies snapshot is set before saving
 				var snapshot = serializeEnemies();
 				try { SaveLoadManager.setEnemies(snapshot); } catch (e) { console.log('setEnemies before save failed', e); }
@@ -470,6 +1006,7 @@ Item {
 	property int tileSize: 512
 	// when snipe mode is active we set tileScale to 0.5 to shrink everything visually
 	property real tileScale: 1.0
+	property real teleportRingDistance: Math.max(256, tileSize * 0.75)
 
 	Behavior on tileScale { NumberAnimation { duration: 220; easing.type: Easing.InOutQuad } }
 	property int mapRows: tileManager.curMapData ? tileManager.curMapData.length : 0
@@ -482,6 +1019,30 @@ Item {
 		clip: true
 		Item {
 			id: mapWrapper
+			property var enemyProjectileVisuals: []
+			property var revealedEnemyVisuals: []
+			function registerEnemyProjectile(obj) {
+				if (!obj || enemyProjectileVisuals.indexOf(obj) !== -1) return;
+				enemyProjectileVisuals.push(obj);
+			}
+			function unregisterEnemyProjectile(obj) {
+				if (!obj) return;
+				var idx = enemyProjectileVisuals.indexOf(obj);
+				if (idx !== -1) enemyProjectileVisuals.splice(idx, 1);
+			}
+			function registerRevealedEnemy(obj) {
+				if (!obj || revealedEnemyVisuals.indexOf(obj) !== -1) return;
+				revealedEnemyVisuals.push(obj);
+				if (revealRepaintTimer) revealRepaintTimer.running = true;
+				if (sightMask) sightMask.requestPaint();
+			}
+			function unregisterRevealedEnemy(obj) {
+				if (!obj) return;
+				var idx = revealedEnemyVisuals.indexOf(obj);
+				if (idx !== -1) revealedEnemyVisuals.splice(idx, 1);
+				if (revealedEnemyVisuals.length === 0 && revealRepaintTimer) revealRepaintTimer.running = false;
+				if (sightMask) sightMask.requestPaint();
+			}
 			// 明确设置宽高，避免在缩放或计算偏移时出现未定义边界导致的裁剪/空白
 			width: mapPixelWidth
 			height: mapPixelHeight
@@ -561,6 +1122,7 @@ Item {
 		id: aimOverlay
 		anchors.fill: parent
 		z: 998
+		visible: !(playerObj && playerObj.teleportMode)
 		property real aimX: 0
 		property real aimY: 0
 
@@ -624,6 +1186,7 @@ Item {
 		MouseArea {
 			anchors.fill: parent
 			hoverEnabled: true
+			enabled: aimOverlay.visible
 			acceptedButtons: Qt.LeftButton
 			onPositionChanged: function(mouse) {
 				// compute world coords relative to mapWrapper
@@ -701,6 +1264,7 @@ Item {
 			running: false
 			onTriggered: function() {
 				if (!playerObj || !playerItem) return;
+				if (playerObj.teleportMode) return;
 				// compute aim target similar to previous onClicked logic
 					var sx = mapWrapper.x + (playerObj.pos.x + (playerItem.width/2)) * tileScale;
 					var sy = mapWrapper.y + (playerObj.pos.y + (playerItem.height/2)) * tileScale;
@@ -760,6 +1324,123 @@ Item {
 						// if bullet not ready, still allow continuous clicking but don't create visual
 					}
 				}
+			}
+		}
+	}
+
+	// While in teleport mode, clicking anywhere on the viewport teleports the player to that world position
+	MouseArea {
+		id: teleportClickArea
+		anchors.fill: parent
+		z: 2105
+		visible: (playerObj && playerObj.teleportMode)
+		enabled: visible
+		hoverEnabled: false
+		acceptedButtons: Qt.LeftButton
+		cursorShape: Qt.PointingHandCursor
+		onClicked: function(mouse) {
+			if (!playerObj || !mapWrapper) return;
+			var localX = mouse.x - mapWrapper.x;
+			var localY = mouse.y - mapWrapper.y;
+			var worldX = localX / tileScale;
+			var worldY = localY / tileScale;
+			var clampedX = Math.max(0, Math.min(worldX, mapCols * tileSize));
+			var clampedY = Math.max(0, Math.min(worldY, mapRows * tileSize));
+			// Start a high-speed animated move instead of instant teleport
+			try {
+				startTeleportMove(clampedX, clampedY);
+			} catch (e) {
+				console.log('teleportClickArea teleport failed', e);
+			}
+		}
+	}
+
+	// Teleport mover: animates playerObj.pos from current position to target smoothly
+	Item {
+		id: teleportMover
+		visible: false
+		width: 1; height: 1
+		property bool running: false
+		property real px: 0
+		property real py: 0
+		signal finished()
+
+		ParallelAnimation {
+			id: teleportParallel
+			running: false
+			NumberAnimation { id: animX; target: teleportMover; property: "px" }
+			NumberAnimation { id: animY; target: teleportMover; property: "py" }
+			onStopped: {
+				teleportMover.running = false;
+				teleportClickArea.enabled = true;
+				try { teleportMover.finished(); } catch(e) {}
+			}
+		}
+
+		onPxChanged: {
+			// update backend player pos (playerObj.pos is top-left in world coords)
+			if (!playerObj || !playerItem) return;
+			var newWorldX = teleportMover.px - (playerItem.width/2);
+			var newWorldY = teleportMover.py - (playerItem.height/2);
+			try { playerObj.pos = Qt.point(newWorldX, newWorldY); } catch(e) {}
+		}
+		onPyChanged: onPxChanged
+	}
+
+	function startTeleportMove(targetWorldX, targetWorldY) {
+		if (!playerObj || !playerItem) return;
+		// prevent additional clicks while moving
+		teleportClickArea.enabled = false;
+		// compute current player center in world coords
+		var curCenterX = playerObj.pos.x + (playerItem.width/2);
+		var curCenterY = playerObj.pos.y + (playerItem.height/2);
+		var dstX = targetWorldX + (playerItem.width/2);
+		var dstY = targetWorldY + (playerItem.height/2);
+		var dx = dstX - curCenterX; var dy = dstY - curCenterY;
+		var dist = Math.sqrt(dx*dx + dy*dy);
+		// choose high speed (world units per second)
+		var speed = 2400.0; // adjust for "high-speed" feel
+		var durationMs = Math.max(80, Math.min(1200, Math.round((dist / speed) * 1000)));
+
+		teleportMover.px = curCenterX;
+		teleportMover.py = curCenterY;
+		animX.from = curCenterX; animX.to = dstX; animX.duration = durationMs; animX.easing.type = Easing.InOutQuad;
+		animY.from = curCenterY; animY.to = dstY; animY.duration = durationMs; animY.easing.type = Easing.InOutQuad;
+		teleportMover.running = true;
+		teleportParallel.start();
+
+		teleportMover.finished.connect(function() {
+			// ensure final pos set exactly
+			try { playerObj.pos = Qt.point(targetWorldX, targetWorldY); } catch(e) {}
+			try { if (typeof playerObj.exitTeleportMode === 'function') playerObj.exitTeleportMode(); } catch(e) {}
+		});
+	}
+
+	// Teleport overlay floats above the map so teleport targets remain visible while aim overlay is hidden.
+	EntityQml.TeleportOverlay {
+		id: teleportOverlay
+		// parent it to mapWrapper so overlay coordinates share the same coordinate space
+		parent: mapWrapper
+		playerObj: playerObj
+		tileScale: tileScale
+		mapWrapperRef: mapWrapper
+		teleportDistance: teleportRingDistance
+		// pass reference to dynamic sight mask so overlay uses current visible radius
+		sightMaskRef: sightMask
+		active: playerObj && playerObj.teleportMode
+		playerVisualWidth: playerItem ? playerItem.width : 0
+		playerVisualHeight: playerItem ? playerItem.height : 0
+		mapClamp: ({ width: mapCols * tileSize, height: mapRows * tileSize })
+	}
+	Connections {
+		target: playerObj
+		enabled: !!playerObj
+		function onTeleportModeChanged() {
+			if (playerObj.teleportMode) {
+				if (fireTimer.running) fireTimer.stop();
+				try {
+					if (typeof playerItem.startBulletRecharge === 'function') playerItem.startBulletRecharge();
+				} catch (e) {}
 			}
 		}
 	}
@@ -826,6 +1507,11 @@ Item {
 									var backendCode = '';
 									if (s.type === 'Enemy1') backendCode = 'import GeistZerfall.Game 1.0; BackendEnemy1 {}';
 									else if (s.type === 'Enemy2') backendCode = 'import GeistZerfall.Game 1.0; BackendEnemy2 {}';
+									else if (s.type === 'Enemy3') backendCode = 'import GeistZerfall.Game 1.0; BackendEnemy3 {}';
+									else if (s.type === 'Enemy4') backendCode = 'import GeistZerfall.Game 1.0; BackendEnemy4 {}';
+									else if (s.type === 'Enemy5') backendCode = 'import GeistZerfall.Game 1.0; BackendEnemy5 {}';
+									else if (s.type === 'Enemy6') backendCode = 'import GeistZerfall.Game 1.0; BackendEnemy6 {}';
+									else if (s.type === 'Enemy7') backendCode = 'import GeistZerfall.Game 1.0; BackendEnemy7 {}';
 									else continue; // unknown type skip
 									var be = Qt.createQmlObject(backendCode, gameViewRoot);
 									if (!be) continue;
@@ -845,6 +1531,11 @@ Item {
 									var compPath = '';
 									if (s.type === 'Enemy1') compPath = './Entity/Enemy/Enemy1.qml';
 									else if (s.type === 'Enemy2') compPath = './Entity/Enemy/Enemy2.qml';
+									else if (s.type === 'Enemy3') compPath = './Entity/Enemy/Enemy3.qml';
+									else if (s.type === 'Enemy4') compPath = './Entity/Enemy/Enemy4.qml';
+									else if (s.type === 'Enemy5') compPath = './Entity/Enemy/Enemy5.qml';
+									else if (s.type === 'Enemy6') compPath = './Entity/Enemy/Enemy6.qml';
+									else if (s.type === 'Enemy7') compPath = './Entity/Enemy/Enemy7.qml';
 									if (compPath !== '') {
 										var comp = Qt.createComponent(compPath);
 										if (comp.status === Component.Ready) {
@@ -862,6 +1553,8 @@ Item {
 								// persist snapshot for SaveLoad UI
 								try { WindowState.setGameEnemies && WindowState.setGameEnemies(serializeEnemies()); } catch(eSS) {}
 								appliedSaveLoad = true;
+								// after restoring enemies from save, ensure we trigger win if all enemies are already dead
+								Qt.callLater(function(){ checkVictoryNow(); });
 							} else {
 								console.log('GameView: no saved enemies list; will spawn from map normally');
 							}
@@ -884,20 +1577,54 @@ Item {
 							var autoHp = Math.max(0, Math.min(SaveLoadManager.hp, playerObj.maxHp));
 							playerObj.hp = autoHp;
 						}
+						// restore countdown time from auto-save if present
+						try {
+							if (typeof SaveLoadManager.timeLeftSeconds !== 'undefined' && !isNaN(SaveLoadManager.timeLeftSeconds)) {
+								// Only restore auto-save time if it belongs to this battle and has positive remaining time
+								if (SaveLoadManager.battleId === battleId && SaveLoadManager.timeLeftSeconds > 0) {
+									timeLeftSeconds = SaveLoadManager.timeLeftSeconds;
+									if (timeLeftSeconds > 0) countdownTimer.running = true;
+									console.log('GameView: restored timeLeftSeconds from auto-save', timeLeftSeconds);
+								}
+							}
+						} catch(eTL) { console.log('restore timeLeftSeconds from auto-save failed', eTL); }
 					} else {
-						playerObj.pos = Qt.point(centerX, centerY);
+						// If battle JSON provides an explicit spawn.playerPos, honor it (tile coords assumed)
+						if (battleData && battleData.spawn && battleData.spawn.playerPos) {
+							try {
+								var p = battleData.spawn.playerPos;
+								// assume p.x/p.y are tile coordinates (col,row). Place player at tile center,
+								// convert to top-left world coords used by playerObj.pos
+								var spawnWorldX = (p.x * tileSize) + (tileSize/2) - (playerItem.width/2);
+								var spawnWorldY = (p.y * tileSize) + (tileSize/2) - (playerItem.height/2);
+								playerObj.pos = Qt.point(spawnWorldX, spawnWorldY);
+							} catch(ePos) { console.log('apply explicit spawn.playerPos failed', ePos); playerObj.pos = Qt.point(centerX, centerY); }
+						} else {
+							// No explicit spawn provided: scan mapData for tile==0 and use its center if found
+							var used = false;
+							try {
+								if (tileManager && tileManager.curMapData) {
+									var rows2 = tileManager.curMapData.length;
+									for (var rr = 0; rr < rows2 && !used; ++rr) {
+										var cols2 = tileManager.curMapData[rr].length;
+										for (var cc = 0; cc < cols2; ++cc) {
+											var tt = tileManager.getTileType(rr, cc);
+											if (tt === 0) {
+												var wx = cc * tileSize + tileSize/2 - (playerItem.width/2);
+												var wy = rr * tileSize + tileSize/2 - (playerItem.height/2);
+												playerObj.pos = Qt.point(wx, wy);
+												used = true;
+												break;
+											}
+										}
+									}
+								}
+							} catch(eScan) { console.log('scan for tile==0 failed', eScan); }
+							if (!used) playerObj.pos = Qt.point(centerX, centerY);
+						}
 					}
 				} else {
 					playerObj.pos = Qt.point(centerX, centerY);
-				}
-			}
-			// 尝试切换到游戏音乐;若不存在则回退到主菜单音乐
-			if (typeof window !== 'undefined' && typeof window.playMusic === 'function') {
-				try {
-					window.playMusic("qrc:/resource/audio/bgm/fight.mp3");
-				} catch (e) {
-					console.log("切换到游戏音乐失败,使用主菜单音乐作为回退", e);
-					window.playMusic("qrc:/resource/audio/bgm/mainmenu.mp3");
 				}
 			}
 			// expose playerObj to window so SaveLoad UI can read current player state when saving
@@ -927,7 +1654,7 @@ Item {
 				// mark that snipe key is held so other logic (moving) won't change the sight while held
 				gameViewRoot.snipeHeld = true;
 				if (playerObj && typeof playerObj.snipeStart === 'function') playerObj.snipeStart();
-				tileScale = 1.0 / 2.0;
+				tileScale = 1.5 / 2.0;
 				// ensure sightMask radius is updated to match scaled view
 				sightMask.radius = sightMask.baseRadius * tileScale;
 				// pressing space should stop bullet auto-fire if it was active
@@ -1050,12 +1777,34 @@ Item {
 			ctx.beginPath();
 			ctx.arc(cx, cy, radius, 0, Math.PI * 2);
 			ctx.fill();
+			if (mapWrapper && mapWrapper.revealedEnemyVisuals && mapWrapper.revealedEnemyVisuals.length > 0) {
+				for (var idx = mapWrapper.revealedEnemyVisuals.length - 1; idx >= 0; --idx) {
+					var enemy = mapWrapper.revealedEnemyVisuals[idx];
+					if (!enemy || !enemy.visible) continue;
+					var centerX = mapWrapper.x + enemy.x + enemy.width / 2;
+					var centerY = mapWrapper.y + enemy.y + enemy.height / 2;
+					var scaleFactor = (enemy.scale !== undefined && enemy.scale > 0) ? enemy.scale : 1.0;
+					var radiusHint = Math.max(enemy.width, enemy.height) * scaleFactor * 0.7;
+					var revealRadius = Math.max(radiusHint, 60);
+					ctx.beginPath();
+					ctx.arc(centerX, centerY, revealRadius, 0, Math.PI * 2);
+					ctx.fill();
+				}
+			}
 			// 恢复默认合并方式
 			ctx.globalCompositeOperation = 'source-over';
 		}
 	}
 
-	// 监听 playerItem 的 moving 状态，平滑调整视野半径到 baseRadius/2 或 baseRadius
+		Timer {
+			id: revealRepaintTimer
+			interval: 120
+			repeat: true
+			running: false
+			onTriggered: sightMask.requestPaint()
+		}
+
+		// 监听 playerItem 的 moving 状态，平滑调整视野半径到 baseRadius/2 或 baseRadius
     	Connections {
     		target: playerItem
     		onMovingChanged: {
