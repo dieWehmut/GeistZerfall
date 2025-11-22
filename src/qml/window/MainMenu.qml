@@ -125,7 +125,7 @@ Item {
             color: "transparent"
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.bottom: parent.bottom
-            anchors.bottomMargin: 40
+            anchors.bottomMargin: 20
 
             Row {
                 id: buttonRow

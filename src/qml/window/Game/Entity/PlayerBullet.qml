@@ -40,7 +40,8 @@ Item {
 	SoundEffect {
 		id: bulletSfx
 		source: "qrc:/resource/audio/SoundEffect/playerBullet.wav"
-		volume: 0.8
+		// 本地基础音量 * 全局主音量 * 全局 SFX 音量
+		volume: 0.8 * (typeof window !== 'undefined' ? window.masterVolume * window.sfxVolume : 1.0)
 	}
 
 	function handleBackendAssigned() {

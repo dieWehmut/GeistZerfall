@@ -31,10 +31,10 @@ Item {
         // 根据类型加载对应的 QML
         switch (contentData.type) {
             case "text":
-                qmlFile = "../contentShow/Text.qml";
+                qmlFile = "../contentShow/ContentText.qml";
                 break;
-            case "image":
-                qmlFile = "../contentShow/Image.qml";
+                case "image":
+                qmlFile = "../contentShow/ContentImage.qml";
                 break;
             case "animation":
                 qmlFile = "../contentShow/Animation.qml";

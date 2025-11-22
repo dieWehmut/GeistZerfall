@@ -32,6 +32,7 @@
         <file>qml/window/Lore/components/HistoryPanel.qml</file>
         <file>qml/window/Lore/components/LoreControlButton.qml</file>
         <file>qml/window/Lore/components/LoreControlBar.qml</file>
+        <file>qml/window/Lore/components/ConfigSlider.qml</file>
         <file>qml/components/LoreControlButton.qml</file>
         <file>qml/components/LoreControlBar.qml</file>
         <file>qml/window/windowState.js</file>

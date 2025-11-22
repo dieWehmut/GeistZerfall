@@ -31,13 +31,15 @@ Item {
         spacing: 18
 
         LoreControlButton {
-            iconText: "\u2699"
+            iconText: "\u2630"
+            text: "MENU"
             onClicked: root.settingsClicked()
         }
 
         LoreControlButton {
             id: autoButton
-            iconText: "\u27F3"
+            iconText: "\u25B6"
+            text: "AUTO"
             checkable: true
             checked: root.autoEnabled
             onClicked: {
@@ -47,27 +49,35 @@ Item {
         }
 
         LoreControlButton {
-            iconText: "\u23E9"
+            iconText: "\u25B6\u25B6"
+            text: "SKIP"
             onClicked: root.skipClicked()
         }
 
         LoreControlButton {
-            iconText: "\uD83D\uDCD6"
+            iconText: "\u270E"
+            text: "LOG"
             onClicked: root.historyClicked()
         }
 
         LoreControlButton {
-            iconText: "\uD83D\uDCBE"
+            iconText: "\u2399"
+            text: "SAVE"
             onClicked: root.saveClicked()
         }
 
         LoreControlButton {
-            iconText: "\u2B07"
+            iconText: "\u2398"
+            iconRotation: 90
+            text: "LOAD"
             onClicked: root.loadClicked()
         }
 
         LoreControlButton {
-            iconText: "\u2302"
+            iconText: "\u25A3"
+            iconYOffset: -3
+            iconScale: 1.08
+            text: "TITLE"
             onClicked: root.titleClicked()
         }
     }

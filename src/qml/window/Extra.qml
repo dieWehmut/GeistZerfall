@@ -30,9 +30,9 @@ Item {
         Text {
             text: "EXTRA"
             anchors.left: parent.left
-            anchors.leftMargin: 40
+            anchors.leftMargin: 24
             anchors.top: parent.top
-            anchors.topMargin: 60
+            anchors.topMargin: 24
             font.pixelSize: 48
             color: "white"
             font.bold: true
@@ -124,7 +124,7 @@ Item {
         BottomButtonBar {
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.bottom: parent.bottom
-            anchors.bottomMargin: 40
+            anchors.bottomMargin: 20
             buttons: [
                 {text: "SAVE", action: function() {
                     WindowState.setTargetMode("save")

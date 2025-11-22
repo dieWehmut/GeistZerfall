@@ -33,7 +33,7 @@ Item {
     SoundEffect {
         id: hitSfx
         source: "qrc:/resource/audio/SoundEffect/playerHit.wav"
-        volume: 0.8
+        volume: 0.8 * (typeof window !== 'undefined' ? window.masterVolume * window.sfxVolume : 1.0)
     }
 
     function updateScreenPos() {

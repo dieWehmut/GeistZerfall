@@ -23,7 +23,15 @@ Window {
 
     AudioOutput {
         id: bgmOutput
+        // 全局音量控制（0.0 - 1.0）
+        // masterVolume 与 bgmVolume 来自窗口属性，计算最终输出
+        volume: masterVolume * bgmVolume
     }
+
+    // 全局音量属性（0.0 - 1.0）
+    property real masterVolume: 1.0
+    property real bgmVolume: 1.0
+    property real sfxVolume: 1.0
 
     // 当前正在播放的音乐 source（用于避免重复切换）
     property string currentMusic: ""
