@@ -16,7 +16,7 @@ Item {
     property real pulsateScale: 1.0
     property real impactScale: 1.0
     // speed up pulsating animation
-    property int pulsateDuration: 200
+    property int pulsateDuration: 50
     scale: pulsateScale * impactScale
 
     Image {
@@ -159,6 +159,89 @@ Item {
             pulsateStarter.start();
         } catch(e) {}
         syncForcedRevealRegistration();
+    }
+
+    // --- Bullet circle: five Enemy5 bullet images orbiting quickly ---
+    Item {
+        id: bulletCircle
+        anchors.centerIn: parent
+        width: parent.width * 2
+        height: parent.height * 2
+        z: enemy4Root.z + 20
+        transformOrigin: Item.Center
+        // orbit radius in screen pixels (relative to enemy size)
+        property real orbitRadius: Math.max(parent.width, parent.height) * 0.9
+        // size of each orbiting bullet
+        property real orbitBulletSize: Math.max(16, baseSize * 0.42) * tileScaleRef
+        // rotation angle in degrees (animated)
+        property real rotationAngle: 0
+
+        Repeater {
+            id: bulletRepeater
+            model: 5
+            delegate: Item {
+                width: bulletCircle.orbitBulletSize
+                height: bulletCircle.orbitBulletSize
+                transformOrigin: Item.Center
+                // compute angle including global rotation
+                property real ang: (index * (360.0 / bulletRepeater.count)) + bulletCircle.rotationAngle
+                x: bulletCircle.width/2 + Math.cos(-ang * Math.PI/180.0) * bulletCircle.orbitRadius - width/2
+                y: bulletCircle.height/2 + Math.sin(-ang * Math.PI/180.0) * bulletCircle.orbitRadius - height/2
+                Image {
+                    anchors.fill: parent
+                    // use distinct images enemy4Bullet1..enemy4Bullet5 based on index
+                    source: "qrc:/resource/image/entity/enemy4Bullet" + (index+1) + ".png"
+                    fillMode: Image.PreserveAspectFit
+                }
+            }
+        }
+
+        // continuous fast rotation
+        NumberAnimation { target: bulletCircle; property: "rotationAngle"; from: 0; to: 360; duration: 600; loops: Animation.Infinite; running: true }
+    }
+
+    // damage config for orbit bullets
+    property int orbitBulletDamage: 12
+    property int orbitHitCooldownMs: 300
+    // last time (ms since epoch) we applied damage to player from orbit bullets
+    property int lastOrbitHitTime: 0
+
+    // Timer to check collision between orbit bullets and the player
+    Timer {
+        id: orbitCollisionTimer
+        interval: 40
+        repeat: true
+        running: true
+        onTriggered: {
+            if (!playerItemRef || !playerObjRef) return;
+            // compute screen offset (mapWrapper.x if available)
+            var offsetX = mapWrapperRef ? mapWrapperRef.x : 0;
+            var offsetY = mapWrapperRef ? mapWrapperRef.y : 0;
+            var px = playerItemRef.x;
+            var py = playerItemRef.y;
+            var pw = playerItemRef.width;
+            var ph = playerItemRef.height;
+            var now = Date.now();
+            for (var i = 0; i < bulletRepeater.count; ++i) {
+                var it = bulletRepeater.itemAt(i);
+                if (!it) continue;
+                // bullet position relative to mapWrapper: enemy4Root.x + it.x
+                var bx = offsetX + enemy4Root.x + it.x;
+                var by = offsetY + enemy4Root.y + it.y;
+                var bw = it.width;
+                var bh = it.height;
+                if (bx < px + pw && bx + bw > px && by < py + ph && by + bh > py) {
+                    // collision detected
+                    if (!lastOrbitHitTime || (now - lastOrbitHitTime) >= orbitHitCooldownMs) {
+                        try {
+                            if (typeof playerObjRef.receiveDamage === 'function') playerObjRef.receiveDamage(orbitBulletDamage);
+                        } catch(e) { console.log('orbit hit failed', e); }
+                        lastOrbitHitTime = now;
+                    }
+                    break; // one hit per tick is enough
+                }
+            }
+        }
     }
 
     Component.onDestruction: {

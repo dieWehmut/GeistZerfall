@@ -40,6 +40,19 @@ Item {
 		height: parent.height
 	}
 
+	// blue square border slightly larger than the bullet, rotates together with the root
+	Rectangle {
+		id: blueBorder
+		anchors.centerIn: parent
+		width: parent.width * 1.14
+		height: parent.height * 1.14
+		color: "transparent"
+		border.color: "#3399FF"
+		border.width: Math.max(2, 4 * tileScaleRef)
+		radius: 0
+		z: img.z + 1
+	}
+
 	SoundEffect {
 		id: bulletSfx
 		source: "qrc:/resource/audio/SoundEffect/playerBullet.wav"
