@@ -250,7 +250,13 @@ Item {
 
 	onBackendChanged: {
 		if (!backend) return;
-		try { backend.setProperty("collisionRadius", baseSize * 0.45); } catch(e){}
+		try {
+			if (backend && typeof backend.setCollisionRadius === 'function') {
+				backend.setCollisionRadius(baseSize * 0.45);
+			} else {
+				backend.setProperty("collisionRadius", baseSize * 0.45);
+			}
+		} catch(e){}
 		try { backend.posChanged.connect(updateScreenPos); } catch(e){}
 		try { backend.enemyProjectileCreated.connect(function(pr){
 			var comp = Qt.createComponent("./Enemy1Bullet.qml");

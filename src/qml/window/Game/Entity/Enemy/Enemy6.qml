@@ -101,7 +101,11 @@ Item {
         if (!backend)
             return;
         try {
-            backend.setProperty("collisionRadius", baseSize * 0.45);
+            if (backend && typeof backend.setCollisionRadius === 'function') {
+                backend.setCollisionRadius(baseSize * 0.45);
+            } else {
+                backend.setProperty("collisionRadius", baseSize * 0.45);
+            }
         } catch (e) {}
         try {
             backend.posChanged.connect(updateScreenPos);

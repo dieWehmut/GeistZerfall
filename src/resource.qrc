@@ -21,6 +21,10 @@
         <file>resource/audio/SoundEffect/playerBullet.wav</file>
         <file>resource/audio/SoundEffect/playerLaser.wav</file>
         <file>resource/audio/SoundEffect/playerHit.wav</file>
+        <file>resource/audio/SoundEffect/teleport.wav</file>
+        <file>resource/audio/SoundEffect/enemyHit.wav</file>
+        <file>resource/audio/SoundEffect/buttonHover.wav</file>
+        <file>resource/audio/SoundEffect/buttonClick.wav</file>
         <file>qml/window/Lore/chapters/prologue.json</file>
         <file>qml/window/Lore/chapters/chapter01.json</file>
         <file>qml/window/Game/battles/battle01.json</file>

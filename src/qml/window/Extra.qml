@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls
+import QtMultimedia 6.5
 import "windowState.js" as WindowState
 import "../components"
 
@@ -50,6 +51,18 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             z: 10
 
+            // 悬浮与点击音效（绑定到主音量与效果音）
+            SoundEffect {
+                id: hoverSfx
+                source: "qrc:/resource/audio/SoundEffect/buttonHover.wav"
+                volume: 0.9 * (typeof window !== 'undefined' ? window.masterVolume * window.sfxVolume : 1.0)
+            }
+            SoundEffect {
+                id: clickSfx
+                source: "qrc:/resource/audio/SoundEffect/buttonClick.wav"
+                volume: 1.0 * (typeof window !== 'undefined' ? window.masterVolume * window.sfxVolume : 1.0)
+            }
+
             property int cols: 3
             property int rows: 2
             property real gap: 28
@@ -92,12 +105,13 @@ Item {
                         MouseArea {
                             anchors.fill: parent
                             hoverEnabled: true
-                            onEntered: boxRect.hovered = true
+                            onEntered: { boxRect.hovered = true; try { hoverSfx.play(); } catch(e) {} }
                             onExited: { boxRect.hovered = false; boxRect.pressed = false }
                             onPressed: boxRect.pressed = true
                             onReleased: boxRect.pressed = false
                             onCanceled: boxRect.pressed = false
                             onClicked: {
+                                try { clickSfx.play(); } catch(e) {}
                                 try { SaveLoadManager.battleId = boxRect.battleId; } catch (e1) {}
                                 try { window.currentBattleId = boxRect.battleId; } catch (e2) {}
                                 try {

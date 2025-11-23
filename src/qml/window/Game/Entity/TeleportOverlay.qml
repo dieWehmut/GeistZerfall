@@ -1,4 +1,5 @@
 import QtQuick 2.15
+import QtMultimedia
 import "."
 
 Item {
@@ -20,6 +21,12 @@ Item {
     property real playerSpriteSize: 96
     property real playerVisualWidth: 0
     property real playerVisualHeight: 0
+    property var enemyBackends: []
+    property int teleportCircleDamage: 60
+    property int teleportCircleHitCooldownMs: 500
+    property int teleportCircleCheckIntervalMs: 80
+    property real defaultEnemyCollisionRadius: 48
+    property var circleHitCache: []
     property var directions: [
         Qt.point(0, -1),
         Qt.point(0, 1),
@@ -66,10 +73,10 @@ Item {
 
     function playerCenterWorld() {
         if (!playerObj || !playerObj.pos) return Qt.point(0, 0);
-        // playerVisualWidth/Height already describe world-size geometry (Player.qml width/height),
-        // so avoid scaling them by tileScale again or the overlay drifts when zooming.
-        var widthWorld = (playerVisualWidth && playerVisualWidth > 0) ? playerVisualWidth : playerSpriteSize;
-        var heightWorld = (playerVisualHeight && playerVisualHeight > 0) ? playerVisualHeight : playerSpriteSize;
+        // Convert visual (px) size to world units by dividing tileScale to avoid drift.
+        var scale = Math.max(0.0001, tileScale);
+        var widthWorld = (playerVisualWidth && playerVisualWidth > 0) ? (playerVisualWidth / scale) : (playerSpriteSize / scale);
+        var heightWorld = (playerVisualHeight && playerVisualHeight > 0) ? (playerVisualHeight / scale) : (playerSpriteSize / scale);
         return Qt.point(playerObj.pos.x + widthWorld / 2, playerObj.pos.y + heightWorld / 2);
     }
 
@@ -128,7 +135,12 @@ Item {
         if (!teleportOverlay.playerObj) return;
         // compute and clamp world endpoints
         teleportOverlay.teleportLineStartWorld = teleportOverlay.playerCenterWorld();
-        teleportOverlay.teleportLineEndWorld = teleportOverlay.clampPoint(pt);
+        var scale = Math.max(0.0001, tileScale);
+        var widthWorld = (playerVisualWidth && playerVisualWidth > 0) ? (playerVisualWidth / scale) : (playerSpriteSize / scale);
+        var heightWorld = (playerVisualHeight && playerVisualHeight > 0) ? (playerVisualHeight / scale) : (playerSpriteSize / scale);
+        var clamped = teleportOverlay.clampPoint(pt);
+        // draw line towards the target center to match actual move path
+        teleportOverlay.teleportLineEndWorld = Qt.point(clamped.x + widthWorld / 2, clamped.y + heightWorld / 2);
         teleportOverlay.teleportLineVisible = true;
         if (teleportLineTimer.running) teleportLineTimer.stop();
         teleportLineTimer.start();
@@ -136,6 +148,88 @@ Item {
         if (typeof teleportLineCanvas !== 'undefined') teleportLineCanvas.requestPaint();
         // notify parent that user requested a teleport to pt (GameView will perform animated move)
         try { teleportOverlay.teleportRequested(pt); } catch(e) { /* ignore */ }
+    }
+
+    function circleRadiusWorldFor(item) {
+        if (!item) return (46 / Math.max(0.0001, tileScale));
+        var pxRadius = item.width > 0 ? item.width * 0.5 : (item.radius || 46);
+        return pxRadius / Math.max(0.0001, tileScale);
+    }
+
+    function pruneCircleHitCache(now) {
+        for (var i = circleHitCache.length - 1; i >= 0; --i) {
+            var entry = circleHitCache[i];
+            if (!entry || !entry.enemy) {
+                circleHitCache.splice(i, 1);
+                continue;
+            }
+            if (entry.enemy.alive !== undefined && !entry.enemy.alive) {
+                circleHitCache.splice(i, 1);
+                continue;
+            }
+            if (entry.enemy.hp !== undefined && entry.enemy.hp <= 0) {
+                circleHitCache.splice(i, 1);
+            }
+        }
+    }
+
+    function canDamageEnemy(enemy, now) {
+        for (var i = 0; i < circleHitCache.length; ++i) {
+            var entry = circleHitCache[i];
+            if (entry.enemy === enemy) {
+                if ((now - entry.lastHit) >= teleportCircleHitCooldownMs) {
+                    entry.lastHit = now;
+                    return true;
+                }
+                return false;
+            }
+        }
+        circleHitCache.push({ enemy: enemy, lastHit: now });
+        return true;
+    }
+
+    function detectTeleportCircleHits() {
+        if (!teleportOverlay.active) return;
+        if (!enemyBackends || enemyBackends.length === 0) return;
+        var circleCount = markerRepeater.count;
+        if (circleCount <= 0) return;
+        var now = Date.now();
+        pruneCircleHitCache(now);
+        for (var ei = 0; ei < enemyBackends.length; ++ei) {
+            var enemy = enemyBackends[ei];
+            if (!enemy) continue;
+            if (enemy.alive !== undefined && !enemy.alive) continue;
+            if (enemy.hp !== undefined && enemy.hp <= 0) continue;
+            var pos = enemy.pos;
+            if (!pos) continue;
+            var enemyRadius = (enemy.collisionRadius !== undefined) ? enemy.collisionRadius : defaultEnemyCollisionRadius;
+            var hit = false;
+            for (var ci = 0; ci < circleCount; ++ci) {
+                var circleItem = markerRepeater.itemAt(ci);
+                if (!circleItem) continue;
+                var circleCenter = circleItem.worldPoint || Qt.point(0, 0);
+                var circleRadius = circleRadiusWorldFor(circleItem);
+                var dx = pos.x - circleCenter.x;
+                var dy = pos.y - circleCenter.y;
+                var radiusSum = circleRadius + enemyRadius;
+                if ((dx * dx + dy * dy) <= radiusSum * radiusSum) {
+                    hit = true;
+                    break;
+                }
+            }
+            if (hit && canDamageEnemy(enemy, now)) {
+                try {
+                    if (typeof enemy.receiveDamage === 'function') {
+                        enemy.receiveDamage(teleportCircleDamage, 0, 0, 0);
+                    }
+                } catch (err) {
+                    console.log('teleport circle damage failed', err);
+                }
+                if (teleportCircleHitSfx) {
+                    try { teleportCircleHitSfx.play(); } catch (playErr) {}
+                }
+            }
+        }
     }
 
 
@@ -165,6 +259,14 @@ Item {
         }
     }
 
+    Timer {
+        id: circleCollisionTimer
+        interval: teleportCircleCheckIntervalMs
+        repeat: true
+        running: teleportOverlay.active
+        onTriggered: teleportOverlay.detectTeleportCircleHits()
+    }
+
     Canvas {
         id: teleportLineCanvas
         anchors.fill: parent
@@ -185,6 +287,12 @@ Item {
             ctx.lineCap = 'round';
             ctx.stroke();
         }
+    }
+
+    SoundEffect {
+        id: teleportCircleHitSfx
+        source: "qrc:/resource/audio/SoundEffect/enemyHit.wav"
+        volume: 0.55 * (typeof window !== 'undefined' ? window.masterVolume * window.sfxVolume : 1.0)
     }
 
     function forceUpdate() {

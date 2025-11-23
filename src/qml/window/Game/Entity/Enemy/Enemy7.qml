@@ -84,7 +84,13 @@ Item {
     // 初始化与信号绑定
     onBackendChanged: {
         if (!backend) return;
-        try { backend.setProperty("collisionRadius", baseSize * 0.45); } catch(e){}
+        try {
+            if (backend && typeof backend.setCollisionRadius === 'function') {
+                backend.setCollisionRadius(baseSize * 0.45);
+            } else {
+                backend.setProperty("collisionRadius", baseSize * 0.45);
+            }
+        } catch(e){}
         try { backend.posChanged.connect(updateScreenPos); } catch(e){}
         // 子弹创建（散射弹）
         try { backend.enemyProjectileCreated.connect(function(pr){

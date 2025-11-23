@@ -222,11 +222,10 @@ Item {
 			// 中间列：音量相关
 			Column {
 				spacing: 12
-				anchors.verticalCenter: parent.verticalCenter
 
 				// 主音量
 				Column { spacing: 5
-					Text { text: "主音量"; font.pixelSize: 24; color: "white"; font.bold: true; style: Text.Outline; styleColor: "black" }
+					Text { text: "主音量"; font.pixelSize: 28; color: "white"; font.bold: true; style: Text.Outline; styleColor: "black" }
 					ConfigSlider {
 						id: masterSlider
 						Component.onCompleted: value = Math.round((typeof window !== 'undefined' ? window.masterVolume : 1.0) * 100);
@@ -244,7 +243,7 @@ Item {
 
 				// 背景音乐
 				Column { spacing: 5
-					Text { text: "背景音乐"; font.pixelSize: 24; color: "white"; font.bold: true; style: Text.Outline; styleColor: "black" }
+					Text { text: "背景音乐"; font.pixelSize: 28; color: "white"; font.bold: true; style: Text.Outline; styleColor: "black" }
 					ConfigSlider { id: bgmSlider; Component.onCompleted: value = Math.round((typeof window !== 'undefined' ? window.bgmVolume : 1.0) * 100); onValueChanged: if (typeof window !== 'undefined') window.bgmVolume = value / 100.0 }
 					Row { spacing: 10
 						AppButton { id: bgmOnBtn; text: "ON"; width: 100; height: 40; fontPixelSize: 18; checkable: true; checked: (typeof window !== 'undefined' ? window.bgmVolume > 0.0 : true); onClicked: { if (typeof window !== 'undefined') { window.bgmVolume = 1.0; bgmOnBtn.checked = true; bgmOffBtn.checked = false; bgmSlider.value = Math.round(window.bgmVolume * 100); } } }
@@ -254,7 +253,7 @@ Item {
 
 				// 音效
 				Column { spacing: 5
-					Text { text: "效果音"; font.pixelSize: 24; color: "white"; font.bold: true; style: Text.Outline; styleColor: "black" }
+					Text { text: "效果音"; font.pixelSize: 28; color: "white"; font.bold: true; style: Text.Outline; styleColor: "black" }
 					ConfigSlider { id: sfxSlider; Component.onCompleted: value = Math.round((typeof window !== 'undefined' ? window.sfxVolume : 1.0) * 100); onValueChanged: if (typeof window !== 'undefined') window.sfxVolume = value / 100.0 }
 					Row { spacing: 8
 						AppButton { id: sfxOnBtn; text: "ON"; width: 100; height: 40; fontPixelSize: 18; checkable: true; checked: (typeof window !== 'undefined' ? window.sfxVolume > 0.0 : true); onClicked: { if (typeof window !== 'undefined') { window.sfxVolume = 1.0; sfxOnBtn.checked = true; sfxOffBtn.checked = false; sfxSlider.value = Math.round(window.sfxVolume * 100); } } }
@@ -267,15 +266,14 @@ Item {
 			// 右侧第3列：文字显示速度 与 自动模式速度
 			Column {
 				spacing: 12
-				anchors.verticalCenter: parent.verticalCenter
 
 				Column { spacing: 5
-					Text { text: "文字显示速度"; font.pixelSize: 24; color: "white"; font.bold: true; style: Text.Outline; styleColor: "black" }
+					Text { text: "文字显示速度"; font.pixelSize: 28; color: "white"; font.bold: true; style: Text.Outline; styleColor: "black" }
 					ConfigSlider { value: 50 }
 				}
 
 				Column { spacing: 5
-					Text { text: "自动模式速度"; font.pixelSize: 24; color: "white"; font.bold: true; style: Text.Outline; styleColor: "black" }
+					Text { text: "自动模式速度"; font.pixelSize: 28; color: "white"; font.bold: true; style: Text.Outline; styleColor: "black" }
 					ConfigSlider { value: 50 }
 				}
 			}

@@ -11,6 +11,8 @@ Item {
 		id: laserSfx
 		source: "qrc:/resource/audio/SoundEffect/playerLaser.wav"
 		volume: 0.9 * (typeof window !== 'undefined' ? window.masterVolume * window.sfxVolume : 1.0)
+		// 与效果音绑定：任一为 0 时静音
+		muted: (typeof window !== 'undefined') ? (window.masterVolume === 0 || window.sfxVolume === 0) : false
 	}
 
 	property var backend: null

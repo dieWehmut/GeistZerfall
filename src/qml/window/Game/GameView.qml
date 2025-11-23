@@ -1,5 +1,6 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
+import QtMultimedia 6.5
 // Fix relative imports: Map and Entity are subfolders of Game
 import "./Map"
 import "./Entity" as EntityQml
@@ -8,7 +9,7 @@ import "../windowState.js" as WindowState
 import GeistZerfall.Game 1.0
 
 Item {
-	id: gameViewRoot
+    id: gameViewRoot
 	// 通过context property注入playerObj
 	// Backward-compatible global aim coordinates (fallback to avoid ReferenceError from legacy code)
 	property real aimX: 0
@@ -891,6 +892,9 @@ Item {
 			} catch (eTL) { console.log('restore saved timeLeftSeconds failed', eTL); }
 		}
 		console.log("spawnEnemiesFromMap: total enemies", enemyBackends.length);
+		// Explicitly update TeleportOverlay's enemy list reference to ensure it sees the populated array
+		if (teleportOverlay) teleportOverlay.enemyBackends = enemyBackends;
+		
 		// after spawning, check if victory condition already met (e.g., enemies restored as dead)
 		Qt.callLater(function(){ checkVictoryNow(); });
 		// refresh global snapshot of enemies for SaveLoad UI via WindowState
@@ -1349,7 +1353,7 @@ Item {
 		acceptedButtons: Qt.LeftButton
 		cursorShape: Qt.PointingHandCursor
 		onClicked: function(mouse) {
-			if (!playerObj || !mapWrapper || !teleportOverlay) return;
+			if (!playerObj || !mapWrapper || ! teleportOverlay) return;
 			var localX = mouse.x - mapWrapper.x;
 			var localY = mouse.y - mapWrapper.y;
 			var worldX = localX / tileScale;
@@ -1395,6 +1399,13 @@ Item {
 		onPyChanged: onPxChanged
 	}
 
+	// 瞬移音效（受主音量与效果音控制）
+	SoundEffect {
+		id: teleportSfx
+		source: "qrc:/resource/audio/SoundEffect/teleport.wav"
+		volume: 0.9 * (typeof window !== 'undefined' ? window.masterVolume * window.sfxVolume : 1.0)
+	}
+
 	function startTeleportMove(targetWorldX, targetWorldY) {
 		if (!playerObj || !playerItem) return;
 		// prevent additional clicks while moving
@@ -1415,6 +1426,8 @@ Item {
 		animX.from = curCenterX; animX.to = dstX; animX.duration = durationMs; animX.easing.type = Easing.InOutQuad;
 		animY.from = curCenterY; animY.to = dstY; animY.duration = durationMs; animY.easing.type = Easing.InOutQuad;
 		teleportMover.running = true;
+		// 播放瞬移音效
+		try { teleportSfx.play(); } catch(e) {}
 		teleportParallel.start();
 
 		teleportMover.finished.connect(function() {
@@ -1440,6 +1453,7 @@ Item {
 		playerVisualWidth: playerItem ? playerItem.width : 0
 		playerVisualHeight: playerItem ? playerItem.height : 0
 		mapClamp: ({ width: mapCols * tileSize, height: mapRows * tileSize })
+		enemyBackends: enemyBackends
 	}
 
 	// Start animated teleport when overlay emits the request (marker clicks or viewport clicks)
@@ -1669,7 +1683,7 @@ Item {
 								playerObj.pos = Qt.point(centerX, centerY);
 								didSpawn = true;
 							}
-						} catch (eScan) { console.log('scan for tile==0 failed', eScan); playerObj.pos = Qt.point(centerX, centerY); didSpawn = true; }
+						} catch (eScan) { console.log('scan for tile==0 failed', e); playerObj.pos = Qt.point(centerX, centerY); didSpawn = true; }
 					}
 
 					// Mark that we handled spawn/default state so we won't attempt auto-restore again

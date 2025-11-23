@@ -19,6 +19,7 @@ class Enemy : public Entity {
 	Q_PROPERTY(int maxMp READ getMaxMp WRITE setMaxMp NOTIFY maxMpChanged)
 	Q_PROPERTY(bool alive READ isAlive NOTIFY aliveChanged)
 	Q_PROPERTY(bool forcedReveal READ isForcedReveal NOTIFY forcedRevealChanged)
+	Q_PROPERTY(double collisionRadius READ getCollisionRadius WRITE setCollisionRadius NOTIFY collisionRadiusChanged)
 	Q_PROPERTY(int attackCooldownMs READ getAttackCooldownMs WRITE setAttackCooldownMs)
 public:
 	explicit Enemy(QObject *parent = nullptr);
@@ -48,6 +49,8 @@ public:
 	int getAttackCooldownMs() const { return attackCooldownMs; }
 	void setAttackCooldownMs(int ms) { attackCooldownMs = ms; }
 	bool isForcedReveal() const { return forcedReveal; }
+	double getCollisionRadius() const { return collisionRadius; }
+	Q_INVOKABLE void setCollisionRadius(double value);
 
 	// 指定/更新追踪的玩家对象。
 	Q_INVOKABLE void setPlayerTarget(Player *p) { playerTarget = p; }
@@ -67,6 +70,7 @@ signals:
 	void mpChanged();
 	void maxMpChanged();
 	void aliveChanged();
+	void collisionRadiusChanged();
 	void attacked();           // 成功触发攻击（派生类 performAttack 已执行）
 	void died();               // HP 归零时
 	// 由派生类在 performAttack 中发射后触发，供 QML 侧创建对应的可视对象
@@ -90,6 +94,7 @@ protected:
 	int mp{0};
 	int maxMp{0};
 	bool alive{true};
+	double collisionRadius{48.0};
 	int attackCooldownMs{1200};
 	QElapsedTimer lastAttackTimer; // 用于冷却判断
 	bool forcedReveal{false};

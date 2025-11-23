@@ -1,4 +1,5 @@
 import QtQuick 2.15
+import QtMultimedia 6.5
 
 Item {
     id: root
@@ -46,10 +47,30 @@ Item {
         hoverEnabled: true
         enabled: root.enabled
         cursorShape: Qt.PointingHandCursor
+        onEntered: {
+            // 悬浮音效（受主音量与效果音音量控制）
+            try {
+                if (root.enabled) hoverSfx.play();
+            } catch (e) {}
+        }
         onClicked: {
             if (!root.enabled) return;
+            // 点击音效（受主音量与效果音音量控制）
+            try { clickSfx.play(); } catch (e) {}
             if (root.checkable) root.checked = !root.checked;
             root.clicked()
         }
+    }
+
+    // 悬浮/点击音效，绑定到 Config 界面的效果音（window.sfxVolume）与主音量
+    SoundEffect {
+        id: hoverSfx
+        source: "qrc:/resource/audio/SoundEffect/buttonHover.wav"
+        volume: 0.9 * (typeof window !== 'undefined' ? window.masterVolume * window.sfxVolume : 1.0)
+    }
+    SoundEffect {
+        id: clickSfx
+        source: "qrc:/resource/audio/SoundEffect/buttonClick.wav"
+        volume: 1.0 * (typeof window !== 'undefined' ? window.masterVolume * window.sfxVolume : 1.0)
     }
 }
