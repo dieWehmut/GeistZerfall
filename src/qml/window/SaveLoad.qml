@@ -188,32 +188,42 @@ Item {
 										id: deleteBtnBg
 										width: 90; height: 44; radius: 6
 										z: 50
-										color: deleteBtnMouse.containsMouse ? "#e57373" : "#eeeeee"
-										border.color: deleteBtnMouse.containsMouse ? "#e57373" : "#bbbbbb"
+										// default: white background + black text; hover: black background + white text
+										color: (deleteBtnBg.pressed ? "#111111" : (deleteBtnMouse.containsMouse ? "#000000" : "#ffffff"))
+										border.color: deleteBtnMouse.containsMouse ? "#000000" : "#bbbbbb"
 										border.width: 1
 										visible: SaveLoadManager.hasSlot(slotRect.idx, "save")
 										Layout.alignment: Qt.AlignVCenter | Qt.AlignRight
-										Text { id: deleteBtnText; text: "DELETE"; anchors.centerIn: parent; font.pixelSize: 16; color: "#222"; font.bold: true }
+										property bool pressed: false
+										// Subtle scale transform for hover / press feedback
+										transform: Scale { xScale: deleteBtnBg.pressed ? 0.96 : (deleteBtnMouse.containsMouse ? 1.03 : 1.0); yScale: deleteBtnBg.pressed ? 0.96 : (deleteBtnMouse.containsMouse ? 1.03 : 1.0); origin.x: parent.width/2; origin.y: parent.height/2 }
+
+										Behavior on color { ColorAnimation { duration: 140 } }
+										Behavior on border.color { ColorAnimation { duration: 140 } }
+										Behavior on scale { NumberAnimation { duration: 100 } }
+
+										Text { id: deleteBtnText; text: "DELETE"; anchors.centerIn: parent; font.pixelSize: 16; color: (deleteBtnBg.pressed || deleteBtnMouse.containsMouse) ? "white" : "black"; font.bold: true }
+
 										MouseArea { id: deleteBtnMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor;
 											onPressed: {
 												// prevent the slot MouseArea from handling this click
 												try { slotMouse.enabled = false; } catch (e) {}
-												// pressed style
-												try { deleteBtnBg.color = "#d32f2f"; deleteBtnText.color = "white"; } catch (e) {}
+												// pressed flag to trigger pressed visuals
+												try { deleteBtnBg.pressed = true; } catch (e) {}
 											}
 											onReleased: {
 												try { slotMouse.enabled = true; } catch (e) {}
-												// restore hover/normal style
-												try { deleteBtnBg.color = deleteBtnMouse.containsMouse ? "#e57373" : "#eeeeee"; deleteBtnText.color = deleteBtnMouse.containsMouse ? "white" : "#222"; } catch (e) {}
+												// release pressed state and keep hover visuals if still hovered
+												try { deleteBtnBg.pressed = false; } catch (e) {}
 											}
 											onEntered: {
 												// while hovering delete, ensure slotMouse won't intercept clicks
 												try { slotMouse.enabled = false; } catch (e) {}
-												try { deleteBtnBg.color = "#e57373"; deleteBtnText.color = "white"; } catch (e) {}
+												// no direct color manipulation — styles bound to containsMouse/pressed
 											}
 											onExited: {
 												try { slotMouse.enabled = true; } catch (e) {}
-												try { deleteBtnBg.color = "#eeeeee"; deleteBtnText.color = "#222"; } catch (e) {}
+												try { deleteBtnBg.pressed = false; } catch (e) {}
 											}
 											onClicked: {
 												console.log('delete slot', slotRect.idx);

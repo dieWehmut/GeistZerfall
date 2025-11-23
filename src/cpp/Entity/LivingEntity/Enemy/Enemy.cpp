@@ -50,6 +50,14 @@ Enemy::~Enemy() {
 	SeparationManager::instance()->unregisterEnemy(this);
 }
 
+void Enemy::setCollisionRadius(double value) {
+	double clamped = (value < 0.0) ? 0.0 : value;
+	if (qFuzzyCompare(1.0 + collisionRadius, 1.0 + clamped))
+		return;
+	collisionRadius = clamped;
+	emit collisionRadiusChanged();
+}
+
 void Enemy::startLogicLoop() {
 	if (logicTimer && !logicTimer->isActive()) logicTimer->start();
 }
