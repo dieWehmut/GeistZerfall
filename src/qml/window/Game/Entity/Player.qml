@@ -2,6 +2,9 @@ import QtQuick
 
 Item {
 	id: playerRoot
+	// Signals emitted to let external UI react to key-down/up events
+	signal keyDown(int key)
+	signal keyUp(int key)
 	width: 96; height: 96
 	property var playerObj: null
 
@@ -71,6 +74,8 @@ Item {
 	}
 
 	Keys.onPressed: function(event) {
+		// Emit a general keyDown signal so external UI (joystick/buttons) can mirror state
+		try { playerRoot.keyDown(event.key); } catch(e) {}
 		if (!playerObj) return;
 		if (event.key === Qt.Key_F) {
 			event.accepted = true;
@@ -90,6 +95,8 @@ Item {
 	}
 
 	Keys.onReleased: function(event) {
+		// Emit a general keyUp signal
+		try { playerRoot.keyUp(event.key); } catch(e) {}
 		if (!playerObj) return;
 		if (event.key === Qt.Key_W||event.key === Qt.Key_Up) wDown = false;
 		if (event.key === Qt.Key_S||event.key === Qt.Key_Down) sDown = false;
