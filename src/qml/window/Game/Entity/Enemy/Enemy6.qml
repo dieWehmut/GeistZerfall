@@ -13,6 +13,9 @@ Item {
     property real tileScaleRef: 1.0
     z: 120
     transformOrigin: Item.Center
+    // continuous spin properties
+    property int spinDuration: 9000
+    property real spinOffset: 0
     property real pulsateScale: 1.0
     property real impactScale: 1.0
     // speed up pulsating animation
@@ -154,6 +157,18 @@ Item {
         NumberAnimation { target: enemy6Root; property: "pulsateScale"; from: 2.0; to: 1.0; duration: pulsateDuration; easing.type: Easing.InOutSine }
     }
 
+    // rotation / spin animation (smooth, continuous)
+    NumberAnimation {
+        id: spinAnim
+        target: enemy6Root
+        property: "rotation"
+        from: 0; to: 360
+        loops: Animation.Infinite
+        running: false
+        duration: spinDuration
+        easing.type: Easing.Linear
+    }
+
     Timer { id: pulsateStarter; interval: 0; repeat: false; onTriggered: pulsateAnim.start() }
 
     Component.onCompleted: {
@@ -164,6 +179,13 @@ Item {
             var offset = Math.floor(Math.random() * pulsateDuration);
             pulsateStarter.interval = offset;
             pulsateStarter.start();
+            try {
+                // randomize spin start and duration a bit to avoid uniform motion
+                spinOffset = Math.floor(Math.random() * 1000);
+                spinAnim.duration = spinDuration + Math.floor(Math.random() * 4000) - 2000;
+                // stagger start
+                Qt.callLater(function() { spinAnim.start(); });
+            } catch(e) {}
         } catch(e) {}
         syncForcedRevealRegistration();
     }

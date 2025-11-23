@@ -23,6 +23,7 @@ public:
 
     Q_INVOKABLE void shoot(double px, double py, double dirx, double diry);// Fire a bullet (called from QML)
     Q_INVOKABLE void snipe(double px, double py, double dirx, double diry);// Fire a laser
+    Q_INVOKABLE void wave(double px, double py, double dirx, double diry); // Fire wave spread
     Q_INVOKABLE void snipeStart();
     Q_INVOKABLE void snipeStop();
     Q_INVOKABLE void shootStart();
@@ -48,6 +49,8 @@ signals:
     void playerBulletCreated(QObject* bullet);
     // Emitted when a new laser backend object is created. QML should create a laser visual and bind to it.
     void playerLaserCreated(QObject* laser);
+    // Emitted when a new wave backend object is created. QML should create a wave visual and bind to it.
+    void playerWaveCreated(QObject* wave);
     void hpChanged();
     void maxHpChanged();
     void damaged(int amount);
