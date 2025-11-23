@@ -53,6 +53,7 @@ qt_add_qml_module(GeistZerfall
         src/qml/window/Game/Entity/Player.qml
         src/qml/window/Game/Entity/PlayerBullet.qml
         src/qml/window/Game/Entity/PlayerLaser.qml
+        src/qml/window/Game/Entity/PlayerWave.qml
         src/qml/window/Game/Entity/TeleportCircle.qml
         src/qml/window/Game/Entity/TeleportOverlay.qml
         src/qml/window/Game/Entity/Enemy/Enemy1.qml
@@ -114,6 +115,8 @@ qt_add_qml_module(GeistZerfall
         src/cpp/Entity/Projectile/PlayerBullet.h
         src/cpp/Entity/Projectile/PlayerLaser.cpp
         src/cpp/Entity/Projectile/PlayerLaser.h
+        src/cpp/Entity/Projectile/PlayerWave.cpp
+        src/cpp/Entity/Projectile/PlayerWave.h
         src/cpp/Entity/Projectile/Projectile.cpp
         src/cpp/Entity/Projectile/Projectile.h
         src/cpp/Entity/Projectile/EnemyProjectile/Enemy1Bullet.cpp

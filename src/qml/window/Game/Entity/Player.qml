@@ -353,4 +353,27 @@ Item {
 		} catch (e) { console.log('trySnipe backend call failed', e); }
 		return true;
 	}
+
+	// Attempt to fire a wave; returns true if fired.
+	// Only fires when laserCd holds at least 50% of laserCdMax.
+	function tryWave(px, py, dirx, diry) {
+		if (!playerObj) return false;
+		if (typeof laserCd === 'undefined' || typeof laserCdMax === 'undefined') return false;
+		var cost = Math.round(laserCdMax * 0.5);
+		if (laserCd < cost) {
+			// insufficient resource
+			// optional: play deny sound or visual feedback here
+			return false;
+		}
+		// call backend wave and deduct cost from client-side resource
+		try {
+			if (typeof playerObj.wave === 'function') playerObj.wave(px, py, dirx, diry);
+			else playerObj.wave(px, py, dirx, diry);
+		} catch (e) { console.log('tryWave backend call failed', e); }
+
+		laserCd = Math.max(0, laserCd - cost);
+		laserRecharging = true;
+		if (!laserCdTimer.running) laserCdTimer.start();
+		return true;
+	}
 }

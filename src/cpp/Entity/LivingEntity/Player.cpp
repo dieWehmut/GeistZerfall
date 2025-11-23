@@ -1,4 +1,5 @@
 #include "Player.h"
+#include "../Projectile/PlayerWave.h"
 #include "Manager/EventManager/SeparationManager.h"
 #include <QDebug>
 #include <QtCore/QTimer>
@@ -96,6 +97,41 @@ void Player::snipe(double px, double py, double dirx, double diry) {
 		connect(l, &PlayerLaser::backendDestroyed, this, [this](PlayerLaser* self){ Q_UNUSED(self); qDebug() << "Player::snipe: backendDestroyed for" << self; });
 		l->setProperty("visualType", QVariant("laser"));
 		emit playerLaserCreated(l);
+	}
+}
+
+void Player::wave(double px, double py, double dirx, double diry) {
+	qDebug() << "Player::wave called px,py,dir:" << px << py << dirx << diry;
+	// forward angles: 0, +30, -30; reverse is opposite direction
+	const double baseAnglesDeg[3] = {0.0, 30.0, -30.0};
+	const int waveDamage = 120;
+	for (int i = 0; i < 3; ++i) {
+		double ang = qDegreesToRadians(baseAnglesDeg[i]);
+		double nx = dirx * std::cos(ang) - diry * std::sin(ang);
+		double ny = dirx * std::sin(ang) + diry * std::cos(ang);
+		PlayerWave *w = new PlayerWave(this->parent());
+		w->setDamage(waveDamage);
+		w->setStartPos(QPointF(px, py));
+		w->setDirection(nx, ny);
+		connect(w, &PlayerWave::backendDestroyed, this, [this](PlayerWave* self){ Q_UNUSED(self); qDebug() << "Player::wave: backendDestroyed for" << self; });
+		w->setProperty("visualType", QVariant("wave"));
+		emit playerWaveCreated(w);
+	}
+	// reverse direction
+	for (int i = 0; i < 3; ++i) {
+		double ang = qDegreesToRadians(baseAnglesDeg[i]);
+		// reverse dir
+		double rdx = -dirx;
+		double rdy = -diry;
+		double nx = rdx * std::cos(ang) - rdy * std::sin(ang);
+		double ny = rdx * std::sin(ang) + rdy * std::cos(ang);
+		PlayerWave *w = new PlayerWave(this->parent());
+		w->setDamage(waveDamage);
+		w->setStartPos(QPointF(px, py));
+		w->setDirection(nx, ny);
+		connect(w, &PlayerWave::backendDestroyed, this, [this](PlayerWave* self){ Q_UNUSED(self); qDebug() << "Player::wave: backendDestroyed for" << self; });
+		w->setProperty("visualType", QVariant("wave"));
+		emit playerWaveCreated(w);
 	}
 }
 

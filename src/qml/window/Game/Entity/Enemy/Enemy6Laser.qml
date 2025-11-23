@@ -14,6 +14,9 @@ Item {
     property int damage: 10
     z: 130
     visible: backend !== null
+    transformOrigin: Item.Center
+    // subtle spin for the whole laser visual
+    property int spinDuration: 6000
 
     // 波形参数
     property double waveFrequency: backend ? backend.waveFrequency : 2.0
@@ -249,6 +252,22 @@ Item {
                     } catch (e) {}
                 }
             }
+        }
+
+        // rotation for subtle spin
+        NumberAnimation {
+            id: spinAnim
+            target: root
+            property: "rotation"
+            from: 0; to: 360
+            loops: Animation.Infinite
+            running: false
+            duration: spinDuration
+            easing.type: Easing.Linear
+        }
+
+        Component.onCompleted: {
+            try { spinAnim.start(); } catch(e) {}
         }
     }
 }

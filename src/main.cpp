@@ -26,6 +26,7 @@
 #include "cpp/Entity/Projectile/EnemyProjectile/Enemy7Bullet.h"
 #include "cpp/Entity/Projectile/PlayerBullet.h"
 #include "cpp/Entity/Projectile/PlayerLaser.h"
+#include "cpp/Entity/Projectile/PlayerWave.h"
 
 int main(int argc, char *argv[])
 {
@@ -52,6 +53,7 @@ int main(int argc, char *argv[])
     qmlRegisterType<Enemy7Bullet>("GeistZerfall.Game", 1, 0, "BackendEnemy7Bullet");
     qmlRegisterType<PlayerBullet>("GeistZerfall.Game", 1, 0, "BackendPlayerBullet");
     qmlRegisterType<PlayerLaser>("GeistZerfall.Game", 1, 0, "BackendPlayerLaser");
+    qmlRegisterType<PlayerWave>("GeistZerfall.Game", 1, 0, "BackendPlayerWave");
     qmlRegisterType<SaveLoad>("GeistZerfall.Game", 1, 0, "SaveLoad");
     qmlRegisterType<Transition>("GeistZerfall.Game", 1, 0, "Transition");
     QObject::connect(

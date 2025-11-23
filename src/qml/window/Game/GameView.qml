@@ -41,6 +41,34 @@ Item {
 		}
 	}
 
+	// Top-left player HP display (shows current HP and optional max HP)
+	Item {
+		id: hpDisplayRoot
+		anchors.top: parent.top
+		anchors.left: parent.left
+		anchors.topMargin: 12
+		anchors.leftMargin: 12
+		z: 3000
+		Rectangle {
+			id: hpBg
+			anchors.top: parent.top
+			anchors.left: parent.left
+			color: "#00000080"
+			radius: 6
+			width: textHp.width + 24
+			height: textHp.height + 12
+		}
+		Text {
+			id: textHp
+			anchors.centerIn: hpBg
+			color: "white"
+			font.pixelSize: 34
+			font.bold: true
+			// Show 'HP: current / max' if available, otherwise fallback to a placeholder
+			text: (playerObj && typeof playerObj.hp !== 'undefined') ? ("HP: " + playerObj.hp + (typeof playerObj.maxHp !== 'undefined' ? (" / " + playerObj.maxHp) : "")) : "HP: -"
+		}
+	}
+
 	// 加载战斗数据（使用 FileReader 读取 JSON）
 	function loadBattleData(id) {
 		console.log("GameView: loading battle data", id);
@@ -941,6 +969,61 @@ Item {
 			if (typeof windowBtn !== 'undefined') windowBtn.checked = true;
 		}
 	}
+	// Q key: release PlayerWave spread along mouse direction
+	Shortcut {
+		sequence: "Q"
+		onActivated: {
+			if (!playerObj || !playerItem) return;
+			// compute player center in world coords
+			var curCenterX = playerObj.pos.x + (playerItem.width/2);
+			var curCenterY = playerObj.pos.y + (playerItem.height/2);
+			// aim overlay stores screen coords; convert to world coords
+			if (typeof aimOverlay === 'undefined' || aimOverlay.aimX === undefined) {
+				console.log('Q pressed but aim not available');
+				return;
+			}
+			var worldX = (aimOverlay.aimX - mapWrapper.x) / Math.max(0.0001, tileScale);
+			var worldY = (aimOverlay.aimY - mapWrapper.y) / Math.max(0.0001, tileScale);
+			var dx = worldX - curCenterX;
+			var dy = worldY - curCenterY;
+			// normalize
+			var len = Math.sqrt(dx*dx + dy*dy);
+			if (len === 0) { dx = 0; dy = -1; } else { dx /= len; dy /= len; }
+			try {
+				// prefer playerItem.tryWave if available (client-side guard + deduction)
+				var fired = false;
+				if (playerItem && typeof playerItem.tryWave === 'function') {
+					fired = playerItem.tryWave(curCenterX, curCenterY, dx, dy);
+				} else {
+					// fallback: only fire if visual resource is available (>=50%) and deduct
+					if (playerItem && typeof playerItem.laserCd !== 'undefined' && typeof playerItem.laserCdMax !== 'undefined') {
+						var cost = Math.round(playerItem.laserCdMax * 0.5);
+						if (playerItem.laserCd >= cost) {
+							try { if (typeof playerObj.wave === 'function') playerObj.wave(curCenterX, curCenterY, dx, dy); }
+							catch(e) { console.log('playerObj.wave failed', e); }
+							playerItem.laserCd = Math.max(0, playerItem.laserCd - cost);
+							if (playerItem.laserCd < playerItem.laserCdMax) {
+								playerItem.laserRecharging = true;
+								if (!playerItem.laserCdTimer.running) playerItem.laserCdTimer.start();
+							}
+							fired = true;
+						} else {
+							// not enough resource to fire
+							fired = false;
+						}
+					} else {
+						// no playerItem resource info — try firing anyway
+						try { if (typeof playerObj.wave === 'function') { playerObj.wave(curCenterX, curCenterY, dx, dy); fired = true; } }
+						catch(e) { console.log('playerObj.wave failed', e); }
+					}
+				}
+				if (!fired) {
+					// optional: feedback (deny sound/flash) can be added here
+					console.log('PlayerWave not fired — insufficient laserCd or action denied');
+				}
+			} catch(e) { console.log('playerWave handling failed', e); }
+		}
+	}
 	anchors.fill: parent
 	property bool appliedSaveLoad: false
 	Component.onDestruction: {
@@ -1788,6 +1871,23 @@ Item {
 			} else {
 				console.log('Failed to create PlayerLaser component:', comp.errorString());
 			}
+		}
+	}
+
+	// When backend player emits playerWaveCreated, create wave visual and bind to backend
+	Connections {
+		target: playerObj
+		onPlayerWaveCreated: function(wave) {
+			console.log('GameView.qml: playerWaveCreated', wave);
+			var comp = Qt.createComponent("./Entity/PlayerWave.qml");
+			if (comp.status === Component.Ready) {
+				var obj = comp.createObject(mapWrapper, { backend: wave, enemiesRef: enemyBackends, mapWrapperRef: mapWrapper, tileScaleRef: tileScale });
+				if (!obj) console.log('Failed to create PlayerWave visual');
+				else {
+					obj.tileScaleRef = Qt.binding(function() { return tileScale; });
+					obj.enemiesRef = Qt.binding(function() { return enemyBackends; });
+				}
+			} else { console.log('Failed to create PlayerWave component:', comp.errorString()); }
 		}
 	}
 	// 视野遮罩层（Canvas 实现，避免 Qt6 qsb 要求）
