@@ -578,8 +578,8 @@ Item {
 		anchors.top: parent.top
 		anchors.right: parent.right
 		anchors.topMargin: 12
-		// leave a little gap to the right edge
-		anchors.rightMargin: 24
+		// leave a little gap to the right edge (增加一点以避免按钮被裁切)
+		anchors.rightMargin: 36
 		z: 3000
 
 		Rectangle {
@@ -632,7 +632,7 @@ Item {
 				id: toggleText
 				color: "white"
 				font.pixelSize: 20
-				text: "Toggle Controls"
+				text: "Hide Controls"
 				anchors.left: trBg.left
 				anchors.right: trBg.right
 				anchors.leftMargin: 12
@@ -1262,6 +1262,20 @@ Item {
 					try { if (typeof btnNo !== 'undefined') btnNo.clicked(); else gameViewRoot.controlsVisible = true; } catch(e) { gameViewRoot.controlsVisible = true; }
 				}
 			} catch(eToggle) { console.log('H shortcut toggle failed', eToggle); }
+		}
+	}
+    
+	// Shortcut 'C' toggles Aim Mode between 'mouse' and 'move'
+	Shortcut {
+		sequence: "C"
+		onActivated: {
+			try {
+				if (gameViewRoot.aimMode === "mouse") {
+					gameViewRoot.aimMode = "move";
+				} else {
+					gameViewRoot.aimMode = "mouse";
+				}
+			} catch(eToggle) { console.log('C shortcut toggle aimMode failed', eToggle); }
 		}
 	}
 // (Removed shortcut overrides for letter/number keys so physical key events can flow through playerItem for hold behaviour.)

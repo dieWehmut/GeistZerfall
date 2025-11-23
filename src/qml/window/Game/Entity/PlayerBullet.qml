@@ -53,13 +53,16 @@ Item {
 		z: img.z + 1
 	}
 
+	// safe global SFX volume helper — avoids NaN when global properties are absent
+	property real _globalSfxVolume: (typeof window !== 'undefined' && typeof window.masterVolume === 'number' ? window.masterVolume : 1.0) * (typeof window !== 'undefined' && typeof window.sfxVolume === 'number' ? window.sfxVolume : 1.0)
+
 	SoundEffect {
 		id: bulletSfx
 		source: "qrc:/resource/audio/SoundEffect/playerBullet.wav"
-		// 本地基础音量 * 全局主音量 * 全局 SFX 音量
-		volume: 0.8 * (typeof window !== 'undefined' ? window.masterVolume * window.sfxVolume : 1.0)
-		// 当任一全局音量为 0 时静音，确保与“效果音”一致
-		muted: (typeof window !== 'undefined') ? (window.masterVolume === 0 || window.sfxVolume === 0) : false
+		// 本地基础音量 * 全局主音量 * 全局 SFX 音量（使用安全 helper）
+		volume: 0.8 * _globalSfxVolume
+		// 当任一全局音量为 0 时静音；若属性不存在则不强制静音
+		muted: (typeof window !== 'undefined' && typeof window.masterVolume === 'number' && typeof window.sfxVolume === 'number') ? (window.masterVolume === 0 || window.sfxVolume === 0) : false
 	}
 
 	function handleBackendAssigned() {
@@ -81,7 +84,8 @@ Item {
 		try {
 			var isLaser = false;
 			try { isLaser = (backend.visualType === 'laser' || expectedVisual === 'laser'); } catch(err) { isLaser = false; }
-			if (!isLaser) bulletSfx.play();
+			// 只有在未被静音时才播放声效（SoundEffect.muted 可能随设置变化）
+			if (!isLaser && !bulletSfx.muted) bulletSfx.play();
 		} catch(e){}
 		if (!collisionTimer.running) collisionTimer.start();
 	}

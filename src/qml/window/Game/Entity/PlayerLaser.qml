@@ -7,12 +7,16 @@ Item {
 	anchors.fill: parent
 	x: 0; y: 0
 	// Laser visual and logic can be implemented here. For now include sound effect.
+	// safe global SFX volume helper — avoids NaN when global properties are absent
+	property real _globalSfxVolume: (typeof window !== 'undefined' && typeof window.masterVolume === 'number' ? window.masterVolume : 1.0) * (typeof window !== 'undefined' && typeof window.sfxVolume === 'number' ? window.sfxVolume : 1.0)
+
 	SoundEffect {
 		id: laserSfx
 		source: "qrc:/resource/audio/SoundEffect/playerLaser.wav"
-		volume: 0.9 * (typeof window !== 'undefined' ? window.masterVolume * window.sfxVolume : 1.0)
-		// 与效果音绑定：任一为 0 时静音
-		muted: (typeof window !== 'undefined') ? (window.masterVolume === 0 || window.sfxVolume === 0) : false
+		// 结合全局 master 与 sfx 值（使用 helper）
+		volume: 0.9 * _globalSfxVolume
+		// 与效果音绑定：任一为 0 时静音；若未定义属性则不强制静音
+		muted: (typeof window !== 'undefined' && typeof window.masterVolume === 'number' && typeof window.sfxVolume === 'number') ? (window.masterVolume === 0 || window.sfxVolume === 0) : false
 	}
 
 	property var backend: null
@@ -161,7 +165,12 @@ Item {
 
 	function start(dirx, diry) {
 		console.log('PlayerLaser.start called, dir:', dirx, diry, 'backend?', backend);
-		try { console.log('PlayerLaser: attempting to play laserSfx'); laserSfx.play(); console.log('PlayerLaser: laserSfx.play() returned'); } catch (e) { console.log('laserSfx play failed', e); }
+		try {
+			console.log('PlayerLaser: attempting to play laserSfx');
+			// 只有在 sound 未被静音时才播放
+			if (!laserSfx.muted) laserSfx.play();
+			console.log('PlayerLaser: laserSfx.play() returned');
+		} catch (e) { console.log('laserSfx play failed', e); }
 		// trigger a short pulse to make the beam pop when fired
 		try { if (typeof pulsate === 'function') pulsate(); } catch(e) { console.log('pulsate failed', e); }
 	}
