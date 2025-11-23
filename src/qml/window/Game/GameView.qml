@@ -2180,11 +2180,26 @@ Item {
 				anchors.bottom: parent.bottom
 				anchors.right: parent.right
 
-				Text {
+				Canvas {
 					anchors.centerIn: parent
-					text: "ATK"
-					color: parent.pressed ? "white" : "black"
-					font.bold: true
+					width: parent.width * 0.6
+					height: parent.height * 0.6
+					property bool buttonPressed: parent.pressed
+					Component.onCompleted: requestPaint()
+					onButtonPressedChanged: requestPaint()
+					onPaint: {
+						var ctx = getContext('2d');
+						ctx.clearRect(0,0,width,height);
+						var fg = parent.pressed ? 'white' : 'black';
+						ctx.strokeStyle = fg; ctx.fillStyle = fg;
+						var cx = width/2, cy = height/2;
+						var r = Math.min(width, height)/2 - 2;
+						// outer dot
+						ctx.beginPath(); ctx.arc(cx, cy, r*0.28, 0, Math.PI*2); ctx.fill();
+						// crosshair lines
+						ctx.lineWidth = Math.max(2, r*0.12);
+						ctx.beginPath(); ctx.moveTo(cx - r, cy); ctx.lineTo(cx + r, cy); ctx.moveTo(cx, cy - r); ctx.lineTo(cx, cy + r); ctx.stroke();
+					}
 				}
 
 				MouseArea {
@@ -2266,11 +2281,24 @@ Item {
 				x: (btnAttack.x + btnAttack.width/2) + Math.cos(Math.PI) * actionButtons.buttonRadius - width/2
 				y: (btnAttack.y + btnAttack.height/2) - Math.sin(Math.PI) * actionButtons.buttonRadius - height/2
 
-				Text {
+				Canvas {
 					anchors.centerIn: parent
-					text: "F"
-					color: parent.pressed ? "white" : "black"
-					font.bold: true
+					width: parent.width * 0.6
+					height: parent.height * 0.6
+					property bool buttonPressed: parent.pressed
+					Component.onCompleted: requestPaint()
+					onButtonPressedChanged: requestPaint()
+					onPaint: {
+						var ctx = getContext('2d'); ctx.clearRect(0,0,width,height);
+						var fg = parent.pressed ? 'white' : 'black'; ctx.strokeStyle = fg; ctx.fillStyle = fg;
+						var cx = width/2, cy = height/2; var r = Math.min(width,height)/2 - 2;
+						// simple teleport icon: circle with an inward arrow
+						ctx.lineWidth = Math.max(2, r*0.12);
+						ctx.beginPath(); ctx.arc(cx, cy, r*0.6, 0, Math.PI*2); ctx.stroke();
+						// arrow
+						ctx.beginPath(); ctx.moveTo(cx + r*0.15, cy - r*0.05); ctx.lineTo(cx - r*0.05, cy - r*0.05); ctx.lineTo(cx - r*0.05, cy - r*0.25); ctx.stroke();
+						ctx.beginPath(); ctx.moveTo(cx - r*0.05, cy - r*0.25); ctx.lineTo(cx - r*0.15, cy - r*0.15); ctx.stroke();
+					}
 				}
 
 				MouseArea {
@@ -2302,11 +2330,25 @@ Item {
 				x: (btnAttack.x + btnAttack.width/2) + Math.cos(3 * Math.PI / 4) * actionButtons.buttonRadius - width/2
 				y: (btnAttack.y + btnAttack.height/2) - Math.sin(3 * Math.PI / 4) * actionButtons.buttonRadius - height/2
 
-				Text {
+				Canvas {
 					anchors.centerIn: parent
-					text: "Q"
-					color: parent.pressed ? "white" : "black"
-					font.bold: true
+					width: parent.width * 0.7
+					height: parent.height * 0.7
+					property bool buttonPressed: parent.pressed
+					Component.onCompleted: requestPaint()
+					onButtonPressedChanged: requestPaint()
+					onPaint: {
+						var ctx = getContext('2d'); ctx.clearRect(0,0,width,height);
+						var fg = parent.pressed ? 'white' : 'black'; ctx.strokeStyle = fg; ctx.lineWidth = Math.max(2, Math.min(width,height)*0.06);
+						// draw a stylized wave
+						ctx.beginPath();
+						for (var i=0;i<=width;i++) {
+							var x = i;
+							var y = height/2 + Math.sin((i/width)*Math.PI*2) * (height*0.18);
+							if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+						}
+						ctx.stroke();
+					}
 				}
 
 				MouseArea {
@@ -2363,11 +2405,27 @@ Item {
 				x: (btnAttack.x + btnAttack.width/2) + Math.cos(Math.PI/2) * actionButtons.buttonRadius - width/2
 				y: (btnAttack.y + btnAttack.height/2) - Math.sin(Math.PI/2) * actionButtons.buttonRadius - height/2
 
-				Text {
+				Canvas {
 					anchors.centerIn: parent
-					text: "SPC"
-					color: parent.pressed ? "white" : "black"
-					font.bold: true
+					width: parent.width * 0.7
+					height: parent.height * 0.7
+					property bool buttonPressed: parent.pressed
+					Component.onCompleted: requestPaint()
+					onButtonPressedChanged: requestPaint()
+					onPaint: {
+						var ctx = getContext('2d'); ctx.clearRect(0,0,width,height);
+						var fg = parent.pressed ? 'white' : 'black'; ctx.strokeStyle = fg; ctx.fillStyle = fg;
+						var cx = width/2, cy = height/2; var r = Math.min(width,height)/2 - 2;
+						// reticle circle
+						ctx.lineWidth = Math.max(2, r*0.12);
+						ctx.beginPath(); ctx.arc(cx, cy, r*0.6, 0, Math.PI*2); ctx.stroke();
+						// center dot
+						ctx.beginPath(); ctx.arc(cx, cy, r*0.12, 0, Math.PI*2); ctx.fill();
+						// crosshairs
+						ctx.beginPath(); ctx.moveTo(cx - r*0.9, cy); ctx.lineTo(cx - r*0.28, cy); ctx.moveTo(cx + r*0.28, cy); ctx.lineTo(cx + r*0.9, cy);
+						ctx.moveTo(cx, cy - r*0.9); ctx.lineTo(cx, cy - r*0.28); ctx.moveTo(cx, cy + r*0.28); ctx.lineTo(cx, cy + r*0.9);
+						ctx.stroke();
+					}
 				}
 
 				MouseArea {
