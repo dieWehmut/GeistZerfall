@@ -113,6 +113,9 @@ void Player::wave(double px, double py, double dirx, double diry) {
 		w->setDamage(waveDamage);
 		w->setStartPos(QPointF(px, py));
 		w->setDirection(nx, ny);
+		// expose rotation in degrees so QML visuals can rotate to match direction
+		double angleDeg = qRadiansToDegrees(std::atan2(ny, nx));
+		w->setProperty("rotation", QVariant(angleDeg));
 		connect(w, &PlayerWave::backendDestroyed, this, [this](PlayerWave* self){ Q_UNUSED(self); qDebug() << "Player::wave: backendDestroyed for" << self; });
 		w->setProperty("visualType", QVariant("wave"));
 		emit playerWaveCreated(w);
@@ -129,6 +132,8 @@ void Player::wave(double px, double py, double dirx, double diry) {
 		w->setDamage(waveDamage);
 		w->setStartPos(QPointF(px, py));
 		w->setDirection(nx, ny);
+		double angleDeg = qRadiansToDegrees(std::atan2(ny, nx));
+		w->setProperty("rotation", QVariant(angleDeg));
 		connect(w, &PlayerWave::backendDestroyed, this, [this](PlayerWave* self){ Q_UNUSED(self); qDebug() << "Player::wave: backendDestroyed for" << self; });
 		w->setProperty("visualType", QVariant("wave"));
 		emit playerWaveCreated(w);

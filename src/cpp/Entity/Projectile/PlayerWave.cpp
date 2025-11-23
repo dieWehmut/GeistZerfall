@@ -4,7 +4,7 @@
 #include <cmath>
 
 PlayerWave::PlayerWave(QObject *parent) : Projectile(parent) {
-    setSpeed(3);
+    setSpeed(8);
     setMaxDist(1200);
     setDamage(waveDamage);
     if (!moveTimer) {
@@ -17,6 +17,9 @@ PlayerWave::PlayerWave(QObject *parent) : Projectile(parent) {
         QPointF p = getPos();
         QPointF np(p.x() + dx, p.y() + dy);
         setPos(np);
+        // update rotation (degrees) every tick
+        double angleDeg = std::atan2(vy, vx) * 180.0 / M_PI;
+        setRotation(angleDeg);
         traveledDist += std::sqrt(dx*dx + dy*dy);
         // Wave only dies when it reaches its max distance
         if (traveledDist >= getMaxDist()) {
@@ -36,8 +39,17 @@ void PlayerWave::setDirection(double dx, double dy) {
     double len = std::sqrt(dx*dx + dy*dy);
     if (len == 0) { vx = 0; vy = -1; }
     else { vx = dx / len; vy = dy / len; }
+    // update rotation (degrees)
+    double angleDeg = std::atan2(vy, vx) * 180.0 / M_PI;
+    setRotation(angleDeg);
     traveledDist = 0;
     startTick();
+}
+
+void PlayerWave::setRotation(double value) {
+    if (waveRotation == value) return;
+    waveRotation = value;
+    emit rotationChanged();
 }
 
 void PlayerWave::startTick() {

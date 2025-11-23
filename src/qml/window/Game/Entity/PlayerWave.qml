@@ -3,6 +3,7 @@ import QtMultimedia 6.5
 
 Item {
     id: waveRoot
+    transformOrigin: Item.Center
     property var backend: null
     property var mapWrapperRef: null
     property real tileScaleRef: 1.0
@@ -34,7 +35,8 @@ Item {
     Canvas {
         id: circ
         anchors.centerIn: parent
-        width: Math.max(parent.width, circleScreenRadius * 2)
+        // ensure canvas is large enough to hold the outer lines (1.5x radius)
+        width: Math.max(parent.width, circleScreenRadius * 2 * 1.5)
         height: width
         z: sprite.z - 1
         opacity: 0.65
@@ -52,6 +54,24 @@ Item {
             ctx.beginPath(); ctx.fillStyle = grad; ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill();
             // crisp ring
             ctx.beginPath(); ctx.strokeStyle = 'rgba(50,170,255,0.55)'; ctx.lineWidth = Math.max(2, 4 * tileScaleRef); ctx.arc(cx, cy, r*0.9, 0, Math.PI*2); ctx.stroke();
+            // radial dark-blue thick lines (8-fold symmetry), rotate with waveRoot.rotation
+            try {
+                var linesR = r * 1.5;
+                ctx.save();
+                ctx.translate(cx, cy);
+                for (var i = 0; i < 8; ++i) {
+                    var ang = i * (Math.PI * 2 / 8);
+                    var x2 = Math.cos(ang) * linesR;
+                    var y2 = Math.sin(ang) * linesR;
+                    ctx.beginPath();
+                    ctx.strokeStyle = 'rgba(10,50,140,0.95)';
+                    ctx.lineWidth = Math.max(3, 6 * tileScaleRef);
+                    ctx.moveTo(0, 0);
+                    ctx.lineTo(x2, y2);
+                    ctx.stroke();
+                }
+                ctx.restore();
+            } catch(e) {}
         }
     }
 
@@ -120,6 +140,7 @@ Item {
     function handleBackendAssigned() {
         updateScreenPos();
         try { backend.posChanged.connect(updateScreenPos); } catch(e) {}
+        try { backend.rotationChanged.connect(function(){ waveRoot.rotation = backend.rotation; circ.requestPaint(); }); } catch(e) {}
         try { backend.destroyed.connect(function(){ waveRoot.destroy(); }); } catch(e) {}
         try { if (typeof backend.backendDestroyed === 'function' || backend.hasOwnProperty('backendDestroyed')) backend.backendDestroyed.connect(function(){ waveRoot.destroy(); }); } catch(e) {}
         if (!checkTimer.running) checkTimer.start();
@@ -127,8 +148,29 @@ Item {
 
     onBackendChanged: {
         if (!backend) { checkTimer.stop(); return; }
+        // initialize rotation if backend provides it
+        try {
+            var rot = (backend && backend.rotation !== undefined) ? backend.rotation : 0;
+            console.log('PlayerWave.qml: backend.rotation ->', rot);
+            waveRoot.rotation = rot;
+        } catch(e) {}
+        circ.requestPaint();
         handleBackendAssigned();
     }
+
+
+    NumberAnimation {
+        target: waveRoot
+        property: "rotation"
+        from: 0
+        to: 360
+        duration: 250
+        loops: Animation.Infinite
+        running: true
+    }
+
+    onTileScaleRefChanged: circ.requestPaint()
+    onCircleScreenRadiusChanged: circ.requestPaint()
 
     Component.onDestruction: checkTimer.stop()
 }

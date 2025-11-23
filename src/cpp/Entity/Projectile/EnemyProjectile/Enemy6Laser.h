@@ -45,7 +45,7 @@ private:
   QPointF origin{0, 0};
   double dirx_{0};
   double diry_{0};
-  double velocity{260}; // 每秒像素
+  double velocity{480}; // 更快速度（原260，现480）
   QTimer *updateTimer{nullptr};
 
   // 波形参数

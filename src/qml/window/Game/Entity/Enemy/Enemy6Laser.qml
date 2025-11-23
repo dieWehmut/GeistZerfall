@@ -16,7 +16,7 @@ Item {
     visible: backend !== null
     transformOrigin: Item.Center
     // subtle spin for the whole laser visual
-    property int spinDuration: 6000
+        property int spinDuration: 1200 // 更快自旋
 
     // 波形参数
     property double waveFrequency: backend ? backend.waveFrequency : 2.0
@@ -34,6 +34,8 @@ Item {
         onTriggered: {
             if (backend) {
                 traveledDist = backend.traveledDist || 0.0;
+                // debug
+                console.log('Enemy6Laser.qml Timer: pos=', backend.pos ? (backend.pos.x + ',' + backend.pos.y) : 'null', 'dir=', backend.dirx, backend.diry, 'waveTime=', backend.waveTime, 'traveled=', traveledDist);
             }
         }
     }
@@ -45,6 +47,8 @@ Item {
         onPaint: {
             if (!backend)
                 return;
+            // debug: ensure we have required backend values
+            console.log('Enemy6Laser.qml paint: origin=', originX, originY, 'end=', backend.pos.x, backend.pos.y, 'dir=', dirX, dirY, 'waveTime=', waveTime, 'traveledDist=', traveledDist);
 
             var ctx = getContext('2d');
             ctx.clearRect(0, 0, width, height);
@@ -70,6 +74,19 @@ Item {
             }
             var perpX = -dirY;  // 垂直向量
             var perpY = dirX;
+
+            // 绘制底层粗线（明显可见）——调试/增强可视性
+            try {
+                ctx.save();
+                ctx.strokeStyle = 'rgba(220,40,200,0.95)';
+                ctx.lineWidth = Math.max(12, 32 * tileScaleRef);
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.moveTo(canvasStartX, canvasStartY);
+                ctx.lineTo(canvasEndX, canvasEndY);
+                ctx.stroke();
+                ctx.restore();
+            } catch(e) {}
 
             // 绘制波形路径
             ctx.strokeStyle = '#9b59b6';  // 紫色
@@ -125,6 +142,14 @@ Item {
             ctx.strokeStyle = 'rgba(155, 89, 182, 0.3)';
             ctx.lineWidth = 16 * tileScaleRef;
             ctx.stroke();
+
+            // debug: draw endpoint marker
+            try {
+                ctx.beginPath();
+                ctx.fillStyle = 'rgba(255,40,40,0.95)';
+                ctx.arc(canvasEndX, canvasEndY, Math.max(3, 6 * tileScaleRef), 0, Math.PI*2);
+                ctx.fill();
+            } catch(e) {}
         }
     }
 
@@ -253,21 +278,22 @@ Item {
                 }
             }
         }
+    }
 
-        // rotation for subtle spin
-        NumberAnimation {
-            id: spinAnim
-            target: root
-            property: "rotation"
-            from: 0; to: 360
-            loops: Animation.Infinite
-            running: false
-            duration: spinDuration
-            easing.type: Easing.Linear
-        }
+    // rotation for real-time spin (root-level)
+    NumberAnimation {
+        id: spinAnim
+        target: root
+        property: "rotation"
+        from: 0
+        to: 360
+        duration: spinDuration
+        loops: Animation.Infinite
+        running: false
+        easing.type: Easing.Linear
+    }
 
-        Component.onCompleted: {
-            try { spinAnim.start(); } catch(e) {}
-        }
+    Component.onCompleted: {
+        try { spinAnim.start(); } catch(e) {}
     }
 }
