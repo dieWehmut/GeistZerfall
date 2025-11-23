@@ -7,15 +7,25 @@ import "./Entity" as EntityQml
 // windowState.js is in the parent directory of Game
 import "../windowState.js" as WindowState
 import GeistZerfall.Game 1.0
+// import shared components (AppButton)
+import "../../components"
 
 Item {
     id: gameViewRoot
+	// 是否显示屏幕触控（左下摇杆 + 右下操作按钮）
+	// 默认 NO（显示控件）
+	property bool controlsVisible: true
 	// 通过context property注入playerObj
 	// Backward-compatible global aim coordinates (fallback to avoid ReferenceError from legacy code)
 	property real aimX: 0
 	property real aimY: 0
 	// Whether the player is holding the snipe/space key in this view - used to lock sight while held
 	property bool snipeHeld: false
+	// Aim mode selection: "mouse" follows cursor, "move" follows player movement direction
+	property string aimMode: "move"
+	// Cache last normalized move direction for aim fallback when player stops moving
+	property real lastMoveAimDirX: 0
+	property real lastMoveAimDirY: -1
 
 	// 战斗数据相关
 	property string battleId: ""
@@ -41,6 +51,26 @@ Item {
 			if (typeof window !== 'undefined') window.currentBattleId = candidate;
 			loadBattleData(battleId);
 		}
+
+		// Load persisted controlsVisible state if available
+		try {
+			if (typeof WindowState !== 'undefined' && WindowState.getControlsVisible) {
+				var cv = WindowState.getControlsVisible();
+				if (typeof cv !== 'undefined' && cv !== null) {
+					controlsVisible = cv;
+				} else if (WindowState.setControlsVisible) {
+					WindowState.setControlsVisible(controlsVisible);
+				}
+			}
+		} catch(eCV) { console.log('reading controlsVisible from WindowState failed', eCV); }
+
+		Qt.callLater(function() {
+			if (aimMode === "move") setMoveAimTarget();
+		});
+	}
+
+	onControlsVisibleChanged: {
+		try { if (typeof WindowState !== 'undefined' && WindowState.setControlsVisible) WindowState.setControlsVisible(controlsVisible); } catch(e) { console.log('persist controlsVisible failed', e); }
 	}
 
 	// Global keys mirror: ensure keyboard works even if playerItem didn't get focus
@@ -142,7 +172,7 @@ Item {
 			anchors.left: parent.left
 			color: "#00000080"
 			radius: 6
-			width: Math.max(textHp.width, textMp1.width, textMp2.width) + 24
+			width: Math.max(textTime.width, textHp.width, textMp1.width, textMp2.width) + 24
 			height: statsColumn.height + 12
 		}
 
@@ -154,6 +184,17 @@ Item {
 			anchors.topMargin: 6
 			spacing: 2
 
+			// Countdown (when a time limit is configured)
+			Text {
+				id: textTime
+				color: "white"
+				font.pixelSize: 28
+				font.bold: true
+				text: "Timer：" + formatTimeLeft()
+				visible: timeLimitSeconds > 0
+				horizontalAlignment: Text.AlignLeft
+			}
+
 			// smaller font than before per request
 			Text {
 				id: textHp
@@ -161,7 +202,7 @@ Item {
 				font.pixelSize: 28
 				font.bold: true
 				// Show HP as percentage (round to integer). If no data, show '-'.
-				text: (playerObj && typeof playerObj.hp !== 'undefined' && typeof playerObj.maxHp !== 'undefined' && playerObj.maxHp > 0) ? ("HP: " + Math.round(playerObj.hp / Math.max(1, playerObj.maxHp) * 100) + "%") : "HP: -"
+				text: (playerObj && typeof playerObj.hp !== 'undefined' && typeof playerObj.maxHp !== 'undefined' && playerObj.maxHp > 0) ? ("HP：" + Math.round(playerObj.hp / Math.max(1, playerObj.maxHp) * 100) + "%") : "HP： -"
 				horizontalAlignment: Text.AlignLeft
 			}
 
@@ -171,7 +212,7 @@ Item {
 				color: "white"
 				font.pixelSize: 28
 				font.bold: true
-				text: (playerItem && typeof playerItem.bulletCd !== 'undefined' && typeof playerItem.bulletCdMax !== 'undefined' && playerItem.bulletCdMax > 0) ? ("MP1: " + Math.round(playerItem.bulletCd / Math.max(1, playerItem.bulletCdMax) * 100) + "%") : "MP1: -"
+				text: (playerItem && typeof playerItem.bulletCd !== 'undefined' && typeof playerItem.bulletCdMax !== 'undefined' && playerItem.bulletCdMax > 0) ? ("MP1：" + Math.round(playerItem.bulletCd / Math.max(1, playerItem.bulletCdMax) * 100) + "%") : "MP1： -"
 				horizontalAlignment: Text.AlignLeft
 			}
 
@@ -181,7 +222,7 @@ Item {
 				color: "white"
 				font.pixelSize: 28
 				font.bold: true
-				text: (playerItem && typeof playerItem.laserCd !== 'undefined' && typeof playerItem.laserCdMax !== 'undefined' && playerItem.laserCdMax > 0) ? ("MP2: " + Math.round(playerItem.laserCd / Math.max(1, playerItem.laserCdMax) * 100) + "%") : "MP2: -"
+				text: (playerItem && typeof playerItem.laserCd !== 'undefined' && typeof playerItem.laserCdMax !== 'undefined' && playerItem.laserCdMax > 0) ? ("MP2：" + Math.round(playerItem.laserCd / Math.max(1, playerItem.laserCdMax) * 100) + "%") : "MP2： -"
 				horizontalAlignment: Text.AlignLeft
 			}
 		}
@@ -531,33 +572,153 @@ Item {
 		}
 	}
 
-	// Top-right time display (visible only when a timeLimit is configured)
+	// Right-top small config + toggle controls UI
 	Item {
-		id: timeDisplayRoot
+		id: topRightControlPanel
 		anchors.top: parent.top
 		anchors.right: parent.right
 		anchors.topMargin: 12
-		anchors.rightMargin: 12
+		// leave a little gap to the right edge
+		anchors.rightMargin: 24
 		z: 3000
-		visible: timeLimitSeconds > 0
+
 		Rectangle {
-			id: timeBg
+			id: trBg
 			anchors.top: parent.top
 			anchors.right: parent.right
 			color: "#00000080"
 			radius: 6
-			width: textTime.width + 24
-			height: textTime.height + 12
+			width: Math.max(cfgBtn.implicitWidth, toggleText.width, (btnYes.implicitWidth + btnNo.implicitWidth + 8)) + 24
+			height: contentColumn.height + 12
 		}
-		Text {
-			id: textTime
-			anchors.centerIn: timeBg
-			color: "white"
-			font.pixelSize: 34
-			font.bold: true
-			text: formatTimeLeft()
+
+		Column {
+			id: contentColumn
+			anchors.left: trBg.left
+			anchors.leftMargin: 12
+			anchors.top: trBg.top
+			anchors.topMargin: 6
+			spacing: 6
+
+			// Config button row (use AppButton so style matches project buttons)
+			Row {
+				anchors.left: trBg.left
+				anchors.right: trBg.right
+				anchors.leftMargin: 12
+				anchors.rightMargin: 12
+				AppButton {
+					id: cfgBtn
+					iconText: "\u2630" // ☰ (menu) — matches LoreView
+					text: "Settings"
+					height: 44
+					fontPixelSize: 18
+					onClicked: {
+						try {
+							if (window && typeof window.pushSource === 'function') {
+								window.pushSource("qml/window/Config.qml");
+							} else if (window && typeof window.replaceSource === 'function') {
+								window.replaceSource("qml/window/Config.qml");
+							} else if (typeof gotoConfig === 'function') {
+								gotoConfig();
+							} else {
+								console.log('No navigation API to open Config');
+							}
+						} catch(e) { console.log('open config failed', e); }
+					}
+				}
+			}
+
+			Text {
+				id: toggleText
+				color: "white"
+				font.pixelSize: 20
+				text: "Toggle Controls"
+				anchors.left: trBg.left
+				anchors.right: trBg.right
+				anchors.leftMargin: 12
+				anchors.rightMargin: 12
+				horizontalAlignment: Text.AlignHCenter
+			}
+
+			Row {
+				id: toggleRow
+				// match width to the settings button above so left/right edges align
+				width: cfgBtn.width
+				anchors.horizontalCenter: cfgBtn.horizontalCenter
+				spacing: 6
+				// YES button (按用户要求：YES 模式隐藏控件)
+				AppButton {
+					id: btnYes
+					text: "YES"
+					// evenly split available width
+					width: Math.max(64, Math.round((toggleRow.width - toggleRow.spacing) / 2))
+					height: 44
+					fontPixelSize: 16
+					onClicked: { gameViewRoot.controlsVisible = false }
+					// active when controlsVisible == false -> mark checked state to show active color
+					checked: !gameViewRoot.controlsVisible
+				}
+
+				// NO button (NO 显示控件)
+				AppButton {
+					id: btnNo
+					text: "NO"
+					width: Math.max(64, Math.round((toggleRow.width - toggleRow.spacing) / 2))
+					height: 44
+					fontPixelSize: 16
+					onClicked: { gameViewRoot.controlsVisible = true }
+					checked: gameViewRoot.controlsVisible
+				}
+			}
+
+			Text {
+				id: aimModeLabel
+				color: "white"
+				font.pixelSize: 20
+				text: "Aim Mode"
+				anchors.left: trBg.left
+				anchors.right: trBg.right
+				anchors.leftMargin: 12
+				anchors.rightMargin: 12
+				horizontalAlignment: Text.AlignHCenter
+			}
+
+			Item {
+				width: cfgBtn.width
+				height: 44
+				anchors.horizontalCenter: cfgBtn.horizontalCenter
+				AppButton {
+					id: mouseAimBtn
+					anchors.fill: parent
+					iconText: "\u25CE"
+					text: "Mouse Aim"
+					fontPixelSize: 16
+					checked: aimMode === "mouse"
+					onClicked: { aimMode = "mouse" }
+				}
+			}
+
+			Item {
+				width: cfgBtn.width
+				height: 44
+				anchors.horizontalCenter: cfgBtn.horizontalCenter
+				AppButton {
+					id: moveAimBtn
+					anchors.fill: parent
+					iconText: "\u27A4"
+					text: "Move Aim"
+					fontPixelSize: 16
+					checked: aimMode === "move"
+					onClicked: {
+						if (aimMode !== "move") aimMode = "move";
+						setMoveAimTarget();
+					}
+				}
+			}
 		}
 	}
+
+	
 
 	function clearEnemies() {
 		for (var i = 0; i < enemyVisuals.length; ++i) { try { enemyVisuals[i].destroy(); } catch(e){} }
@@ -1087,6 +1248,22 @@ Item {
 			if (typeof windowBtn !== 'undefined') windowBtn.checked = true;
 		}
 	}
+
+	// Shortcut 'H' toggles the controls (acts like clicking YES/NO)
+	Shortcut {
+		sequence: "H"
+		onActivated: {
+			try {
+				if (gameViewRoot.controlsVisible) {
+					// controls currently visible -> emulate YES (hide)
+					try { if (typeof btnYes !== 'undefined') btnYes.clicked(); else gameViewRoot.controlsVisible = false; } catch(e) { gameViewRoot.controlsVisible = false; }
+				} else {
+					// controls currently hidden -> emulate NO (show)
+					try { if (typeof btnNo !== 'undefined') btnNo.clicked(); else gameViewRoot.controlsVisible = true; } catch(e) { gameViewRoot.controlsVisible = true; }
+				}
+			} catch(eToggle) { console.log('H shortcut toggle failed', eToggle); }
+		}
+	}
 // (Removed shortcut overrides for letter/number keys so physical key events can flow through playerItem for hold behaviour.)
 
 	anchors.fill: parent
@@ -1168,6 +1345,9 @@ Item {
 	property int tileSize: 512
 	// when snipe mode is active we set tileScale to 0.5 to shrink everything visually
 	property real tileScale: 1.0
+	onTileScaleChanged: {
+		if (aimMode === "move") setMoveAimTarget();
+	}
 	property real teleportRingDistance: Math.max(256, tileSize * 0.75)
 
 	Behavior on tileScale { NumberAnimation { duration: 220; easing.type: Easing.InOutQuad } }
@@ -1254,6 +1434,12 @@ Item {
 		id: tileManager
 	}
 
+	Connections {
+		target: mapWrapper
+		onXChanged: { if (gameViewRoot.aimMode === "move") gameViewRoot.setMoveAimTarget(); }
+		onYChanged: { if (gameViewRoot.aimMode === "move") gameViewRoot.setMoveAimTarget(); }
+	}
+
 	// helper to create/destroy bullets
 	function destroyChild(item) {
 		if (!item) return;
@@ -1278,6 +1464,132 @@ Item {
 		}
 	}
 
+	onAimModeChanged: {
+		if (aimMode === "move") {
+			setMoveAimTarget();
+		} else {
+			try {
+				if (aimOverlay) {
+					aimOverlay.aimX = -1000;
+					aimOverlay.aimY = -1000;
+					if (aimCanvas && typeof aimCanvas.requestPaint === 'function') aimCanvas.requestPaint();
+				}
+			} catch(eAim) { console.log('reset mouse aim failed', eAim); }
+		}
+	}
+
+	function updateMouseAimPoint(screenX, screenY) {
+		if (aimMode !== "mouse") return;
+		if (!aimOverlay) return;
+		aimOverlay.aimX = screenX;
+		aimOverlay.aimY = screenY;
+		try { if (aimCanvas && typeof aimCanvas.requestPaint === 'function') aimCanvas.requestPaint(); } catch(e) {}
+	}
+
+	function setMoveAimTarget() {
+		if (aimMode !== "move") return;
+		if (!playerObj || !playerItem || !mapWrapper || !aimOverlay) return;
+		var px = playerObj.pos ? (playerObj.pos.x + (playerItem.width / 2)) : 0;
+		var py = playerObj.pos ? (playerObj.pos.y + (playerItem.height / 2)) : 0;
+		var centerX = mapWrapper.x + px * tileScale;
+		var centerY = mapWrapper.y + py * tileScale;
+		var dirX = (typeof playerItem.lastDx === 'number') ? playerItem.lastDx : 0;
+		var dirY = (typeof playerItem.lastDy === 'number') ? playerItem.lastDy : 0;
+		if (dirX === 0 && dirY === 0) {
+			dirX = lastMoveAimDirX;
+			dirY = lastMoveAimDirY;
+		} else {
+			var len = Math.sqrt(dirX * dirX + dirY * dirY);
+			if (len > 0) {
+				dirX /= len;
+				dirY /= len;
+				lastMoveAimDirX = dirX;
+				lastMoveAimDirY = dirY;
+			}
+		}
+		if (dirX === 0 && dirY === 0) {
+			dirX = 0;
+			dirY = -1;
+		}
+		var radius = (typeof sightMask !== 'undefined' && sightMask) ? sightMask.radius : 150;
+		aimOverlay.aimX = centerX + dirX * radius;
+		aimOverlay.aimY = centerY + dirY * radius;
+		try { if (aimCanvas && typeof aimCanvas.requestPaint === 'function') aimCanvas.requestPaint(); } catch(e) {}
+	}
+
+	function resolveAimTarget(preferredScreenX, preferredScreenY) {
+		if (!playerObj || !playerItem || !mapWrapper) return null;
+		var px = playerObj.pos ? (playerObj.pos.x + (playerItem.width / 2)) : 0;
+		var py = playerObj.pos ? (playerObj.pos.y + (playerItem.height / 2)) : 0;
+		var centerX = mapWrapper.x + px * tileScale;
+		var centerY = mapWrapper.y + py * tileScale;
+		var targetX;
+		var targetY;
+		var usePreferred = (aimMode === "mouse" && typeof preferredScreenX === 'number' && typeof preferredScreenY === 'number');
+		if (usePreferred) {
+			targetX = preferredScreenX;
+			targetY = preferredScreenY;
+		} else {
+			targetX = aimOverlay ? aimOverlay.aimX : undefined;
+			targetY = aimOverlay ? aimOverlay.aimY : undefined;
+		}
+		if (typeof targetX !== 'number' || typeof targetY !== 'number' || targetX < -9000 || targetY < -9000) {
+			var fallbackX = (aimMode === "move") ? lastMoveAimDirX : 0;
+			var fallbackY = (aimMode === "move") ? lastMoveAimDirY : -1;
+			var lenFallback = Math.sqrt(fallbackX * fallbackX + fallbackY * fallbackY);
+			if (lenFallback === 0) {
+				fallbackX = 0;
+				fallbackY = -1;
+				lenFallback = 1;
+			}
+			var baseRadius = (typeof sightMask !== 'undefined' && sightMask) ? sightMask.radius : 150;
+			targetX = centerX + (fallbackX / lenFallback) * baseRadius;
+			targetY = centerY + (fallbackY / lenFallback) * baseRadius;
+		}
+		var radius = (typeof sightMask !== 'undefined' && sightMask) ? sightMask.radius : 0;
+		var dxs = targetX - centerX;
+		var dys = targetY - centerY;
+		var dist = Math.sqrt(dxs * dxs + dys * dys);
+		if (radius > 0 && dist > radius) {
+			var nx = dxs / dist;
+			var ny = dys / dist;
+			targetX = centerX + nx * radius;
+			targetY = centerY + ny * radius;
+		}
+		var scale = Math.max(0.0001, tileScale);
+		var targetWorldX = (targetX - mapWrapper.x) / scale;
+		var targetWorldY = (targetY - mapWrapper.y) / scale;
+		return {
+			screenStartX: centerX,
+			screenStartY: centerY,
+			screenTargetX: targetX,
+			screenTargetY: targetY,
+			worldTargetX: targetWorldX,
+			worldTargetY: targetWorldY,
+			playerWorldX: px,
+			playerWorldY: py,
+			dirX: targetWorldX - px,
+			dirY: targetWorldY - py
+		};
+	}
+
+	function spawnLaserVisual(startScreenX, startScreenY, endScreenX, endScreenY) {
+		if (!mapWrapper) return;
+		try {
+			var laserQml = 'import QtQuick 2.15; Canvas { id: beam; anchors.fill: parent; z: 2000; property real startX: 0; property real startY: 0; property real endX: 0; property real endY: 0; property real thickness: 24; onPaint: { var ctx = getContext("2d"); ctx.clearRect(0,0,width,height); ctx.strokeStyle = "#66CCFF"; ctx.lineWidth = thickness; ctx.beginPath(); ctx.moveTo(startX, startY); ctx.lineTo(endX, endY); ctx.stroke(); } }';
+			var laserObj = Qt.createQmlObject(laserQml, mapWrapper);
+			if (laserObj) {
+				laserObj.startX = startScreenX - mapWrapper.x;
+				laserObj.startY = startScreenY - mapWrapper.y;
+				laserObj.endX = endScreenX - mapWrapper.x;
+				laserObj.endY = endScreenY - mapWrapper.y;
+				laserObj.thickness = 24 * tileScale;
+				laserObj.requestPaint();
+				Qt.createQmlObject('import QtQuick 2.0; Timer { interval: 120; repeat: false; running: true; onTriggered: { try { parent.destroy(); } catch(e){} } }', laserObj);
+			}
+		} catch(e) { console.log('spawnLaserVisual failed', e); }
+	}
+
 	// Aiming overlay and left-click shooting
 	// place this under the sightMask (so it's only visible inside the transparent sight circle)
 	Item {
@@ -1285,8 +1597,8 @@ Item {
 		anchors.fill: parent
 		z: 998
 		visible: !(playerObj && playerObj.teleportMode)
-		property real aimX: 0
-		property real aimY: 0
+		property real aimX: -1000
+		property real aimY: -1000
 
 	Canvas {
 			id: aimCanvas
@@ -1351,70 +1663,38 @@ Item {
 			enabled: aimOverlay.visible
 			acceptedButtons: Qt.LeftButton
 			onPositionChanged: function(mouse) {
-				// compute world coords relative to mapWrapper
-				aimOverlay.aimX = mouse.x;
-				aimOverlay.aimY = mouse.y;
-				aimCanvas.requestPaint();
+				gameViewRoot.updateMouseAimPoint(mouse.x, mouse.y);
 			}
-			onExited: function() { aimOverlay.aimX = -1000; aimOverlay.aimY = -1000; aimCanvas.requestPaint(); }
-				onPressed: function(mouse) {
-					if (mouse.button !== Qt.LeftButton) return;
-					if (!playerObj || !playerItem) return;
-					// mirror UI attack button whenever mouse left is pressed
-					try { if (typeof btnAttack !== 'undefined') btnAttack.pressed = true; } catch(e) {}
-					// If snipe (laser) mode is active, fire once immediately on click and do NOT start auto-fire
-					if (playerObj.snipeActive || gameViewRoot.snipeHeld) {
-						try {
-							var sx = mapWrapper.x + (playerObj.pos.x + (playerItem.width/2)) * tileScale;
-							var sy = mapWrapper.y + (playerObj.pos.y + (playerItem.height/2)) * tileScale;
-							var ax = mouse.x;
-							var ay = mouse.y;
-							var dxs = ax - sx;
-							var dys = ay - sy;
-							var dists = Math.sqrt(dxs*dxs + dys*dys);
-							var tx = ax;
-							var ty = ay;
-							if (dists > sightMask.radius && dists > 0) {
-								var nx = dxs / dists;
-								tx = sx + nx * sightMask.radius;
-								ty = sy + (dys / dists) * sightMask.radius;
-							}
-							var targetWorldX = (tx - mapWrapper.x) / tileScale;
-							var targetWorldY = (ty - mapWrapper.y) / tileScale;
-							var px = playerObj.pos.x + (playerItem.width/2);
-							var py = playerObj.pos.y + (playerItem.height/2);
-							var dirx = targetWorldX - px;
-							var diry = targetWorldY - py;
-							var fired = false;
-							try {
-								if (typeof playerItem.trySnipe === 'function') fired = playerItem.trySnipe(px, py, dirx, diry);
-								else fired = false;
-							} catch(e) { console.log('trySnipe call failed', e); fired = false; }
-							if (fired) {
-								var laserQml = 'import QtQuick 2.15; Canvas { id: beam; anchors.fill: parent; z: 2000; property real startX: 0; property real startY: 0; property real endX: 0; property real endY: 0; property real thickness: 24; onPaint: { var ctx = getContext("2d"); ctx.clearRect(0,0,width,height); ctx.strokeStyle = "#66CCFF"; ctx.lineWidth = thickness; ctx.beginPath(); ctx.moveTo(startX, startY); ctx.lineTo(endX, endY); ctx.stroke(); } }';
-								var laserObj = Qt.createQmlObject(laserQml, mapWrapper);
-								if (laserObj) {
-									laserObj.startX = sx - mapWrapper.x;
-									laserObj.startY = sy - mapWrapper.y;
-									laserObj.endX = tx - mapWrapper.x;
-									laserObj.endY = ty - mapWrapper.y;
-									laserObj.thickness = 24 * tileScale;
-									laserObj.requestPaint();
-									Qt.createQmlObject('import QtQuick 2.0; Timer { interval: 120; repeat: false; running: true; onTriggered: { try { parent.destroy(); } catch(e){} } }', laserObj);
-								}
-							}
-						} catch(e) { console.log('snipe onPressed failed', e); }
-						return;
-					}
-					// begin auto-fire for bullets
-					try { if (typeof playerItem.stopBulletRecharge === 'function') playerItem.stopBulletRecharge(); } catch(e) {}
-					if (!fireTimer.running) {
-						fireTimer.start();
-					}
-
-					// If we reach here, we are auto-firing while mouse left is held.
-					// pressed state already set above; keep until release
+			onExited: function() {
+				if (gameViewRoot.aimMode === "mouse") {
+					aimOverlay.aimX = -1000;
+					aimOverlay.aimY = -1000;
+					aimCanvas.requestPaint();
 				}
+			}
+			onPressed: function(mouse) {
+				if (mouse.button !== Qt.LeftButton) return;
+				if (!playerObj || !playerItem) return;
+				try { if (typeof btnAttack !== 'undefined') btnAttack.pressed = true; } catch(e) {}
+				gameViewRoot.updateMouseAimPoint(mouse.x, mouse.y);
+				var aimData = gameViewRoot.resolveAimTarget(mouse.x, mouse.y);
+				if (!aimData) return;
+				if (playerObj.snipeActive || gameViewRoot.snipeHeld) {
+					var fired = false;
+					try {
+						if (typeof playerItem.trySnipe === 'function') fired = playerItem.trySnipe(aimData.playerWorldX, aimData.playerWorldY, aimData.dirX, aimData.dirY);
+						else fired = false;
+					} catch(e) { console.log('trySnipe call failed', e); fired = false; }
+					if (fired) {
+						gameViewRoot.spawnLaserVisual(aimData.screenStartX, aimData.screenStartY, aimData.screenTargetX, aimData.screenTargetY);
+					}
+					return;
+				}
+				try { if (typeof playerItem.stopBulletRecharge === 'function') playerItem.stopBulletRecharge(); } catch(e) {}
+				if (!fireTimer.running) {
+					fireTimer.start();
+				}
+			}
 			onReleased: function(mouse) {
 					// mirror UI: unset pressed when mouse released
 					try { if (typeof btnAttack !== 'undefined') btnAttack.pressed = false; } catch(e) {}
@@ -2035,6 +2315,15 @@ Item {
     		}
     	}
 
+		Connections {
+			target: playerItem
+			onLastDxChanged: { if (gameViewRoot.aimMode === "move") gameViewRoot.setMoveAimTarget(); }
+			onLastDyChanged: { if (gameViewRoot.aimMode === "move") gameViewRoot.setMoveAimTarget(); }
+			onMovingChanged: { if (gameViewRoot.aimMode === "move") gameViewRoot.setMoveAimTarget(); }
+			onXChanged: { if (gameViewRoot.aimMode === "move") gameViewRoot.setMoveAimTarget(); }
+			onYChanged: { if (gameViewRoot.aimMode === "move") gameViewRoot.setMoveAimTarget(); }
+		}
+
 	// On-screen controls
 	Item {
 		id: touchControls
@@ -2053,6 +2342,7 @@ Item {
 		// Left-bottom Joystick (WASD)
 		Item {
 			id: joystick
+			visible: gameViewRoot.controlsVisible
 			width: 200; height: 200
 				anchors.bottom: parent.bottom
 				anchors.left: parent.left
@@ -2077,8 +2367,8 @@ Item {
 				y: (parent.height - height) / 2
 			}
 
-			MouseArea {
-				id: joystickArea
+				MouseArea {
+					id: joystickArea
 				anchors.fill: parent
 				preventStealing: true
 				
@@ -2170,7 +2460,9 @@ Item {
 			// radius from ATK center to small buttons
 			property real buttonRadius: btnAttack ? (btnAttack.width/2 + 36) : 96
 
-			// Big Circle (LMB / Attack)
+				visible: gameViewRoot.controlsVisible
+
+				// Big Circle (LMB / Attack)
 			Rectangle {
 				id: btnAttack
 				width: 120; height: 120
@@ -2469,7 +2761,7 @@ Item {
 									if (playerItem && typeof playerItem.tryWave === 'function') fired = playerItem.tryWave(curCenterX, curCenterY, dx, dy);
 									else {
 										if (playerItem && typeof playerItem.laserCd !== 'undefined' && typeof playerItem.laserCdMax !== 'undefined') {
-											var cost = Math.round(playerItem.laserCdMax * 0.5);
+											var cost = Math.round(playerItem.laserCdMax * 0.9);
 											if (playerItem.laserCd >= cost) { playerItem.laserCd = Math.max(0, playerItem.laserCd - cost); fired = true; }
 										} else {
 											try { if (typeof playerObj.wave === 'function') { playerObj.wave(curCenterX, curCenterY, dx, dy); fired = true; } } catch(e) { console.log('playerObj.wave failed', e); }

@@ -4,6 +4,8 @@ import QtMultimedia 6.5
 Item {
     id: root
     property alias text: label.text
+    // optional small icon (text glyph) shown left of the label when non-empty
+    property string iconText: ""
     property bool checkable: false
     property bool checked: false
     property bool enabled: true
@@ -20,25 +22,43 @@ Item {
         // target colors depend on state; animate changes
         property color targetColor: root.enabled ? (root.checked || hoverArea.containsMouse ? "black" : "white") : "#dddddd"
         color: targetColor
-        border.width: 1
-        property color targetBorderColor: root.enabled ? (root.checked || hoverArea.containsMouse ? "black" : "#bbbbbb") : "#cccccc"
+        border.width: 2
+        // border becomes white when active/hovered (user requested white border on hover)
+        // default border black; when hovered or checked switch to white (per requested style)
+        property color targetBorderColor: root.enabled ? (root.checked || hoverArea.containsMouse ? "white" : "black") : "#cccccc"
         border.color: targetBorderColor
 
         Behavior on color { ColorAnimation { duration: 200; easing.type: Easing.OutQuad } }
         Behavior on border.color { ColorAnimation { duration: 200; easing.type: Easing.OutQuad } }
     }
 
-    Text {
-        id: label
+    // allow optional icon + text layout
+    Row {
         anchors.centerIn: parent
-        // animate text color
-        property color targetTextColor: root.enabled ? (root.checked || hoverArea.containsMouse ? "white" : "black") : "#888888"
-        color: targetTextColor
-        font.pixelSize: root.fontPixelSize
-        font.bold: true
-        horizontalAlignment: Text.AlignHCenter
-        verticalAlignment: Text.AlignVCenter
-        Behavior on color { ColorAnimation { duration: 200; easing.type: Easing.OutQuad } }
+        spacing: 8
+        visible: true
+
+        Text {
+            id: icon
+            text: root.iconText
+            visible: root.iconText !== ""
+            color: root.enabled ? (root.checked || hoverArea.containsMouse ? "white" : "black") : "#888888"
+            font.pixelSize: Math.max(16, root.fontPixelSize - 6)
+            Behavior on color { ColorAnimation { duration: 200; easing.type: Easing.OutQuad } }
+        }
+
+        Text {
+            id: label
+            // animate text color
+            property color targetTextColor: root.enabled ? (root.checked || hoverArea.containsMouse ? "white" : "black") : "#888888"
+            color: targetTextColor
+            text: ""
+            font.pixelSize: root.fontPixelSize
+            font.bold: true
+            horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
+            Behavior on color { ColorAnimation { duration: 200; easing.type: Easing.OutQuad } }
+        }
     }
 
     MouseArea {

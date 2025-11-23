@@ -22,7 +22,7 @@ Item {
     property real playerVisualWidth: 0
     property real playerVisualHeight: 0
     property var enemyBackends: []
-    property int teleportCircleDamage: 60
+    property int teleportCircleDamage: 200
     property int teleportCircleHitCooldownMs: 500
     property int teleportCircleCheckIntervalMs: 80
     property real defaultEnemyCollisionRadius: 48

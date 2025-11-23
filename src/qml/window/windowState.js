@@ -2,6 +2,7 @@
 var targetMode = undefined
 var loreState = undefined
 var gameEnemies = undefined
+var controlsVisible = undefined
 
 function setTargetMode(m) {
     targetMode = m
@@ -38,4 +39,13 @@ function getGameEnemies() {
 
 function clearGameEnemies() {
     gameEnemies = undefined
+}
+
+// Persist on-screen controls visibility (true == visible, false == hidden)
+function setControlsVisible(v) {
+    controlsVisible = v
+}
+
+function getControlsVisible() {
+    return controlsVisible
 }
