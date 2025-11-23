@@ -54,10 +54,25 @@ Item {
 				if (event.key === Qt.Key_A || event.key === Qt.Key_Left) { playerItem.aDown = true; playerItem.computeAndMove(); joystickArea.updateFromKeyboard(); }
 				if (event.key === Qt.Key_D || event.key === Qt.Key_Right) { playerItem.dDown = true; playerItem.computeAndMove(); joystickArea.updateFromKeyboard(); }
 
-				// Action keys -> update visuals and call backend where appropriate
-				if (event.key === Qt.Key_Q) { try { btnQ.pressed = true; /* tryWave handled elsewhere (Shortcut) or call explicit code here if needed */ } catch(e) {} }
-				if (event.key === Qt.Key_F) { try { btnF.pressed = true; if (playerObj && typeof playerObj.toggleTeleportMode === 'function') playerObj.toggleTeleportMode(); } catch(e) {} }
-				if (event.key === Qt.Key_Space) { try { btnSpace.pressed = true; gameViewRoot.snipeHeld = true; if (playerObj && typeof playerObj.snipeStart === 'function') playerObj.snipeStart(); tileScale = 1.5 / 2.0; sightMask.radius = sightMask.baseRadius * tileScale; if (fireTimer && fireTimer.running) fireTimer.stop(); if (playerItem && typeof playerItem.startBulletRecharge === 'function') playerItem.startBulletRecharge(); } catch(e) {} }
+				// Action keys -> delegate to touchControls for consistent handling
+				if (touchControls && typeof touchControls.setButtonPressFromKey === "function") {
+					switch (event.key) {
+					case Qt.Key_Q:
+					case Qt.Key_F:
+					case Qt.Key_Space:
+					case Qt.Key_J:
+					case Qt.Key_1:
+					case Qt.Key_K:
+					case Qt.Key_2:
+					case Qt.Key_L:
+					case Qt.Key_3:
+					case Qt.Key_0:
+						touchControls.setButtonPressFromKey(event.key, true);
+						break;
+					default:
+						break;
+					}
+				}
 			} catch(e) {}
 		}
 	Keys.onReleased: function(event) {
@@ -68,13 +83,52 @@ Item {
 				if (event.key === Qt.Key_A || event.key === Qt.Key_Left) { playerItem.aDown = false; playerItem.computeAndMove(); joystickArea.updateFromKeyboard(); }
 				if (event.key === Qt.Key_D || event.key === Qt.Key_Right) { playerItem.dDown = false; playerItem.computeAndMove(); joystickArea.updateFromKeyboard(); }
 
-				if (event.key === Qt.Key_Q) { try { btnQ.pressed = false; } catch(e) {} }
-				if (event.key === Qt.Key_F) { try { btnF.pressed = false; } catch(e) {} }
-				if (event.key === Qt.Key_Space) { try { btnSpace.pressed = false; gameViewRoot.snipeHeld = false; if (playerObj && typeof playerObj.snipeStop === 'function') playerObj.snipeStop(); tileScale = 1.0; sightMask.radius = sightMask.baseRadius * tileScale; if (playerItem && typeof playerItem.startBulletRecharge === 'function') playerItem.startBulletRecharge(); } catch(e) {} }
+				if (touchControls && typeof touchControls.setButtonPressFromKey === "function") {
+					switch (event.key) {
+					case Qt.Key_Q:
+					case Qt.Key_F:
+					case Qt.Key_Space:
+					case Qt.Key_J:
+					case Qt.Key_1:
+					case Qt.Key_K:
+					case Qt.Key_2:
+					case Qt.Key_L:
+					case Qt.Key_3:
+					case Qt.Key_0:
+						touchControls.setButtonPressFromKey(event.key, false);
+						break;
+					default:
+						break;
+					}
+				}
 			} catch(e) {}
 		}
 
-	// Top-left player HP display (shows current HP and optional max HP)
+	function engageSnipeHold() {
+		try { if (typeof btnSpace !== 'undefined' && btnSpace) btnSpace.pressed = true; } catch(e) {}
+		if (!gameViewRoot.snipeHeld) {
+			gameViewRoot.snipeHeld = true;
+			try { if (playerObj && typeof playerObj.snipeStart === 'function') playerObj.snipeStart(); } catch(e) {}
+		}
+		tileScale = 1.5 / 2.0;
+		sightMask.radius = sightMask.baseRadius * tileScale;
+		try { if (fireTimer && fireTimer.running) fireTimer.stop(); } catch(e) {}
+		try { if (playerItem && typeof playerItem.startBulletRecharge === 'function') playerItem.startBulletRecharge(); } catch(e) {}
+	}
+
+	function releaseSnipeHold() {
+		try { if (typeof btnSpace !== 'undefined' && btnSpace) btnSpace.pressed = false; } catch(e) {}
+		var wasHeld = gameViewRoot.snipeHeld;
+		gameViewRoot.snipeHeld = false;
+		if (wasHeld) {
+			try { if (playerObj && typeof playerObj.snipeStop === 'function') playerObj.snipeStop(); } catch(e) {}
+		}
+		tileScale = 1.0;
+		sightMask.radius = sightMask.baseRadius * tileScale;
+		try { if (playerItem && typeof playerItem.startBulletRecharge === 'function') playerItem.startBulletRecharge(); } catch(e) {}
+	}
+
+	// Top-left player HP/MP display (percentages)
 	Item {
 		id: hpDisplayRoot
 		anchors.top: parent.top
@@ -88,17 +142,48 @@ Item {
 			anchors.left: parent.left
 			color: "#00000080"
 			radius: 6
-			width: textHp.width + 24
-			height: textHp.height + 12
+			width: Math.max(textHp.width, textMp1.width, textMp2.width) + 24
+			height: statsColumn.height + 12
 		}
-		Text {
-			id: textHp
-			anchors.centerIn: hpBg
-			color: "white"
-			font.pixelSize: 34
-			font.bold: true
-			// Show 'HP: current / max' if available, otherwise fallback to a placeholder
-			text: (playerObj && typeof playerObj.hp !== 'undefined') ? ("HP: " + playerObj.hp + (typeof playerObj.maxHp !== 'undefined' ? (" / " + playerObj.maxHp) : "")) : "HP: -"
+
+		Column {
+			id: statsColumn
+			anchors.left: hpBg.left
+			anchors.leftMargin: 12
+			anchors.top: hpBg.top
+			anchors.topMargin: 6
+			spacing: 2
+
+			// smaller font than before per request
+			Text {
+				id: textHp
+				color: "white"
+				font.pixelSize: 28
+				font.bold: true
+				// Show HP as percentage (round to integer). If no data, show '-'.
+				text: (playerObj && typeof playerObj.hp !== 'undefined' && typeof playerObj.maxHp !== 'undefined' && playerObj.maxHp > 0) ? ("HP: " + Math.round(playerObj.hp / Math.max(1, playerObj.maxHp) * 100) + "%") : "HP: -"
+				horizontalAlignment: Text.AlignLeft
+			}
+
+			// MP1 = bulletCd percentage (from playerItem)
+			Text {
+				id: textMp1
+				color: "white"
+				font.pixelSize: 28
+				font.bold: true
+				text: (playerItem && typeof playerItem.bulletCd !== 'undefined' && typeof playerItem.bulletCdMax !== 'undefined' && playerItem.bulletCdMax > 0) ? ("MP1: " + Math.round(playerItem.bulletCd / Math.max(1, playerItem.bulletCdMax) * 100) + "%") : "MP1: -"
+				horizontalAlignment: Text.AlignLeft
+			}
+
+			// MP2 = laserCd percentage (from playerItem)
+			Text {
+				id: textMp2
+				color: "white"
+				font.pixelSize: 28
+				font.bold: true
+				text: (playerItem && typeof playerItem.laserCd !== 'undefined' && typeof playerItem.laserCdMax !== 'undefined' && playerItem.laserCdMax > 0) ? ("MP2: " + Math.round(playerItem.laserCd / Math.max(1, playerItem.laserCdMax) * 100) + "%") : "MP2: -"
+				horizontalAlignment: Text.AlignLeft
+			}
 		}
 	}
 
@@ -1002,98 +1087,8 @@ Item {
 			if (typeof windowBtn !== 'undefined') windowBtn.checked = true;
 		}
 	}
-	// Q key: release PlayerWave spread along mouse direction
-	Shortcut {
-		sequence: "Q"
-		onActivated: {
-			if (!playerObj || !playerItem) return;
-			// visual feedback: briefly set btnQ.pressed if available
-			try {
-				if (typeof btnQ !== 'undefined') {
-					btnQ.pressed = true;
-					Qt.createQmlObject('import QtQuick 2.0; Timer { interval: 140; repeat: false; running: true; onTriggered: { try { btnQ.pressed = false; } catch(e) {} } }', gameViewRoot);
-				}
-			} catch(e) {}
-			// compute player center in world coords
-			var curCenterX = playerObj.pos.x + (playerItem.width/2);
-			var curCenterY = playerObj.pos.y + (playerItem.height/2);
-			// aim overlay stores screen coords; convert to world coords
-			if (typeof aimOverlay === 'undefined' || aimOverlay.aimX === undefined) {
-				console.log('Q pressed but aim not available');
-				return;
-			}
-			var worldX = (aimOverlay.aimX - mapWrapper.x) / Math.max(0.0001, tileScale);
-			var worldY = (aimOverlay.aimY - mapWrapper.y) / Math.max(0.0001, tileScale);
-			var dx = worldX - curCenterX;
-			var dy = worldY - curCenterY;
-			// normalize
-			var len = Math.sqrt(dx*dx + dy*dy);
-			if (len === 0) { dx = 0; dy = -1; } else { dx /= len; dy /= len; }
-			try {
-				// prefer playerItem.tryWave if available (client-side guard + deduction)
-				var fired = false;
-				if (playerItem && typeof playerItem.tryWave === 'function') {
-					fired = playerItem.tryWave(curCenterX, curCenterY, dx, dy);
-				} else {
-					// fallback: only fire if visual resource is available (>=50%) and deduct
-					if (playerItem && typeof playerItem.laserCd !== 'undefined' && typeof playerItem.laserCdMax !== 'undefined') {
-						var cost = Math.round(playerItem.laserCdMax * 0.5);
-						if (playerItem.laserCd >= cost) {
-							try { if (typeof playerObj.wave === 'function') playerObj.wave(curCenterX, curCenterY, dx, dy); }
-							catch(e) { console.log('playerObj.wave failed', e); }
-							playerItem.laserCd = Math.max(0, playerItem.laserCd - cost);
-							if (playerItem.laserCd < playerItem.laserCdMax) {
-								playerItem.laserRecharging = true;
-								if (!playerItem.laserCdTimer.running) playerItem.laserCdTimer.start();
-							}
-							fired = true;
-						} else {
-							// not enough resource to fire
-							fired = false;
-						}
-					} else {
-						// no playerItem resource info — try firing anyway
-						try { if (typeof playerObj.wave === 'function') { playerObj.wave(curCenterX, curCenterY, dx, dy); fired = true; } }
-						catch(e) { console.log('playerObj.wave failed', e); }
-					}
-				}
-				if (!fired) {
-					// optional: feedback (deny sound/flash) can be added here
-					console.log('PlayerWave not fired — insufficient laserCd or action denied');
-				}
-			} catch(e) { console.log('playerWave handling failed', e); }
-		}
-	}
+// (Removed shortcut overrides for letter/number keys so physical key events can flow through playerItem for hold behaviour.)
 
-// F key: toggle teleport mode with visual feedback
-Shortcut {
-	sequence: "F"
-	onActivated: {
-		try {
-			if (typeof btnF !== 'undefined') {
-				btnF.pressed = true;
-				Qt.createQmlObject('import QtQuick 2.0; Timer { interval: 140; repeat: false; running: true; onTriggered: { try { btnF.pressed = false; } catch(e) {} } }', gameViewRoot);
-			}
-		} catch(e) {}
-		try { if (playerObj && typeof playerObj.toggleTeleportMode === 'function') playerObj.toggleTeleportMode(); } catch(e) {}
-	}
-}
-
-// Space key: visual feedback and snipe start/stop (short tap visual)
-Shortcut {
-	sequence: "Space"
-	onActivated: {
-		try {
-			if (typeof btnSpace !== 'undefined') {
-				btnSpace.pressed = true;
-				Qt.createQmlObject('import QtQuick 2.0; Timer { interval: 140; repeat: false; running: true; onTriggered: { try { btnSpace.pressed = false; } catch(e) {} } }', gameViewRoot);
-			}
-		} catch(e) {}
-		// Trigger a quick snipe start/stop via existing API if available
-		try { if (playerObj && typeof playerObj.snipeStart === 'function') playerObj.snipeStart(); } catch(e) {}
-		Qt.createQmlObject('import QtQuick 2.0; Timer { interval: 120; repeat: false; running: true; onTriggered: { try { if (typeof playerObj !== "undefined" && playerObj && typeof playerObj.snipeStop === "function") playerObj.snipeStop(); } catch(e) {} } }', gameViewRoot);
-	}
-}
 	anchors.fill: parent
 	property bool appliedSaveLoad: false
 	Component.onDestruction: {
@@ -1872,31 +1867,6 @@ Shortcut {
 		focus: true 
 		Component.onCompleted: playerItem.forceActiveFocus()
 
-		Keys.onPressed: function(event) {
-			if (event.key === Qt.Key_Space) {
-				// mark that snipe key is held so other logic (moving) won't change the sight while held
-				gameViewRoot.snipeHeld = true;
-				if (playerObj && typeof playerObj.snipeStart === 'function') playerObj.snipeStart();
-				tileScale = 1.5 / 2.0;
-				// ensure sightMask radius is updated to match scaled view
-				sightMask.radius = sightMask.baseRadius * tileScale;
-				// pressing space should stop bullet auto-fire if it was active
-				try { if (fireTimer && fireTimer.running) fireTimer.stop(); } catch(e) {}
-				try { if (playerItem && typeof playerItem.startBulletRecharge === 'function') playerItem.startBulletRecharge(); } catch(e) {}
-			}
-		}
-		Keys.onReleased: function(event) {
-			if (event.key === Qt.Key_Space) {
-				// release lock first so moving logic can resume
-				gameViewRoot.snipeHeld = false;
-				if (playerObj && typeof playerObj.snipeStop === 'function') playerObj.snipeStop();
-				// restore scale
-				tileScale = 1.0;
-				sightMask.radius = sightMask.baseRadius * tileScale;
-				// releasing space: ensure recharge resumes
-				try { if (playerItem && typeof playerItem.startBulletRecharge === 'function') playerItem.startBulletRecharge(); } catch(e) {}
-			}
-		}
 	}
 
 	// When backend player emits playerBulletCreated, create bullet visual and bind to backend
@@ -2070,6 +2040,15 @@ Shortcut {
 		id: touchControls
 		anchors.fill: parent
 		z: 5000 // Ensure it's on top
+		property var keyHoldState: ({})
+
+		function ensurePlayerFocus() {
+			try {
+				if (playerItem && !playerItem.activeFocus) {
+					playerItem.forceActiveFocus();
+				}
+			} catch(e) {}
+		}
 
 		// Left-bottom Joystick (WASD)
 		Item {
@@ -2107,6 +2086,7 @@ Shortcut {
 				property real maxDist: width / 2 - joystickKnob.width / 2
 
 				onPressed: {
+					touchControls.ensurePlayerFocus()
 					dragging = true
 					updatePosition(mouse)
 				}
@@ -2185,6 +2165,9 @@ Shortcut {
 			anchors.right: parent.right
 			anchors.margins: 30
 
+			// radius from ATK center to small buttons
+			property real buttonRadius: btnAttack ? (btnAttack.width/2 + 36) : 96
+
 			// Big Circle (LMB / Attack)
 			Rectangle {
 				id: btnAttack
@@ -2207,6 +2190,7 @@ Shortcut {
 				MouseArea {
 					anchors.fill: parent
 					onPressed: {
+						touchControls.ensurePlayerFocus()
 						btnAttack.pressed = true
 						if (!playerObj || !playerItem) return;
 
@@ -2269,7 +2253,7 @@ Shortcut {
 				}
 			}
 
-			// F Button (Left of Attack)
+			// F Button (Left of Attack) - placed radially around ATK
 			Rectangle {
 				id: btnF
 				width: 60; height: 60
@@ -2278,9 +2262,9 @@ Shortcut {
 				color: pressed ? "black" : "white"
 				border.color: pressed ? "white" : "black"
 				border.width: 2
-				anchors.right: btnAttack.left
-				anchors.verticalCenter: btnAttack.verticalCenter
-				anchors.rightMargin: 20
+				// angle: 180 degrees (left)
+				x: (btnAttack.x + btnAttack.width/2) + Math.cos(Math.PI) * actionButtons.buttonRadius - width/2
+				y: (btnAttack.y + btnAttack.height/2) - Math.sin(Math.PI) * actionButtons.buttonRadius - height/2
 
 				Text {
 					anchors.centerIn: parent
@@ -2291,7 +2275,10 @@ Shortcut {
 
 				MouseArea {
 					anchors.fill: parent
-					onPressed: { btnF.pressed = true }
+					onPressed: {
+						touchControls.ensurePlayerFocus()
+						btnF.pressed = true
+					}
 					onReleased: { btnF.pressed = false }
 					onClicked: {
 						if (playerObj && typeof playerObj.toggleTeleportMode === 'function') {
@@ -2302,7 +2289,7 @@ Shortcut {
 				}
 			}
 
-			// Q Button (Top-Left of Attack)
+			// Q Button (Top-Left of Attack) - placed radially around ATK
 			Rectangle {
 				id: btnQ
 				width: 60; height: 60
@@ -2311,10 +2298,9 @@ Shortcut {
 				color: pressed ? "black" : "white"
 				border.color: pressed ? "white" : "black"
 				border.width: 2
-				anchors.right: btnAttack.left
-				anchors.bottom: btnAttack.top
-				anchors.rightMargin: 10
-				anchors.bottomMargin: 10
+				// angle: 135 degrees (top-left)
+				x: (btnAttack.x + btnAttack.width/2) + Math.cos(3 * Math.PI / 4) * actionButtons.buttonRadius - width/2
+				y: (btnAttack.y + btnAttack.height/2) - Math.sin(3 * Math.PI / 4) * actionButtons.buttonRadius - height/2
 
 				Text {
 					anchors.centerIn: parent
@@ -2325,7 +2311,10 @@ Shortcut {
 
 				MouseArea {
 					anchors.fill: parent
-					onPressed: { btnQ.pressed = true }
+					onPressed: {
+						touchControls.ensurePlayerFocus()
+						btnQ.pressed = true
+					}
 					onReleased: { btnQ.pressed = false }
 					onClicked: {
 						if (!playerObj || !playerItem) return;
@@ -2361,7 +2350,7 @@ Shortcut {
 				}
 			}
 
-			// Space Button (Top of Attack)
+			// Space Button (Top of Attack) - placed radially around ATK
 			Rectangle {
 				id: btnSpace
 				width: 60; height: 60
@@ -2370,9 +2359,9 @@ Shortcut {
 				color: pressed ? "black" : "white"
 				border.color: pressed ? "white" : "black"
 				border.width: 2
-				anchors.bottom: btnAttack.top
-				anchors.horizontalCenter: btnAttack.horizontalCenter
-				anchors.bottomMargin: 20
+				// angle: 90 degrees (top)
+				x: (btnAttack.x + btnAttack.width/2) + Math.cos(Math.PI/2) * actionButtons.buttonRadius - width/2
+				y: (btnAttack.y + btnAttack.height/2) - Math.sin(Math.PI/2) * actionButtons.buttonRadius - height/2
 
 				Text {
 					anchors.centerIn: parent
@@ -2384,31 +2373,88 @@ Shortcut {
 				MouseArea {
 					anchors.fill: parent
 					onPressed: {
-						btnSpace.pressed = true
-						gameViewRoot.snipeHeld = true;
-						if (playerObj && typeof playerObj.snipeStart === 'function') playerObj.snipeStart();
-						tileScale = 1.5 / 2.0;
-						sightMask.radius = sightMask.baseRadius * tileScale;
-						try { if (fireTimer && fireTimer.running) fireTimer.stop(); } catch(e) {}
-						try { if (playerItem && typeof playerItem.startBulletRecharge === 'function') playerItem.startBulletRecharge(); } catch(e) {}
+						touchControls.ensurePlayerFocus()
+						engageSnipeHold()
 					}
-					onReleased: {
-						btnSpace.pressed = false
-						gameViewRoot.snipeHeld = false;
-						if (playerObj && typeof playerObj.snipeStop === 'function') playerObj.snipeStop();
-						tileScale = 1.0;
-						sightMask.radius = sightMask.baseRadius * tileScale;
-						try { if (playerItem && typeof playerItem.startBulletRecharge === 'function') playerItem.startBulletRecharge(); } catch(e) {}
-					}
+					onReleased: releaseSnipeHold()
 				}
 			}
 		}
 
 		function setButtonPressFromKey(key, isDown) {
 			try {
-				if (key === Qt.Key_Q) btnQ.pressed = isDown;
-				else if (key === Qt.Key_F) btnF.pressed = isDown;
-				else if (key === Qt.Key_Space) btnSpace.pressed = isDown;
+					if (isDown) {
+						if (!touchControls.keyHoldState) touchControls.keyHoldState = ({});
+						if (touchControls.keyHoldState[key]) {
+							return;
+						}
+						touchControls.keyHoldState[key] = true;
+					} else if (touchControls.keyHoldState && touchControls.keyHoldState[key]) {
+						delete touchControls.keyHoldState[key];
+					}
+					if (key === Qt.Key_Q || key === Qt.Key_K || key === Qt.Key_2) {
+							btnQ.pressed = isDown;
+							if (isDown) {
+								// on press, trigger Q action (single fire) to match keyboard behaviour
+								try {
+									if (!playerObj || !playerItem) return;
+									var curCenterX = playerObj.pos.x + (playerItem.width/2);
+									var curCenterY = playerObj.pos.y + (playerItem.height/2);
+									if (typeof aimOverlay === 'undefined' || aimOverlay.aimX === undefined) return;
+									var worldX = (aimOverlay.aimX - mapWrapper.x) / Math.max(0.0001, tileScale);
+									var worldY = (aimOverlay.aimY - mapWrapper.y) / Math.max(0.0001, tileScale);
+									var dx = worldX - curCenterX; var dy = worldY - curCenterY; var len = Math.sqrt(dx*dx + dy*dy);
+									if (len === 0) { dx = 0; dy = -1; } else { dx /= len; dy /= len; }
+									var fired = false;
+									if (playerItem && typeof playerItem.tryWave === 'function') fired = playerItem.tryWave(curCenterX, curCenterY, dx, dy);
+									else {
+										if (playerItem && typeof playerItem.laserCd !== 'undefined' && typeof playerItem.laserCdMax !== 'undefined') {
+											var cost = Math.round(playerItem.laserCdMax * 0.5);
+											if (playerItem.laserCd >= cost) { playerItem.laserCd = Math.max(0, playerItem.laserCd - cost); fired = true; }
+										} else {
+											try { if (typeof playerObj.wave === 'function') { playerObj.wave(curCenterX, curCenterY, dx, dy); fired = true; } } catch(e) { console.log('playerObj.wave failed', e); }
+										}
+										if (fired) try { if (playerObj && typeof playerObj.createPlayerWave === 'function') playerObj.createPlayerWave(curCenterX, curCenterY, dx, dy); } catch(e) {}
+									}
+								} catch(e) { console.log('setButtonPressFromKey Q/K/2 handler failed', e); }
+							}
+						} else if (key === Qt.Key_F || key === Qt.Key_L || key === Qt.Key_3) {
+							btnF.pressed = isDown;
+							if (isDown) try { if (playerObj && typeof playerObj.toggleTeleportMode === 'function') playerObj.toggleTeleportMode(); } catch(e) {}
+						} else if (key === Qt.Key_Space || key === Qt.Key_0) {
+							// Space / 0 behave same
+							if (isDown) engageSnipeHold();
+							else releaseSnipeHold();
+						} else if (key === Qt.Key_J || key === Qt.Key_1) {
+							// Attack
+							try { if (typeof btnAttack !== 'undefined') btnAttack.pressed = isDown; } catch(e) {}
+							if (isDown) {
+								// mimic mouse press behaviour
+								try {
+									if (!playerObj || !playerItem) return;
+									if (playerObj.snipeActive || gameViewRoot.snipeHeld) {
+										var sx = mapWrapper.x + (playerObj.pos.x + (playerItem.width/2)) * tileScale;
+										var sy = mapWrapper.y + (playerObj.pos.y + (playerItem.height/2)) * tileScale;
+										var ax = aimOverlay ? aimOverlay.aimX : sx;
+										var ay = aimOverlay ? aimOverlay.aimY : sy - sightMask.radius;
+										var dxs = ax - sx; var dys = ay - sy; var dists = Math.sqrt(dxs*dxs + dys*dys);
+										var tx = ax; var ty = ay;
+										if (dists > sightMask.radius && dists > 0) { var nx = dxs / dists; tx = sx + nx * sightMask.radius; ty = sy + (dys / dists) * sightMask.radius; }
+										var targetWorldX = (tx - mapWrapper.x) / tileScale;
+										var targetWorldY = (ty - mapWrapper.y) / tileScale;
+										var px = playerObj.pos.x + (playerItem.width/2);
+										var py = playerObj.pos.y + (playerItem.height/2);
+										try { if (typeof playerItem.trySnipe === 'function') playerItem.trySnipe(px, py, targetWorldX-px, targetWorldY-py); } catch(e) { console.log('trySnipe via key failed', e); }
+									} else {
+										try { if (typeof playerItem.stopBulletRecharge === 'function') playerItem.stopBulletRecharge(); } catch(e) {}
+										if (!fireTimer.running) fireTimer.start();
+									}
+								} catch(e) { console.log('J/1 press via setButtonPressFromKey failed', e); }
+							} else {
+								try { if (fireTimer && fireTimer.running) fireTimer.stop(); } catch(e) {}
+								try { if (playerItem && typeof playerItem.startBulletRecharge === 'function') playerItem.startBulletRecharge(); } catch(e) {}
+							}
+						}
 			} catch(e) {}
 		}
 

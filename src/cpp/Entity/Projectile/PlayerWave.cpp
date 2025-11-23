@@ -4,7 +4,7 @@
 #include <cmath>
 
 PlayerWave::PlayerWave(QObject *parent) : Projectile(parent) {
-    setSpeed(22);
+    setSpeed(3);
     setMaxDist(1200);
     setDamage(waveDamage);
     if (!moveTimer) {
