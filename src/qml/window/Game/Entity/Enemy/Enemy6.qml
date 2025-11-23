@@ -14,7 +14,7 @@ Item {
     z: 120
     transformOrigin: Item.Center
     // continuous spin properties
-    property int spinDuration: 9000
+    property int spinDuration: 100
     property real spinOffset: 0
     property real pulsateScale: 1.0
     property real impactScale: 1.0
