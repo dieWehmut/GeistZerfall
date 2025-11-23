@@ -37,12 +37,18 @@ int Enemy6::performAttack() {
     dy = dy / len;
   }
 
-  // 向玩家方向发射一个波形光波
-  auto *laser = new Enemy6Laser(this->parent());
-  laser->setStartPos(p);
-  laser->setDirection(dx, dy);
-  laser->setProperty("visualType", QVariant("laser"));
-  emit enemyLaserCreated(laser);
+  // 一次发射三条激光，分别为 0°、+45°、-45°
+  const double anglesDeg[3] = {0.0, 45.0, -45.0};
+  for (int i = 0; i < 3; ++i) {
+    double ang = qDegreesToRadians(anglesDeg[i]);
+    double nx = dx * std::cos(ang) - dy * std::sin(ang);
+    double ny = dx * std::sin(ang) + dy * std::cos(ang);
+    auto *laser = new Enemy6Laser(this->parent());
+    laser->setStartPos(p);
+    laser->setDirection(nx, ny);
+    laser->setProperty("visualType", QVariant("laser"));
+    emit enemyLaserCreated(laser);
+  }
 
   return cost;
 }

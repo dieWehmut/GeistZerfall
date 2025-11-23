@@ -2054,9 +2054,10 @@ Item {
 		Item {
 			id: joystick
 			width: 200; height: 200
-			anchors.bottom: parent.bottom
-			anchors.left: parent.left
-			anchors.margins: 50
+				anchors.bottom: parent.bottom
+				anchors.left: parent.left
+				anchors.leftMargin: 8
+				anchors.bottomMargin: 8
 
 			Rectangle {
 				id: joystickBg
@@ -2161,9 +2162,10 @@ Item {
 		Item {
 			id: actionButtons
 			width: 250; height: 250
-			anchors.bottom: parent.bottom
-			anchors.right: parent.right
-			anchors.margins: 30
+				anchors.bottom: parent.bottom
+				anchors.right: parent.right
+				anchors.rightMargin: 8
+				anchors.bottomMargin: 8
 
 			// radius from ATK center to small buttons
 			property real buttonRadius: btnAttack ? (btnAttack.width/2 + 36) : 96
@@ -2375,7 +2377,7 @@ Item {
 								fired = playerItem.tryWave(curCenterX, curCenterY, dx, dy);
 							} else {
 								if (playerItem && typeof playerItem.laserCd !== 'undefined' && typeof playerItem.laserCdMax !== 'undefined') {
-									var cost = Math.round(playerItem.laserCdMax * 0.5);
+									var cost = Math.round(playerItem.laserCdMax * 0.9);
 									if (playerItem.laserCd >= cost) {
 										playerItem.laserCd -= cost;
 										fired = true;

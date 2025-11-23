@@ -2,7 +2,7 @@
 #include <QtMath>
 
 Enemy6Laser::Enemy6Laser(QObject *parent) : Projectile(parent) {
-  setMaxDist(750);
+  setMaxDist(1600); // 更长射程
   setTraveledDist(0);
   updateTimer = new QTimer(this);
   updateTimer->setInterval(16);

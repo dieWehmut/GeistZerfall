@@ -114,9 +114,11 @@ Item {
             backend.posChanged.connect(updateScreenPos);
         } catch (e) {}
         // connect laser creation to spawn visuals
-        try {
-            backend.enemyLaserCreated.connect(function (ls) {
+            try {
+                backend.enemyLaserCreated.connect(function (ls) {
+                    console.log('Enemy6.qml: enemyLaserCreated ->', ls);
                 var comp = Qt.createComponent("./Enemy6Laser.qml");
+                console.log('Enemy6.qml: Enemy6Laser component status=', comp.status, comp.errorString ? comp.errorString() : '');
                 if (comp.status === Component.Ready) {
                     var laser = comp.createObject(mapWrapperRef, {
                         backend: ls,
@@ -125,10 +127,12 @@ Item {
                         tileScaleRef: tileScaleRef,
                         mapWrapperRef: mapWrapperRef
                     });
-                    if (laser)
-                        laser.tileScaleRef = Qt.binding(function () {
-                            return tileScaleRef;
-                        });
+                    if (laser) {
+                        console.log('Enemy6.qml: Enemy6Laser visual created', laser);
+                        laser.tileScaleRef = Qt.binding(function () { return tileScaleRef; });
+                    } else {
+                        console.log('Enemy6.qml: Failed to create Enemy6Laser visual (createObject returned null)');
+                    }
                 }
             });
         } catch (e) {}
