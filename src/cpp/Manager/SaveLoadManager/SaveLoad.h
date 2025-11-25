@@ -59,6 +59,9 @@ public:
     Q_INVOKABLE bool removeSlot(int slot, const QString &folderPath = "save");
     // Capture a temporary preview image (temp.png) by grabbing the main QQuickWindow and saving to folderPath/temp.png
     Q_INVOKABLE bool captureTemp(const QString &folderPath = "save");
+    // System settings save/load (stored as JSON in system.dat under folderPath)
+    Q_INVOKABLE bool saveSystem(const QVariantMap &settings, const QString &folderPath = "save");
+    Q_INVOKABLE QVariantMap loadSystem(const QString &folderPath = "save");
     // Populate the internal enemy list from a QVariantList of maps. Each map should contain:
     // { "type": QString, "x": double, "y": double, "hp": int, "maxHp": int, "mp": int, "maxMp": int, "alive": bool }
     Q_INVOKABLE void setEnemies(const QVariantList &list);

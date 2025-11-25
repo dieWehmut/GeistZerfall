@@ -15,7 +15,9 @@
         { "name": "清原 凛", "position": "right", "scale": 1.0 }
       ],
       "contents": [
-        { "type": "text", "text": "2", "mode": "scene", "speaker": 0 }
+        { "type": "text", 
+        "text": "11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111",
+         "mode": "scene", "speaker": 0 }
       ],
       "choices": [
         { "text": "让我看看怎么个事", "next": "hesitation1" },

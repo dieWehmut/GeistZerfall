@@ -5,6 +5,53 @@ import "../components"
 import "Lore/components"
 
 Item {
+		Component.onCompleted: {
+			// Load persisted system settings (if any)
+			try {
+				if (typeof SaveLoadManager !== 'undefined' && SaveLoadManager) {
+					var settings = SaveLoadManager.loadSystem();
+					if (settings) {
+						if (settings.fullscreen !== undefined) {
+							fullscreenBtn.checked = !!settings.fullscreen;
+							windowBtn.checked = !fullscreenBtn.checked;
+							if (fullscreenBtn.checked) { if (window && window.showFullScreen) window.showFullScreen(); }
+							else { if (window && window.showNormal) window.showNormal(); }
+						}
+						if (settings.textSkip !== undefined) {
+							if (settings.textSkip === 'all') { textSkipAllBtn.checked = true; textSkipReadBtn.checked = false; }
+							else { textSkipReadBtn.checked = true; textSkipAllBtn.checked = false; }
+						}
+						if (settings.optionFastForward !== undefined) { optFastYes.checked = !!settings.optionFastForward; optFastNo.checked = !optFastYes.checked; }
+						if (settings.optionAutoContinue !== undefined) { optAutoYes.checked = !!settings.optionAutoContinue; optAutoNo.checked = !optAutoYes.checked; }
+						if (settings.masterVolume !== undefined) masterSlider.value = Math.round((settings.masterVolume || 0.0) * 100);
+						if (settings.bgmVolume !== undefined) bgmSlider.value = Math.round((settings.bgmVolume || 0.0) * 100);
+						if (settings.sfxVolume !== undefined) sfxSlider.value = Math.round((settings.sfxVolume || 0.0) * 100);
+						if (settings.textSpeed !== undefined) textSpeedSlider.value = settings.textSpeed;
+						if (settings.autoModeSpeed !== undefined) autoModeSlider.value = settings.autoModeSpeed;
+					}
+				}
+			} catch(e) { console.log('Config: loadSystem failed', e); }
+		}
+
+		function persistSystemSettings() {
+			try {
+				if (typeof SaveLoadManager === 'undefined' || !SaveLoadManager) return;
+				// load existing settings and merge so we don't wipe keys others may manage (e.g. aimMode, controlsVisible)
+				var s = SaveLoadManager.loadSystem() || {};
+				if (!s) s = {};
+				// copy/override new values into the loaded settings object
+				s.fullscreen = !!fullscreenBtn.checked;
+				s.textSkip = (textSkipAllBtn.checked ? 'all' : 'read');
+				s.optionFastForward = !!optFastYes.checked;
+				s.optionAutoContinue = !!optAutoYes.checked;
+				s.masterVolume = (masterSlider.value / 100.0);
+				s.bgmVolume = (bgmSlider.value / 100.0);
+				s.sfxVolume = (sfxSlider.value / 100.0);
+				s.textSpeed = textSpeedSlider.value;
+				s.autoModeSpeed = autoModeSlider.value;
+				SaveLoadManager.saveSystem(s);
+			} catch(e) { console.log('Config: persistSystemSettings failed', e); }
+		}
 	anchors.fill: parent
 	property real baseWidth: 1280
 	property real baseHeight: 720
@@ -76,7 +123,7 @@ Item {
 		}
 
 		// 中间设置内容
-		Row {
+				Row {
 			anchors.horizontalCenter: parent.horizontalCenter
 			anchors.top: parent.top
 			anchors.topMargin: 120
@@ -108,6 +155,7 @@ Item {
 							onClicked: {
 								window.showNormal && window.showNormal();
 								fullscreenBtn.checked = false;
+								persistSystemSettings();
 							}
 						}
 						AppButton {
@@ -120,6 +168,7 @@ Item {
 							onClicked: {
 								window.showFullScreen && window.showFullScreen();
 								windowBtn.checked = false;
+								persistSystemSettings();
 							}
 						}
 					}
@@ -138,20 +187,22 @@ Item {
 					Row {
 						spacing: 12
 						AppButton {
+							id: textSkipReadBtn
 							text: "已读"
 							width: 140; height: 50
 							fontPixelSize: 20
 							checkable: true
 							checked: true
-							onClicked: { checked = true; parent.children[1].checked = false }
+							onClicked: { checked = true; parent.children[1].checked = false; persistSystemSettings(); }
 						}
 						AppButton {
+							id: textSkipAllBtn
 							text: "全部"
 							width: 140; height: 50
 							fontPixelSize: 20
 							checkable: true
 							checked: false
-							onClicked: { checked = true; parent.children[0].checked = false }
+							onClicked: { checked = true; parent.children[0].checked = false; persistSystemSettings(); }
 						}
 					}
 				}
@@ -169,20 +220,22 @@ Item {
 					Row {
 						spacing: 12
 						AppButton {
+							id: optFastYes
 							text: "YES"
 							width: 140; height: 50
 							fontPixelSize: 20
 							checkable: true
 							checked: false
-							onClicked: { checked = true; parent.children[1].checked = false }
+							onClicked: { checked = true; parent.children[1].checked = false; persistSystemSettings(); }
 						}
 						AppButton {
+							id: optFastNo
 							text: "NO"
 							width: 140; height: 50
 							fontPixelSize: 20
 							checkable: true
 							checked: true
-							onClicked: { checked = true; parent.children[0].checked = false }
+							onClicked: { checked = true; parent.children[0].checked = false; persistSystemSettings(); }
 						}
 					}
 				}
@@ -200,6 +253,7 @@ Item {
 					Row {
 						spacing: 12
 						AppButton {
+							id: optAutoYes
 							text: "YES"
 							width: 140; height: 50
 							fontPixelSize: 20
@@ -208,6 +262,7 @@ Item {
 							onClicked: { checked = true; parent.children[1].checked = false }
 						}
 						AppButton {
+							id: optAutoNo
 							text: "NO"
 							width: 140; height: 50
 							fontPixelSize: 20
@@ -226,17 +281,17 @@ Item {
 				// 主音量
 				Column { spacing: 5
 					Text { text: "主音量"; font.pixelSize: 28; color: "white"; font.bold: true; style: Text.Outline; styleColor: "black" }
-					ConfigSlider {
+						ConfigSlider {
 						id: masterSlider
 						Component.onCompleted: value = Math.round((typeof window !== 'undefined' ? window.masterVolume : 1.0) * 100);
-						onValueChanged: { if (typeof window !== 'undefined') window.masterVolume = value / 100.0; }
+						onValueChanged: { if (typeof window !== 'undefined') window.masterVolume = value / 100.0; persistSystemSettings(); }
 					}
 					Row { spacing: 8
 						AppButton { id: masterOnBtn; text: "ON"; width: 100; height: 40; fontPixelSize: 18; checkable: true; checked: (typeof window !== 'undefined' ? window.masterVolume > 0.0 : true)
-							onClicked: { if (typeof window !== 'undefined') { window.masterVolume = 1.0; masterOnBtn.checked = true; masterOffBtn.checked = false; masterSlider.value = Math.round(window.masterVolume * 100); } }
+							onClicked: { if (typeof window !== 'undefined') { window.masterVolume = 1.0; masterOnBtn.checked = true; masterOffBtn.checked = false; masterSlider.value = Math.round(window.masterVolume * 100); } persistSystemSettings(); }
 						}
 						AppButton { id: masterOffBtn; text: "OFF"; width: 100; height: 40; fontPixelSize: 18; checkable: true; checked: (typeof window !== 'undefined' ? window.masterVolume === 0.0 : false)
-							onClicked: { if (typeof window !== 'undefined') { window.masterVolume = 0.0; masterOffBtn.checked = true; masterOnBtn.checked = false; masterSlider.value = Math.round(window.masterVolume * 100); } }
+							onClicked: { if (typeof window !== 'undefined') { window.masterVolume = 0.0; masterOffBtn.checked = true; masterOnBtn.checked = false; masterSlider.value = Math.round(window.masterVolume * 100); } persistSystemSettings(); }
 						}
 					}
 				}
@@ -244,20 +299,20 @@ Item {
 				// 背景音乐
 				Column { spacing: 5
 					Text { text: "背景音乐"; font.pixelSize: 28; color: "white"; font.bold: true; style: Text.Outline; styleColor: "black" }
-					ConfigSlider { id: bgmSlider; Component.onCompleted: value = Math.round((typeof window !== 'undefined' ? window.bgmVolume : 1.0) * 100); onValueChanged: if (typeof window !== 'undefined') window.bgmVolume = value / 100.0 }
+					ConfigSlider { id: bgmSlider; Component.onCompleted: value = Math.round((typeof window !== 'undefined' ? window.bgmVolume : 1.0) * 100); onValueChanged: { if (typeof window !== 'undefined') window.bgmVolume = value / 100.0; persistSystemSettings(); } }
 					Row { spacing: 10
-						AppButton { id: bgmOnBtn; text: "ON"; width: 100; height: 40; fontPixelSize: 18; checkable: true; checked: (typeof window !== 'undefined' ? window.bgmVolume > 0.0 : true); onClicked: { if (typeof window !== 'undefined') { window.bgmVolume = 1.0; bgmOnBtn.checked = true; bgmOffBtn.checked = false; bgmSlider.value = Math.round(window.bgmVolume * 100); } } }
-						AppButton { id: bgmOffBtn; text: "OFF"; width: 100; height: 40; fontPixelSize: 18; checkable: true; checked: (typeof window !== 'undefined' ? window.bgmVolume === 0.0 : false); onClicked: { if (typeof window !== 'undefined') { window.bgmVolume = 0.0; bgmOffBtn.checked = true; bgmOnBtn.checked = false; bgmSlider.value = Math.round(window.bgmVolume * 100); } } }
+						AppButton { id: bgmOnBtn; text: "ON"; width: 100; height: 40; fontPixelSize: 18; checkable: true; checked: (typeof window !== 'undefined' ? window.bgmVolume > 0.0 : true); onClicked: { if (typeof window !== 'undefined') { window.bgmVolume = 1.0; bgmOnBtn.checked = true; bgmOffBtn.checked = false; bgmSlider.value = Math.round(window.bgmVolume * 100); } persistSystemSettings(); } }
+						AppButton { id: bgmOffBtn; text: "OFF"; width: 100; height: 40; fontPixelSize: 18; checkable: true; checked: (typeof window !== 'undefined' ? window.bgmVolume === 0.0 : false); onClicked: { if (typeof window !== 'undefined') { window.bgmVolume = 0.0; bgmOffBtn.checked = true; bgmOnBtn.checked = false; bgmSlider.value = Math.round(window.bgmVolume * 100); } persistSystemSettings(); } }
 					}
 				}
 
 				// 音效
 				Column { spacing: 5
 					Text { text: "效果音"; font.pixelSize: 28; color: "white"; font.bold: true; style: Text.Outline; styleColor: "black" }
-					ConfigSlider { id: sfxSlider; Component.onCompleted: value = Math.round((typeof window !== 'undefined' ? window.sfxVolume : 1.0) * 100); onValueChanged: if (typeof window !== 'undefined') window.sfxVolume = value / 100.0 }
+					ConfigSlider { id: sfxSlider; Component.onCompleted: value = Math.round((typeof window !== 'undefined' ? window.sfxVolume : 1.0) * 100); onValueChanged: { if (typeof window !== 'undefined') window.sfxVolume = value / 100.0; persistSystemSettings(); } }
 					Row { spacing: 8
-						AppButton { id: sfxOnBtn; text: "ON"; width: 100; height: 40; fontPixelSize: 18; checkable: true; checked: (typeof window !== 'undefined' ? window.sfxVolume > 0.0 : true); onClicked: { if (typeof window !== 'undefined') { window.sfxVolume = 1.0; sfxOnBtn.checked = true; sfxOffBtn.checked = false; sfxSlider.value = Math.round(window.sfxVolume * 100); } } }
-						AppButton { id: sfxOffBtn; text: "OFF"; width: 100; height: 40; fontPixelSize: 18; checkable: true; checked: (typeof window !== 'undefined' ? window.sfxVolume === 0.0 : false); onClicked: { if (typeof window !== 'undefined') { window.sfxVolume = 0.0; sfxOffBtn.checked = true; sfxOnBtn.checked = false; sfxSlider.value = Math.round(window.sfxVolume * 100); } } }
+						AppButton { id: sfxOnBtn; text: "ON"; width: 100; height: 40; fontPixelSize: 18; checkable: true; checked: (typeof window !== 'undefined' ? window.sfxVolume > 0.0 : true); onClicked: { if (typeof window !== 'undefined') { window.sfxVolume = 1.0; sfxOnBtn.checked = true; sfxOffBtn.checked = false; sfxSlider.value = Math.round(window.sfxVolume * 100); } persistSystemSettings(); } }
+						AppButton { id: sfxOffBtn; text: "OFF"; width: 100; height: 40; fontPixelSize: 18; checkable: true; checked: (typeof window !== 'undefined' ? window.sfxVolume === 0.0 : false); onClicked: { if (typeof window !== 'undefined') { window.sfxVolume = 0.0; sfxOffBtn.checked = true; sfxOnBtn.checked = false; sfxSlider.value = Math.round(window.sfxVolume * 100); } persistSystemSettings(); } }
 					}
 				}
 
@@ -269,12 +324,12 @@ Item {
 
 				Column { spacing: 5
 					Text { text: "文字显示速度"; font.pixelSize: 28; color: "white"; font.bold: true; style: Text.Outline; styleColor: "black" }
-					ConfigSlider { value: 50 }
+					ConfigSlider { id: textSpeedSlider; value: 50; onValueChanged: persistSystemSettings() }
 				}
 
 				Column { spacing: 5
 					Text { text: "自动模式速度"; font.pixelSize: 28; color: "white"; font.bold: true; style: Text.Outline; styleColor: "black" }
-					ConfigSlider { value: 50 }
+					ConfigSlider { id: autoModeSlider; value: 50; onValueChanged: persistSystemSettings() }
 				}
 			}
 		}

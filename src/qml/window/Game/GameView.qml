@@ -64,6 +64,17 @@ Item {
 			}
 		} catch(eCV) { console.log('reading controlsVisible from WindowState failed', eCV); }
 
+		// load persisted system settings (aimMode / controlsVisible) if available
+		try {
+			if (typeof SaveLoadManager !== 'undefined' && SaveLoadManager) {
+				var sys = SaveLoadManager.loadSystem();
+				if (sys) {
+					if (sys.controlsVisible !== undefined) controlsVisible = !!sys.controlsVisible;
+					if (sys.aimMode !== undefined) aimMode = (sys.aimMode === 'mouse' ? 'mouse' : 'move');
+				}
+			}
+		} catch (eSys) { console.log('GameView: loadSystem failed', eSys); }
+
 		Qt.callLater(function() {
 			if (aimMode === "move") setMoveAimTarget();
 		});
@@ -71,6 +82,13 @@ Item {
 
 	onControlsVisibleChanged: {
 		try { if (typeof WindowState !== 'undefined' && WindowState.setControlsVisible) WindowState.setControlsVisible(controlsVisible); } catch(e) { console.log('persist controlsVisible failed', e); }
+		try {
+			if (typeof SaveLoadManager !== 'undefined' && SaveLoadManager) {
+				var s = SaveLoadManager.loadSystem() || {};
+				s.controlsVisible = !!controlsVisible;
+				SaveLoadManager.saveSystem(s);
+			}
+		} catch (e2) { console.log('GameView: saveSystem failed', e2); }
 	}
 
 	// Global keys mirror: ensure keyboard works even if playerItem didn't get focus
@@ -1512,6 +1530,14 @@ Item {
 				}
 			} catch(eAim) { console.log('reset mouse aim failed', eAim); }
 		}
+		// persist aimMode change
+		try {
+			if (typeof SaveLoadManager !== 'undefined' && SaveLoadManager) {
+				var s = SaveLoadManager.loadSystem() || {};
+				s.aimMode = aimMode;
+				SaveLoadManager.saveSystem(s);
+			}
+		} catch(e) { console.log('GameView: saveSystem aimMode failed', e); }
 	}
 
 	function updateMouseAimPoint(screenX, screenY) {

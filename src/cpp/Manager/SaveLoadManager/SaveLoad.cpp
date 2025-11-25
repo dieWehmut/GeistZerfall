@@ -61,6 +61,51 @@ SaveLoad::SaveLoad(QObject *parent) : QObject(parent) {
     });
 }
 
+bool SaveLoad::saveSystem(const QVariantMap &settings, const QString &folderPath) {
+    QString dirPath = QDir::cleanPath(QCoreApplication::applicationDirPath() + "/" + folderPath);
+    QDir dir;
+    if (!dir.exists(dirPath)) {
+        if (!dir.mkpath(dirPath)) {
+            qWarning() << "SaveLoad::saveSystem: cannot create dir" << dirPath;
+            return false;
+        }
+    }
+    QString filePath = dirPath + "/system.dat";
+    QFile f(filePath);
+    if (!f.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        qWarning() << "SaveLoad::saveSystem: cannot open file for write:" << filePath;
+        return false;
+    }
+    QJsonObject obj = QJsonObject::fromVariantMap(settings);
+    QJsonDocument doc(obj);
+    QByteArray bytes = doc.toJson(QJsonDocument::Compact);
+    qint64 written = f.write(bytes);
+    f.close();
+    return written == bytes.size();
+}
+
+QVariantMap SaveLoad::loadSystem(const QString &folderPath) {
+    QVariantMap out;
+    QString dirPath = QDir::cleanPath(QCoreApplication::applicationDirPath() + "/" + folderPath);
+    QString filePath = dirPath + "/system.dat";
+    QFile f(filePath);
+    if (!f.exists()) return out;
+    if (!f.open(QIODevice::ReadOnly)) {
+        qWarning() << "SaveLoad::loadSystem: cannot open file for read:" << filePath;
+        return out;
+    }
+    QByteArray data = f.readAll();
+    f.close();
+    QJsonParseError perr;
+    QJsonDocument doc = QJsonDocument::fromJson(data, &perr);
+    if (perr.error != QJsonParseError::NoError) {
+        qWarning() << "SaveLoad::loadSystem: parse error" << perr.errorString();
+        return out;
+    }
+    if (!doc.isObject()) return out;
+    out = doc.object().toVariantMap();
+    return out;
+}
 bool SaveLoad::saveAuto(const QString &folderPath) {
     // For backward compatibility this still saves the same auto.dat but using the new top-level format.
     return savePlayer(folderPath);
