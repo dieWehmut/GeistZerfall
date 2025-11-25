@@ -1,0 +1,31 @@
+{
+	"meta": { "chapterId": "algorithm7" },
+	"nodes": {
+		"1": {
+			"background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+			"contents": [
+				{ "type": "title", "text": "算法题7", "isTitle": true, "mode": "scene" }
+			],
+			"nextNode": "2"
+		},
+		"2": {
+			"background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+			"contents": [
+				{ "type": "text", "text": "7.Dijkstra 可用于计算图最短路，前提条件是（）", "mode": "scene" }
+			],
+			"choices": [
+				{ "text": "A. 图必须是 DAG", "next": "3" },
+				{ "text": "B. 图不含负权边", "next": "3" },
+				{ "text": "C. 图必须是树", "next": "3" },
+				{ "text": "D. 图必须无环", "next": "3" }
+			]
+		},
+		"3": {
+			"background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+			"contents": [
+				{ "type": "text", "text": "下一题：algorithm8", "mode": "scene" }
+			],
+			"nextChapter": "algorithm8"
+		}
+	}
+}

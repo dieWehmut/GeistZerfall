@@ -1,0 +1,23 @@
+{
+	"meta": { "chapterId": "leap2a" },
+	"nodes": {
+		"1": {
+			"background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+			"contents": [
+				{ "type": "title", "text": "跳跃2a", "isTitle": true, "mode": "scene" }
+			],
+			"nextNode": "2"
+		},
+		"2": {
+			"background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+			"contents": [
+				{ "type": "text", "text": "选择吧", "mode": "scene" }
+			],
+			"choices": [
+				{ "text": "莲或许知道些什么", "next": "preparation3" },
+				{ "text": "谁没翘过课呢", "next": "be5" }
+			]
+		}
+	}
+}
+

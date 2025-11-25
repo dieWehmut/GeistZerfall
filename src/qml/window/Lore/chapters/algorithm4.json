@@ -1,0 +1,31 @@
+{
+	"meta": { "chapterId": "algorithm4" },
+	"nodes": {
+		"1": {
+			"background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+			"contents": [
+				{ "type": "title", "text": "算法题4", "isTitle": true, "mode": "scene" }
+			],
+			"nextNode": "2"
+		},
+		"2": {
+			"background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+			"contents": [
+				{ "type": "text", "text": "4.构建哈夫曼树时，为了获得最优编码，下面哪一步是正确的？", "mode": "scene" }
+			],
+			"choices": [
+				{ "text": "A. 每次合并最小的两个权值", "next": "3" },
+				{ "text": "B. 每次合并最大的两个权值", "next": "3" },
+				{ "text": "C. 每次合并随机两个", "next": "3" },
+				{ "text": "D. 每次取中位数", "next": "3" }
+			]
+		},
+		"3": {
+			"background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+			"contents": [
+				{ "type": "text", "text": "下一题：algorithm5", "mode": "scene" }
+			],
+			"nextChapter": "algorithm5"
+		}
+	}
+}
