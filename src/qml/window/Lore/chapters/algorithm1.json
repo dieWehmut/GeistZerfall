@@ -4,7 +4,7 @@
 		"1": {
 			"background": "qrc:/resource/image/bg/lore/shenLinGate.png",
 			"contents": [
-				{ "type": "title", "text": "算法题1", "isTitle": true, "mode": "scene" }
+				{ "type": "text", "text": "开做", "mode": "scene" }
 			],
 			"nextNode": "2"
 		},
@@ -23,7 +23,7 @@
 		"3": {
 			"background": "qrc:/resource/image/bg/lore/shenLinGate.png",
 			"contents": [
-				{ "type": "text", "text": "下一题：algorithm2", "mode": "scene" }
+				{ "type": "text", "text": "", "mode": "scene" }
 			],
 			"nextChapter": "algorithm2"
 		}

@@ -23,7 +23,8 @@ Item {
 	// optional refs passed from GameView so the visual can draw in screen coords
 	property var mapWrapperRef: null
 	property real tileScaleRef: 1.0
-	// visual thickness in pixels (can be passed from creator, e.g. 24 * tileScale)
+	// visual thickness in WORLD units (will be converted to screen pixels by multiplying tileScaleRef)
+	// e.g. a thickness of 15 means 15 world-units; canvas drawing multiplies by tileScaleRef
 	property real thickness: 15
 	property var enemiesRef: null
 	property int damage: backend && backend.damage !== undefined ? backend.damage : 800
@@ -106,7 +107,8 @@ Item {
 				// stronger alpha for inner layers and scale with i
 				var a = 0.03 * (i + 2) * alphaMul;
 				ctx.strokeStyle = 'rgba(' + baseColor + ',' + Math.min(a, 0.95).toFixed(3) + ')';
-				ctx.lineWidth = thickness * (i * 0.6);
+				// thickness is in world units; convert to screen pixels
+				ctx.lineWidth = (thickness * tileScaleRef) * (i * 0.6);
 				ctx.lineCap = 'round';
 				ctx.moveTo(sx, sy);
 				ctx.lineTo(ex, ey);
@@ -118,7 +120,7 @@ Item {
 			// brighten the core for center beam; dim slightly for outer beams
 			var coreAlpha = 1.0 * alphaMul;
 			ctx.strokeStyle = 'rgba(234,255,255,' + coreAlpha.toFixed(3) + ')';
-			ctx.lineWidth = Math.max(3, thickness * 0.6);
+			ctx.lineWidth = Math.max(3, (thickness * tileScaleRef) * 0.6);
 			ctx.lineCap = 'round';
 			ctx.moveTo(sx, sy);
 			ctx.lineTo(ex, ey);
@@ -137,7 +139,8 @@ Item {
 
 			// endpoint glow: larger, brighter radial gradient to mark the hit point
 			try {
-				var r = Math.max(16, thickness * 1.2);
+				// endpoint radius in screen pixels
+				var r = Math.max(16, (thickness * tileScaleRef) * 1.2);
 				var grad = ctx.createRadialGradient(ex, ey, 0, ex, ey, r * 3);
 				grad.addColorStop(0.0, 'rgba(255,255,255,1.0)');
 				grad.addColorStop(0.12, 'rgba(200,240,255,0.95)');
@@ -151,7 +154,7 @@ Item {
 				// small bright core dot
 				ctx.beginPath();
 				ctx.fillStyle = 'rgba(255,255,255,0.95)';
-				ctx.arc(ex, ey, Math.max(4, thickness * 0.08), 0, Math.PI * 2);
+				ctx.arc(ex, ey, Math.max(4, (thickness * tileScaleRef) * 0.08), 0, Math.PI * 2);
 				ctx.fill();
 			} catch(e) { /* ignore gradient errors on some platforms */ }
 		}
@@ -194,8 +197,8 @@ Item {
 		var sy = (backend.startY !== undefined && backend.startY !== null) ? backend.startY : (backend.pos ? backend.pos.y : 0);
 		var ex = (endX !== 0 && endX !== undefined && endX !== null) ? endX : (backend.pos ? backend.pos.x : sx);
 		var ey = (endY !== 0 && endY !== undefined && endY !== null) ? endY : (backend.pos ? backend.pos.y : sy);
-		var scale = tileScaleRef <= 0 ? 1.0 : tileScaleRef;
-		var beamHalfWidth = (thickness / scale) * 0.5;
+		// thickness is treated as world units; beamHalfWidth in world units is thickness * 0.5
+		var beamHalfWidth = thickness * 0.5;
 		// prune stale entries and removed enemies from knockMap
 		for (var ki = knockMap.length - 1; ki >= 0; --ki) {
 			var ke = knockMap[ki];

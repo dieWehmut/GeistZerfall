@@ -11,7 +11,7 @@
 		"2": {
 			"background": "qrc:/resource/image/bg/lore/shenLinGate.png",
 			"contents": [
-				{ "type": "text", "text": "5.若状态空间共有 n 个节点、边数为 m，则 BFS 与 DFS 的时间复杂度分别为（）", "mode": "scene" }
+				{ "type": "text", "text": "5.若状态空间共有 n 个节点、边数为 m，则 BFS 的时间复杂度为（）", "mode": "scene" }
 			],
 			"choices": [
 				{ "text": "O(n²)", "next": "3" },
