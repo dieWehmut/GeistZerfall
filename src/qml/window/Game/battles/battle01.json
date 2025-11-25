@@ -4,6 +4,7 @@
     "bgm": "battle01.mp3"
   },
   "mapData": [
+
     [ 2,-1,-1,-1, 1,-1,-1,-1, 2],
     [-1, 4,-1,-1,-1,-1,-1, 4,-1],
     [-1,-1,-1,-1,-1,-1,-1,-1, 2],
@@ -13,6 +14,7 @@
     [-1,-1,-1,-1,-1,-1,-1,-1,-1],
     [-1, 4,-1,-1,-1,-1,-1, 4,-1],
     [ 2,-1,-1,-1, 1,-1,-1,-1, 2]
+
   ],
   "rules": {
     "winCondition": { "type": "allEnemiesDead" },
@@ -20,7 +22,7 @@
     "timeLimitSeconds": 60
   },
   "onResult": {
-    "win": { "nextChapter": "chapter01", "nextNode": "start" },
-    "lose": { "action": "gameOver" }
+    "win": { "next": "leap1" },
+    "lose": { "next": "leap1" }
   }
 }

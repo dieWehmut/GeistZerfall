@@ -1,0 +1,31 @@
+{
+	"meta": { "chapterId": "algorithm8" },
+	"nodes": {
+		"1": {
+			"background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+			"contents": [
+				{ "type": "title", "text": "算法题8", "isTitle": true, "mode": "scene" }
+			],
+			"nextNode": "2"
+		},
+		"2": {
+			"background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+			"contents": [
+				{ "type": "text", "text": "8.下列哪种数据结构适合实现优先队列？", "mode": "scene" }
+			],
+			"choices": [
+				{ "text": "链表", "next": "3" },
+				{ "text": "堆", "next": "3" },
+				{ "text": "栈", "next": "3" },
+				{ "text": "队列", "next": "3" }
+			]
+		},
+		"3": {
+			"background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+			"contents": [
+				{ "type": "text", "text": "算法题结束，进入异常章节 exception1。", "mode": "scene" }
+			],
+			"nextChapter": "exception1"
+		}
+	}
+}

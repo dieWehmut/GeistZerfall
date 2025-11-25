@@ -1,0 +1,23 @@
+{
+	"meta": { "chapterId": "preparation2a" },
+	"nodes": {
+		"1": {
+			"background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+			"contents": [
+				{ "type": "title", "text": "准备2a", "isTitle": true, "mode": "scene" }
+			],
+			"nextNode": "2"
+		},
+		"2": {
+			"background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+			"contents": [
+				{ "type": "text", "text": "选择吧", "mode": "scene" }
+			],
+			"choices": [
+				{ "text": "现在没心情", "next": "leap2a" },
+				{ "text": "下次一定", "next": "battle02" }
+			]
+		}
+	}
+}
+

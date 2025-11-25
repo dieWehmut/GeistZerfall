@@ -4,6 +4,7 @@
     "bgm": "battle05.mp3"
   },
   "mapData": [
+
     [-1,-1, 4,-1,-1,-1, 4,-1,-1],
     [-1,-1,-1,-1,-1,-1,-1,-1,-1],
     [ 7,-1, 3,-1,-1,-1, 3,-1, 5],
@@ -13,14 +14,15 @@
     [ 7,-1, 3,-1,-1,-1, 3,-1, 5],
     [-1,-1,-1,-1,-1,-1,-1,-1,-1],
     [-1,-1, 6,-1,-1,-1, 6,-1,-1]
+
   ],
   "rules": {
     "winCondition": { "type": "allEnemiesDead" },
     "loseCondition": { "type": "playerHpZero" },
-    "timeLimitSeconds": 15
+    "timeLimitSeconds": 80
   },
   "onResult": {
-    "win": { "action": "nextLevel" },
-    "lose": { "action": "gameOver" }
+    "win": { "next": "be6" },
+    "lose": { "next": "be6" }
   }
 }

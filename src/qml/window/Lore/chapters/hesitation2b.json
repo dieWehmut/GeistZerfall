@@ -1,0 +1,23 @@
+{
+	"meta": { "chapterId": "hesitation2b" },
+	"nodes": {
+		"1": {
+			"background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+			"contents": [
+				{ "type": "title", "text": "犹豫2b", "isTitle": true, "mode": "scene" }
+			],
+			"nextNode": "2"
+		},
+		"2": {
+			"background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+			"contents": [
+				{ "type": "text", "text": "选择吧", "mode": "scene" }
+			],
+			"choices": [
+				{ "text": "太坑了", "next": "be2" },
+				{ "text": "感觉有点不太对", "next": "preparation2b" }
+			]
+		}
+	}
+}
+
