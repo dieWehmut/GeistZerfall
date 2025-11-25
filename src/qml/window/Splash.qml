@@ -30,6 +30,7 @@ Item {
             spacing: 20
 
             Text {
+                id: blackWarning
                 text: "WARNING"
                 font.pixelSize: 48
                 color: "white"
@@ -71,6 +72,7 @@ Item {
             spacing: 16
 
             Text {
+                id: midTitle
                 text: "本游戏纯属虚构"
                 font.pixelSize: 36
                 color: "white"
@@ -126,6 +128,28 @@ Item {
     // 使用 Timer 控制三个阶段：black 7s -> fade -> mid 5s -> fade -> white 3s -> finish
     Timer { id: blackTimer; interval: 7000; repeat: false; running: true; onTriggered: startFadeToMid() }
 
+    // Slow growth animation for the first page title (WARNING)
+    NumberAnimation {
+        id: blackWarnGrowAnim
+        target: blackWarning
+        property: "font.pixelSize"
+        from: 48; to: 56
+        duration: blackTimer.interval
+        running: blackPage.visible && blackPage.opacity > 0.5
+        loops: 1
+    }
+
+    // Slow growth animation for the middle page title
+    NumberAnimation {
+        id: midTitleGrowAnim
+        target: midTitle
+        property: "font.pixelSize"
+        from: 36; to: 44
+        duration: midTimer.interval
+        running: midBlackPage.visible && midBlackPage.opacity > 0.5
+        loops: 1
+    }
+
     // fade 动画：black -> mid
     ParallelAnimation {
         id: fadeToMidAnim
@@ -133,8 +157,16 @@ Item {
         PropertyAnimation { target: blackPage; property: "opacity"; to: 0.0; duration: 600 }
         PropertyAnimation { target: midBlackPage; property: "opacity"; to: 1.0; duration: 600 }
         onStopped: {
+            // 确保最终状态被强制设置，避免动画被中断导致两页同时可见
+            blackPage.opacity = 0
+            midBlackPage.opacity = 1
+            // 隐藏第一页以避免点击穿透或视觉重叠
+            blackPage.visible = false
             // 启动中间页面计时器
             midTimer.running = true
+            // ensure mid title growth starts and finalize first title
+            blackWarnGrowAnim.running = false; blackWarning.font.pixelSize = 56;
+            midTitleGrowAnim.restart();
         }
     }
 
@@ -149,6 +181,11 @@ Item {
             whiteTimer.running = true
             // trigger white page title entrance
             whitePage.whiteTitleEntered = true
+            // 确保中间页面不可见以避免重叠
+            midBlackPage.opacity = 0
+            midBlackPage.visible = false
+            // finalize middle title size
+            midTitleGrowAnim.running = false; midTitle.font.pixelSize = 44;
         }
     }
 
@@ -157,6 +194,11 @@ Item {
     Timer { id: whiteTimer; interval: 3000; repeat: false; running: false; onTriggered: finishSplash() }
 
     function startFadeToMid() {
+        // make sure both pages visible during the animation
+        blackPage.visible = true
+        midBlackPage.visible = true
+        // restart the first title growth in case user returned here quickly
+        blackWarnGrowAnim.restart();
         fadeToMidAnim.start();
     }
 
@@ -176,7 +218,13 @@ Item {
             }
                 // if first fade is in progress, stop it and goto mid timer / show mid immediately
                 if (fadeToMidAnim.running) {
+                    // interrupt: force final mid state so the first page does not remain visible
                     fadeToMidAnim.stop();
+                    // finalize first-page title animation and start middle title growth
+                    blackWarnGrowAnim.running = false; blackWarning.font.pixelSize = 56;
+                    midTitleGrowAnim.restart();
+                    blackPage.opacity = 0; blackPage.visible = false;
+                    midBlackPage.opacity = 1; midBlackPage.visible = true;
                     midTimer.running = true;
                     return;
                 }
@@ -189,8 +237,12 @@ Item {
 
                 // if second fade is in progress, stop it and jump to finish
                 if (fadeToWhiteAnim.running) {
+                    // interrupt white fade: ensure white page is shown and mid page hidden
                     fadeToWhiteAnim.stop();
-                    whitePage.whiteTitleEntered = true
+                    // finalize middle title animation before leaving
+                    midTitleGrowAnim.running = false; midTitle.font.pixelSize = 44;
+                    whitePage.opacity = 1; whitePage.whiteTitleEntered = true;
+                    midBlackPage.opacity = 0; midBlackPage.visible = false;
                     finishSplash();
                     return;
                 }
