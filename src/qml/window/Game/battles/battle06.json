@@ -26,7 +26,7 @@
     "timeLimitSeconds": 75
   },
   "onResult": {
-    "win": { "nextChapter": "chapter01", "nextNode": "start" },
-    "lose": { "action": "gameOver" }
+    "win": { "next": "te" },
+    "lose": { "next": "te" }
   }
 }

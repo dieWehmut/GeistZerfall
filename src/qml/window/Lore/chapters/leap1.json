@@ -1,0 +1,20 @@
+{
+	"meta": { "chapterId": "leap1" },
+	"nodes": {
+		"1": {
+			"background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+			"contents": [
+				{ "type": "title", "text": "跳跃", "isTitle": true, "mode": "scene" }
+			],
+			"nextNode": "2"
+		},
+		"2": {
+			"background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+			"contents": [
+				{ "type": "text", "text": "进入算法题", "mode": "scene" }
+			],
+			"nextChapter": "algorithm1"
+		}
+	}
+}
+

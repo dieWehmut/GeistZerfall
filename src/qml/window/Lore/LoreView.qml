@@ -227,6 +227,17 @@ Item {
             currentNode = chapterData.meta.startNode;
         }
 
+            // 如果 currentNode 在加载的章节中不存在，尝试回退到章节的 startNode 或者第一个节点，防止旧的引用（例如 "start"）导致找不到节点
+            if (chapterData && chapterData.nodes && (!chapterData.nodes[currentNode])) {
+                if (chapterData.meta && chapterData.meta.startNode && chapterData.nodes[chapterData.meta.startNode]) {
+                    console.log("LoreView: currentNode", currentNode, "not found in chapter; falling back to startNode", chapterData.meta.startNode);
+                    currentNode = chapterData.meta.startNode;
+                } else {
+                    console.log("LoreView: currentNode", currentNode, "not found and no valid startNode; defaulting to first available node");
+                    for (var k in chapterData.nodes) { currentNode = k; break; }
+                }
+            }
+
         if (chapterData && chapterData.nodes) {
             console.log("LoreView: loaded chapter data", chapterId);
             showCurrentContent();
@@ -458,13 +469,32 @@ Item {
             if (node.action === "startBattle") {
                 var battleId = node.actionParams ? node.actionParams.battleId : "battle01";
                 console.log("LoreView: starting battle", battleId);
-                
                 if (typeof transitionManager !== 'undefined') {
                     transitionManager.startBattle(battleId);
                 } else {
                     console.log("LoreView: transitionManager not found");
                 }
+            } else if (node.action === "gameOver") {
+                // End the game and return to main menu
+                try { persistLoreState(); } catch(e) { }
+                try { window.pageHistory = []; } catch(e) { }
+                try { if (window && typeof window.playMusic === 'function') window.playMusic("qrc:/resource/audio/bgm/mainmenu.mp3"); } catch(e) { }
+                try {
+                    if (window && window.replaceSource) window.replaceSource("qml/window/MainMenu.qml"); else if (window && window.pushSource) window.pushSource("qml/window/MainMenu.qml");
+                } catch (eNav) { console.log('LoreView: gameOver navigation failed', eNav); }
+                return;
             }
+            return;
+        }
+
+        // 到达节点末尾且存在分支选项时，弹出选择对话框
+        if (node.choices && node.choices.length > 0) {
+            console.log("LoreView: node has choices at end, showing choice dialog", node.choices);
+            try {
+                choiceDialog.choices = node.choices;
+                choiceDialog.visible = true;
+            } catch (e) { console.log('LoreView: show choice dialog error', e); }
+            setAutoMode(false);
             return;
         }
 
@@ -474,6 +504,17 @@ Item {
             currentNode = node.nextNode;
             currentContentIndex = 0;
             showCurrentContent();
+            return;
+        }
+
+        // 新增：如果节点指定了 nextChapter，则自动切换到该章节
+        if (node.nextChapter) {
+            console.log("LoreView: moving to next chapter", node.nextChapter);
+            // 记录当前章节并重置 node/index 然后加载新章节
+            currentChapter = node.nextChapter;
+            currentNode = "";
+            currentContentIndex = 0;
+            loadChapter(currentChapter);
             return;
         }
 
@@ -511,14 +552,17 @@ Item {
         // 采用手动坐标定位，避免宽高为0时锚点失效导致左上角位置
         z: 1500
         active: true
-        visible: root.currentMode === "scene" && scene.textBoxItem && !root.isTitleScreen
+        // make control bar visible whenever we're in "scene" mode and not a title screen
+        // (don't depend on scene.textBoxItem existing at bind time)
+        visible: root.currentMode === "scene" && !root.isTitleScreen
 
         onLoaded: {
             if (!controlBarLoader.item) return;
             var obj = controlBarLoader.item;
             // 让 Loader 拥有 item 尺寸用于居中
-            controlBarLoader.width = (obj.width && obj.width > 0) ? obj.width : (obj.implicitWidth || obj.childrenRect ? obj.childrenRect.width : 0);
-            controlBarLoader.height = (obj.height && obj.height > 0) ? obj.height : (obj.implicitHeight || obj.childrenRect ? obj.childrenRect.height : 0);
+            controlBarLoader.width = (obj.width && obj.width > 0) ? obj.width : ((obj.implicitWidth !== undefined && obj.implicitWidth !== 0) ? obj.implicitWidth : (obj.childrenRect ? obj.childrenRect.width : 0));
+            controlBarLoader.height = (obj.height && obj.height > 0) ? obj.height : ((obj.implicitHeight !== undefined && obj.implicitHeight !== 0) ? obj.implicitHeight : (obj.childrenRect ? obj.childrenRect.height : 0));
+            console.log("LoreView: controlBarLoader onLoaded size -> w:", controlBarLoader.width, "h:", controlBarLoader.height, "itemExists:", !!controlBarLoader.item);
             updateControlBarPos();
             try { obj.autoEnabled = root.autoModeEnabled; } catch (e) { }
 
@@ -575,6 +619,7 @@ Item {
         onStatusChanged: {
             console.log("LoreView: controlBarLoader status=", status, "source=", source)
         }
+        onVisibleChanged: updateControlBarPos()
         onWidthChanged: updateControlBarPos()
         onHeightChanged: updateControlBarPos()
     }
@@ -587,19 +632,44 @@ Item {
 
     // 更新控制条位置：贴在文本框底部中央
     function updateControlBarPos() {
-        if (!scene || !scene.textBoxItem || !controlBarLoader.item) return;
-        var tb = scene.textBoxItem;
-        // 使用 textBoxItem 的全局坐标映射到 root
-        var pt = tb.mapToItem(root, 0, 0);
-        var desiredWidth = controlBarLoader.width;
-        // 若宽度尚未就绪，延迟重试
-        if (!desiredWidth || desiredWidth === 0) {
-            Qt.callLater(updateControlBarPos);
-            persistLoreState();
+        if (!controlBarLoader.item) {
+            console.log("LoreView: updateControlBarPos abort - no controlBarLoader.item");
             return;
         }
-        controlBarLoader.x = pt.x + (tb.width - desiredWidth)/2;
-        controlBarLoader.y = pt.y + tb.height - controlBarLoader.height - 12; // 12px 上留白
+
+        var tb = null;
+        try { tb = (scene && scene.textBoxItem) ? scene.textBoxItem : null; } catch (e) { tb = null; }
+
+        var desiredWidth = controlBarLoader.width;
+        var desiredHeight = controlBarLoader.height;
+
+        // 若宽度尚未就绪，延迟重试一次
+        if (!desiredWidth || desiredWidth === 0) {
+            console.log("LoreView: updateControlBarPos delaying - controlBar width not ready");
+            Qt.callLater(updateControlBarPos);
+            return;
+        }
+
+        // 如果 textBox 存在则将控制条贴到 textBox 底部，否则回退到 root 底部中央
+        if (tb) {
+            try {
+                var pt = tb.mapToItem(root, 0, 0);
+                controlBarLoader.x = pt.x + (tb.width - desiredWidth)/2;
+                controlBarLoader.y = pt.y + tb.height - desiredHeight - 12; // 12px 上留白
+                console.log("LoreView: updateControlBarPos -> anchored to textBox at", controlBarLoader.x, controlBarLoader.y);
+            } catch (ePos) {
+                console.log("LoreView: updateControlBarPos textBox mapToItem failed", ePos);
+                // fallback to bottom center
+                controlBarLoader.x = Math.round((root.width - desiredWidth)/2);
+                controlBarLoader.y = Math.round(root.height - desiredHeight - 12);
+                console.log("LoreView: updateControlBarPos fallback bottom center at", controlBarLoader.x, controlBarLoader.y);
+            }
+        } else {
+            // fallback: position at bottom center of root
+            controlBarLoader.x = Math.round((root.width - desiredWidth)/2);
+            controlBarLoader.y = Math.round(root.height - desiredHeight - 12);
+            console.log("LoreView: updateControlBarPos -> no textBox, placed at bottom center", controlBarLoader.x, controlBarLoader.y, "root size", root.width, root.height);
+        }
     }
 
     Connections {
@@ -618,7 +688,7 @@ Item {
     // 全屏点击区域(左键点击前进)
     MouseArea {
         anchors.fill: parent
-        enabled: !historyPanel.visible && !confirmTitleDialog.visible
+        enabled: !historyPanel.visible && !confirmTitleDialog.visible && !choiceDialog.visible
         onClicked: {
             console.log("LoreView: clicked, advancing content");
             // 点击时也停止标题自动切换计时器
@@ -632,7 +702,7 @@ Item {
     // 鼠标滚轮处理器(向下滚动前进)
     WheelHandler {
         target: root
-        enabled: !historyPanel.visible && !confirmTitleDialog.visible  // 历史或对话框打开时禁用
+        enabled: !historyPanel.visible && !confirmTitleDialog.visible && !choiceDialog.visible  // 历史或对话框打开时禁用
         onWheel: function(event) {
             // 向下滚动时 angleDelta.y < 0
             if (event.angleDelta.y < 0) {
@@ -743,6 +813,77 @@ Item {
             } else {
                 console.log("LoreView: invalid jump target", nodeId);
             }
+        }
+    }
+
+    // 选项对话框（当节点包含 choices 时弹出）
+    ChoiceDialog {
+        id: choiceDialog
+        z: 2500
+        anchors.fill: parent
+        visible: false
+        onChoiceSelected: function(index) {
+            console.log("LoreView: choice selected", index);
+            try {
+                var node = chapterData && chapterData.nodes && chapterData.nodes[currentNode] ? chapterData.nodes[currentNode] : null;
+                if (!node || !node.choices || index < 0 || index >= node.choices.length) return;
+                var choice = node.choices[index];
+                if (!choice || !choice.next) { choiceDialog.visible = false; return; }
+                var target = choice.next;
+                // case A: next refers to a node in the same chapter
+                if (chapterData && chapterData.nodes && chapterData.nodes[target]) {
+                    currentNode = target;
+                    currentContentIndex = 0;
+                    choiceDialog.visible = false;
+                    showCurrentContent();
+                    return;
+                }
+                // case B: next refers to another chapter id (try to load it)
+                try {
+                    var testPath = ":/qml/window/Lore/chapters/" + target + ".json";
+                    var testObj = fileReader.readJsonFile(testPath);
+                    if (testObj && testObj.nodes) {
+                        // switch to the other chapter
+                        currentChapter = target;
+                        currentNode = "";
+                        currentContentIndex = 0;
+                        choiceDialog.visible = false;
+                        loadChapter(target);
+                        return;
+                    }
+                } catch (e) { /* ignore - not a chapter */ }
+
+                // case C: target may be a battle id (e.g. "battle01") — start battle
+                try {
+                    if (typeof target === 'string' && (/^battle/i).test(target)) {
+                        console.log("LoreView: choice requests battle start:", target);
+                        // prefer transition manager
+                        try {
+                            if (typeof transitionManager !== 'undefined' && typeof transitionManager.startBattle === 'function') {
+                                choiceDialog.visible = false;
+                                setAutoMode(false);
+                                transitionManager.startBattle(target);
+                                return;
+                            }
+                        } catch (e2) { console.log('LoreView: transitionManager.startBattle error', e2); }
+
+                        // fallback: set window battle id and switch to GameView
+                        try {
+                            if (typeof window !== 'undefined') {
+                                window.currentBattleId = target;
+                                choiceDialog.visible = false;
+                                setAutoMode(false);
+                                if (window.replaceSource) window.replaceSource("qml/window/Game/GameView.qml"); else if (window.pushSource) window.pushSource("qml/window/Game/GameView.qml");
+                                return;
+                            }
+                        } catch (e3) { console.log('LoreView: fallback start battle failed', e3); }
+                    }
+                } catch (eB) { }
+
+                // unknown target
+                console.log("LoreView: choice target not found in current chapter or as chapter:", target);
+                choiceDialog.visible = false;
+            } catch (e) { console.log('LoreView: onChoiceSelected error', e); }
         }
     }
 

@@ -1,0 +1,23 @@
+{
+	"meta": { "chapterId": "leap3" },
+	"nodes": {
+		"1": {
+			"background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+			"contents": [
+				{ "type": "title", "text": "跳跃3", "isTitle": true, "mode": "scene" }
+			],
+			"nextNode": "2"
+		},
+		"2": {
+			"background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+			"contents": [
+				{ "type": "text", "text": "选择吧", "mode": "scene" }
+			],
+			"choices": [
+				{ "text": "不好", "next": "transition2" },
+				{ "text": "没什么问题", "next": "preparation4" }
+			]
+		}
+	}
+}
+

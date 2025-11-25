@@ -1,0 +1,31 @@
+{
+	"meta": { "chapterId": "algorithm2" },
+	"nodes": {
+		"1": {
+			"background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+			"contents": [
+				{ "type": "title", "text": "算法题2", "isTitle": true, "mode": "scene" }
+			],
+			"nextNode": "2"
+		},
+		"2": {
+			"background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+			"contents": [
+				{ "type": "text", "text": "2.下列递归方程中，时间复杂度为 O(2ⁿ) 的是（）", "mode": "scene" }
+			],
+			"choices": [
+				{ "text": "T(n) = T(n−1) + O(1)", "next": "3" },
+				{ "text": "T(n) = 2T(n−1) + O(1)", "next": "3" },
+				{ "text": "T(n) = T(n/2) + O(1)", "next": "3" },
+				{ "text": "T(n) = 2T(n/2) + O(1)", "next": "3" }
+			]
+		},
+		"3": {
+			"background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+			"contents": [
+				{ "type": "text", "text": "下一题：algorithm3", "mode": "scene" }
+			],
+			"nextChapter": "algorithm3"
+		}
+	}
+}

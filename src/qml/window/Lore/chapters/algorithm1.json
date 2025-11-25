@@ -1,0 +1,31 @@
+{
+	"meta": { "chapterId": "algorithm1" },
+	"nodes": {
+		"1": {
+			"background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+			"contents": [
+				{ "type": "title", "text": "算法题1", "isTitle": true, "mode": "scene" }
+			],
+			"nextNode": "2"
+		},
+		"2": {
+			"background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+			"contents": [
+				{ "type": "text", "text": "1.在 C++ 中实现枚举法时常用的 STL 组合是（）", "mode": "scene" }
+			],
+			"choices": [
+				{ "text": "map + sort", "next": "3" },
+				{ "text": "vector + next_permutation", "next": "3" },
+				{ "text": "priority_queue + set", "next": "3" },
+				{ "text": "stack + queue", "next": "3" }
+			]
+		},
+		"3": {
+			"background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+			"contents": [
+				{ "type": "text", "text": "下一题：algorithm2", "mode": "scene" }
+			],
+			"nextChapter": "algorithm2"
+		}
+	}
+}
