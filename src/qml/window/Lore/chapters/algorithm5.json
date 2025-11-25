@@ -2,14 +2,14 @@
 	"meta": { "chapterId": "algorithm5" },
 	"nodes": {
 		"1": {
-			"background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+			"background": "qrc:/resource/image/bg/lore/5_Question_Options.png",
 			"contents": [
 				{ "type": "title", "text": "算法题5", "isTitle": true, "mode": "scene" }
 			],
 			"nextNode": "2"
 		},
 		"2": {
-			"background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+			"background": "qrc:/resource/image/bg/lore/5_Question.png",
 			"contents": [
 				{ "type": "text", "text": "5.若状态空间共有 n 个节点、边数为 m，则 BFS 的时间复杂度为（）", "mode": "scene" }
 			],
@@ -21,9 +21,9 @@
 			]
 		},
 		"3": {
-			"background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+			"background": "qrc:/resource/image/bg/lore/5_Options_Question_Answer.png",
 			"contents": [
-				{ "type": "text", "text": "下一题：algorithm6", "mode": "scene" }
+				{ "type": "text", "text": "图搜索需遍历全部节点和边，时间复杂度统一为 O(n+m)", "mode": "scene" }
 			],
 			"nextChapter": "algorithm6"
 		}
