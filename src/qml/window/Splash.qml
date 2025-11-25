@@ -33,6 +33,8 @@ Item {
                 id: blackWarning
                 text: "WARNING"
                 font.pixelSize: 48
+                scale: 1
+                transformOrigin: Item.Center
                 color: "white"
                 font.bold: true
                 horizontalAlignment: Text.AlignHCenter
@@ -52,6 +54,8 @@ Item {
                 "若在游玩过程中出现头晕、心悸、视力模糊、焦虑等不适，请立即停止并寻求医疗或照护者协助。"
                 wrapMode: Text.WordWrap
                 font.pixelSize: 22
+                scale: 1
+                transformOrigin: Item.Center
                 color: "white"
                 horizontalAlignment: Text.AlignHCenter
                 anchors.horizontalCenter: parent.horizontalCenter
@@ -75,6 +79,8 @@ Item {
                 id: midTitle
                 text: "本游戏纯属虚构"
                 font.pixelSize: 36
+                scale: 1
+                transformOrigin: Item.Center
                 color: "white"
                 font.bold: true
                 horizontalAlignment: Text.AlignHCenter
@@ -82,9 +88,12 @@ Item {
             }
 
             Text {
+                id: midBody
                 text: "游戏中的人物、地点、事件均为虚构，如有雷同，纯属巧合。"
                 wrapMode: Text.WordWrap
                 font.pixelSize: 20
+                scale: 1
+                transformOrigin: Item.Center
                 color: "white"
                 horizontalAlignment: Text.AlignHCenter
                 anchors.horizontalCenter: parent.horizontalCenter
@@ -106,6 +115,8 @@ Item {
             text: "GeistZerfall"
             anchors.centerIn: parent
             font.pixelSize: 56
+            scale: 1
+            transformOrigin: Item.Center
             color: "black"
             font.bold: true
             horizontalAlignment: Text.AlignHCenter
@@ -128,26 +139,42 @@ Item {
     // 使用 Timer 控制三个阶段：black 7s -> fade -> mid 5s -> fade -> white 3s -> finish
     Timer { id: blackTimer; interval: 7000; repeat: false; running: true; onTriggered: startFadeToMid() }
 
-    // Slow growth animation for the first page title (WARNING)
-    NumberAnimation {
-        id: blackWarnGrowAnim
-        target: blackWarning
-        property: "font.pixelSize"
-        from: 48; to: 56
-        duration: blackTimer.interval
-        running: blackPage.visible && blackPage.opacity > 0.5
-        loops: 1
+    // Slow growth animations for all text on each page (smooth scaling)
+    ParallelAnimation {
+        id: blackGrowAnim
+        // 自动在黑页可见且计时器运行时启动
+        running: blackPage.visible && blackTimer.running
+        // WARNING title grow (scale is smoother than changing font size)
+        NumberAnimation { target: blackWarning; property: "scale"; from: 1; to: 1.1667; duration: blackTimer.interval; easing.type: Easing.InOutQuad }
+        // WARNING body grow
+        NumberAnimation { target: warnBody; property: "scale"; from: 1; to: 1.1818; duration: blackTimer.interval; easing.type: Easing.InOutQuad }
+        onStopped: {
+            blackWarning.scale = 1.1667;
+            warnBody.scale = 1.1818;
+        }
     }
 
-    // Slow growth animation for the middle page title
-    NumberAnimation {
-        id: midTitleGrowAnim
-        target: midTitle
-        property: "font.pixelSize"
-        from: 36; to: 44
-        duration: midTimer.interval
-        running: midBlackPage.visible && midBlackPage.opacity > 0.5
-        loops: 1
+    ParallelAnimation {
+        id: midGrowAnim
+        // 自动在中间页可见且计时器运行时启动
+        running: midBlackPage.visible && midTimer.running
+        // Middle page title grow (scale)
+        NumberAnimation { target: midTitle; property: "scale"; from: 1; to: 1.2222; duration: midTimer.interval; easing.type: Easing.InOutQuad }
+        // Middle page body grow
+        NumberAnimation { target: midBody; property: "scale"; from: 1; to: 1.2; duration: midTimer.interval; easing.type: Easing.InOutQuad }
+        onStopped: {
+            midTitle.scale = 1.2222;
+            midBody.scale = 1.2;
+        }
+    }
+
+    // white page growth (title and any other text if added)
+    ParallelAnimation {
+        id: whiteGrowAnim
+        // 自动在白页可见且计时器运行时启动
+        running: whitePage.visible && whiteTimer.running
+        NumberAnimation { target: whiteTitle; property: "scale"; from: 1; to: 1.1429; duration: whiteTimer.interval; easing.type: Easing.InOutQuad }
+        onStopped: { whiteTitle.scale = 1.1429 }
     }
 
     // fade 动画：black -> mid
@@ -164,9 +191,10 @@ Item {
             blackPage.visible = false
             // 启动中间页面计时器
             midTimer.running = true
-            // ensure mid title growth starts and finalize first title
-            blackWarnGrowAnim.running = false; blackWarning.font.pixelSize = 56;
-            midTitleGrowAnim.restart();
+            // ensure mid title growth starts and finalize first page text scales
+            blackGrowAnim.stop();
+            blackWarning.scale = 1.1667; warnBody.scale = 1.1818;
+            midGrowAnim.restart();
         }
     }
 
@@ -184,8 +212,10 @@ Item {
             // 确保中间页面不可见以避免重叠
             midBlackPage.opacity = 0
             midBlackPage.visible = false
-            // finalize middle title size
-            midTitleGrowAnim.running = false; midTitle.font.pixelSize = 44;
+            // finalize middle title scale and start white grow
+            midGrowAnim.stop(); midTitle.scale = 1.2222;
+            midBody.scale = 1.2;
+            whiteGrowAnim.restart();
         }
     }
 
@@ -197,8 +227,8 @@ Item {
         // make sure both pages visible during the animation
         blackPage.visible = true
         midBlackPage.visible = true
-        // restart the first title growth in case user returned here quickly
-        blackWarnGrowAnim.restart();
+        // restart the first page text growth in case user returned here quickly
+        blackGrowAnim.restart();
         fadeToMidAnim.start();
     }
 
@@ -220,9 +250,9 @@ Item {
                 if (fadeToMidAnim.running) {
                     // interrupt: force final mid state so the first page does not remain visible
                     fadeToMidAnim.stop();
-                    // finalize first-page title animation and start middle title growth
-                    blackWarnGrowAnim.running = false; blackWarning.font.pixelSize = 56;
-                    midTitleGrowAnim.restart();
+                    // finalize first-page text animation and start middle title growth
+                    blackGrowAnim.stop(); blackWarning.scale = 1.1667; warnBody.scale = 1.1818;
+                    midGrowAnim.restart();
                     blackPage.opacity = 0; blackPage.visible = false;
                     midBlackPage.opacity = 1; midBlackPage.visible = true;
                     midTimer.running = true;
@@ -240,7 +270,7 @@ Item {
                     // interrupt white fade: ensure white page is shown and mid page hidden
                     fadeToWhiteAnim.stop();
                     // finalize middle title animation before leaving
-                    midTitleGrowAnim.running = false; midTitle.font.pixelSize = 44;
+                    midGrowAnim.stop(); midTitle.scale = 1.2222; midBody.scale = 1.2; whiteGrowAnim.restart();
                     whitePage.opacity = 1; whitePage.whiteTitleEntered = true;
                     midBlackPage.opacity = 0; midBlackPage.visible = false;
                     finishSplash();

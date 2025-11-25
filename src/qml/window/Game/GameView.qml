@@ -158,8 +158,9 @@ Item {
 			gameViewRoot.snipeHeld = true;
 			try { if (playerObj && typeof playerObj.snipeStart === 'function') playerObj.snipeStart(); } catch(e) {}
 		}
-		tileScale = 1 / 3.0;
-		sightMask.radius = sightMask.baseRadius * tileScale;
+		tileScale = 1 / 4.0;
+		// enlarge sight mask when zoomed in: cap to 2x the baseRadius (user preference)
+		sightMask.radius = sightMask.baseRadius * 1.5;
 		try { if (fireTimer && fireTimer.running) fireTimer.stop(); } catch(e) {}
 		try { if (playerItem && typeof playerItem.startBulletRecharge === 'function') playerItem.startBulletRecharge(); } catch(e) {}
 	}
@@ -172,7 +173,7 @@ Item {
 			try { if (playerObj && typeof playerObj.snipeStop === 'function') playerObj.snipeStop(); } catch(e) {}
 		}
 		tileScale = 1.0;
-		sightMask.radius = sightMask.baseRadius * tileScale;
+		sightMask.radius = sightMask.baseRadius / Math.max(0.0001, tileScale);
 		try { if (playerItem && typeof playerItem.startBulletRecharge === 'function') playerItem.startBulletRecharge(); } catch(e) {}
 	}
 
@@ -2291,8 +2292,8 @@ Item {
 		// baseRadius 是默认（原始）视野半径，可调整或从后端读取
 		// read sight via Q_PROPERTY exposed as 'sight'
 		property real baseRadius: playerObj ? (playerObj.sight ? playerObj.sight : 180) : 180
-		// 初始半径按当前 tileScale 缩放，避免进入游戏时出现不一致大小
-		property real radius: baseRadius * tileScale
+		// 初始半径按当前 tileScale 缩放（放大视野时半径应随之放大）
+		property real radius: baseRadius / Math.max(0.0001, tileScale)
 	property color maskColor: Qt.rgba(0,0,0,1.0)
 		z: 999
 
@@ -2312,11 +2313,11 @@ Item {
 			onTileScaleChanged: {
 				// 如果当前处于移动或狙击动态调整，保持逻辑不强制覆盖；否则按基础值更新
 				if (gameViewRoot.snipeHeld) {
-					sightMask.radius = sightMask.baseRadius * tileScale;
+					sightMask.radius = sightMask.baseRadius * 2;
 				} else if (playerItem && playerItem.moving) {
-					sightMask.radius = (sightMask.baseRadius / 2) * tileScale;
+					sightMask.radius = (sightMask.baseRadius / 2) / Math.max(0.0001, tileScale);
 				} else {
-					sightMask.radius = sightMask.baseRadius * tileScale;
+					sightMask.radius = sightMask.baseRadius / Math.max(0.0001, tileScale);
 				}
 			}
 		}
@@ -2365,17 +2366,17 @@ Item {
     		target: playerItem
     		onMovingChanged: {
     			// If the snipe/space key is held, keep sight locked at maximum and ignore moving changes
-    			if (gameViewRoot.snipeHeld) {
-    				// enforce max sight while held
-    				sightMask.radius = sightMask.baseRadius * tileScale;
-    				return;
-    			}
-    			if (playerItem.moving) {
-    				// 把 radius 缩小为原来的一半，动画由 Behavior 控制
-    				sightMask.radius = (sightMask.baseRadius / 2) * tileScale;
-    			} else {
-    				sightMask.radius = sightMask.baseRadius * tileScale;
-    			}
+				if (gameViewRoot.snipeHeld) {
+					// enforce max sight while held (user wants capped 2x)
+					sightMask.radius = sightMask.baseRadius * 2;
+					return;
+				}
+				if (playerItem.moving) {
+					// 把 radius 缩小为原来的一半，动画由 Behavior 控制
+					sightMask.radius = (sightMask.baseRadius / 2) / Math.max(0.0001, tileScale);
+				} else {
+					sightMask.radius = sightMask.baseRadius / Math.max(0.0001, tileScale);
+				}
     		}
     	}
 

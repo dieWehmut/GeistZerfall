@@ -35,15 +35,17 @@ Item {
     Canvas {
         id: circ
         anchors.centerIn: parent
+        // circleScreenRadius is treated as WORLD units; convert to screen pixels here
         // ensure canvas is large enough to hold the outer lines (1.5x radius)
-        width: Math.max(parent.width, circleScreenRadius * 2 * 1.5)
+        width: Math.max(parent.width, (circleScreenRadius * tileScaleRef) * 2 * 1.5)
         height: width
         z: sprite.z - 1
         opacity: 0.65
         onPaint: {
             var ctx = getContext('2d');
             ctx.clearRect(0,0,width,height);
-            var r = circleScreenRadius;
+            // radius in screen pixels
+            var r = circleScreenRadius * tileScaleRef;
             var cx = width/2;
             var cy = height/2;
             // outer soft ring
@@ -115,7 +117,8 @@ Item {
             var now = Date.now();
             pruneCache(now);
             var bx = backend.pos.x; var by = backend.pos.y;
-            var rWorld = circleScreenRadius / Math.max(0.0001, tileScaleRef);
+            // circleScreenRadius is expressed in world units now
+            var rWorld = circleScreenRadius;
             for (var i = 0; i < enemiesRef.length; ++i) {
                 var enemy = enemiesRef[i];
                 if (!enemy || enemy.alive === false || !enemy.pos) continue;
