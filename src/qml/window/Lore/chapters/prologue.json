@@ -4,7 +4,7 @@
     "1": {
       "background": "qrc:/resource/image/bg/lore/shenLinGate.png",
       "contents": [
-        { "type": "title", "text": "序章", "isTitle": true, "mode": "scene", "music": "qrc:/resource/audio/bgm/nervous.mp3", "musicLoops": -1 }
+        { "type": "title", "text": "prologue", "isTitle": true, "mode": "scene", "music": "qrc:/resource/audio/bgm/nervous.mp3", "musicLoops": -1 }
       ],
       "nextNode": "2"
     },

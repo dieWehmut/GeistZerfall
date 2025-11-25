@@ -14,10 +14,10 @@
 				{ "type": "text", "text": "2.下列递归方程中，时间复杂度为 O(2ⁿ) 的是（）", "mode": "scene" }
 			],
 			"choices": [
-				{ "text": "A. T(n) = T(n−1) + O(1)", "next": "3" },
-				{ "text": "B. T(n) = 2T(n−1) + O(1)", "next": "3" },
-				{ "text": "C. T(n) = T(n/2) + O(1)", "next": "3" },
-				{ "text": "D. T(n) = 2T(n/2) + O(1)", "next": "3" }
+				{ "text": "T(n) = T(n−1) + O(1)", "next": "3" },
+				{ "text": "T(n) = 2T(n−1) + O(1)", "next": "3" },
+				{ "text": "T(n) = T(n/2) + O(1)", "next": "3" },
+				{ "text": "T(n) = 2T(n/2) + O(1)", "next": "3" }
 			]
 		},
 		"3": {
