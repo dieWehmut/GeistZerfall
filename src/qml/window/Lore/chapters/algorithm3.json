@@ -14,10 +14,10 @@
 				{ "type": "text", "text": "3.“最长上升子序列（LIS）”的 DP 状态转移方程为（）", "mode": "scene" }
 			],
 			"choices": [
-				{ "text": "A. dp[i] = dp[i−1] + 1", "next": "3" },
-				{ "text": "B. dp[i] = max(dp[j]) + 1（j < i, a[j] < a[i]）", "next": "3" },
-				{ "text": "C. dp[i] = min(dp[j]) + 1", "next": "3" },
-				{ "text": "D. dp[i] = dp[i−1] − 1", "next": "3" }
+				{ "text": "dp[i] = dp[i−1] + 1", "next": "3" },
+				{ "text": "dp[i] = max(dp[j]) + 1（j < i, a[j] < a[i]）", "next": "3" },
+				{ "text": "dp[i] = min(dp[j]) + 1", "next": "3" },
+				{ "text": "dp[i] = dp[i−1] − 1", "next": "3" }
 			]
 		},
 		"3": {

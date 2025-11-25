@@ -14,10 +14,10 @@
 				{ "type": "text", "text": "6.对于一个有向无环图（DAG）求最长路径，应使用（）", "mode": "scene" }
 			],
 			"choices": [
-				{ "text": "A. BFS", "next": "3" },
-				{ "text": "B. DFS", "next": "3" },
-				{ "text": "C. 拓扑排序 + DP", "next": "3" },
-				{ "text": "D. Dijkstra", "next": "3" }
+				{ "text": "BFS", "next": "3" },
+				{ "text": "DFS", "next": "3" },
+				{ "text": "拓扑排序 + DP", "next": "3" },
+				{ "text": "Dijkstra", "next": "3" }
 			]
 		},
 		"3": {
