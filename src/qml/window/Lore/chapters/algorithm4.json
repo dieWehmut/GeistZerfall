@@ -2,14 +2,14 @@
 	"meta": { "chapterId": "algorithm4" },
 	"nodes": {
 		"1": {
-			"background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+			"background": "qrc:/resource/image/bg/lore/4_Question_Options.png",
 			"contents": [
 				{ "type": "title", "text": "算法题4", "isTitle": true, "mode": "scene" }
 			],
 			"nextNode": "2"
 		},
 		"2": {
-			"background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+			"background": "qrc:/resource/image/bg/lore/4_Question.png",
 			"contents": [
 				{ "type": "text", "text": "4.构建哈夫曼树时，为了获得最优编码，下面哪一步是正确的？", "mode": "scene" }
 			],
@@ -21,9 +21,9 @@
 			]
 		},
 		"3": {
-			"background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+			"background": "qrc:/resource/image/bg/lore/4_Options_Question_Answer.png",
 			"contents": [
-				{ "type": "text", "text": "下一题：algorithm5", "mode": "scene" }
+				{ "type": "text", "text": "Huffman 每次选最小两权节点合并，保证最优前缀编码", "mode": "scene" }
 			],
 			"nextChapter": "algorithm5"
 		}

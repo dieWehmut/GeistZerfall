@@ -2,14 +2,14 @@
 	"meta": { "chapterId": "algorithm3" },
 	"nodes": {
 		"1": {
-			"background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+			"background": "qrc:/resource/image/bg/lore/3_Question_Options.png",
 			"contents": [
 				{ "type": "title", "text": "算法题3", "isTitle": true, "mode": "scene" }
 			],
 			"nextNode": "2"
 		},
 		"2": {
-			"background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+			"background": "qrc:/resource/image/bg/lore/3_Question.png",
 			"contents": [
 				{ "type": "text", "text": "3.“最长上升子序列（LIS）”的 DP 状态转移方程为（）", "mode": "scene" }
 			],
@@ -21,9 +21,9 @@
 			]
 		},
 		"3": {
-			"background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+			"background": "qrc:/resource/image/bg/lore/3_Options_Question_Answer.png",
 			"contents": [
-				{ "type": "text", "text": "下一题：algorithm4", "mode": "scene" }
+				{ "type": "text", "text": "LIS 中 dp[i] 取所有更小前驱 dp[j] 的最大值再加一", "mode": "scene" }
 			],
 			"nextChapter": "algorithm4"
 		}
