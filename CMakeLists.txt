@@ -39,7 +39,6 @@ qt_add_qml_module(GeistZerfall
         src/qml/components/AppButton.qml
         src/qml/components/BottomButtonBar.qml
         src/qml/components/ConfirmDialog.qml
-        src/qml/components/qmldir
         src/qml/window/Config.qml
         src/qml/window/Extra.qml
         src/qml/window/MainMenu.qml
@@ -47,9 +46,9 @@ qt_add_qml_module(GeistZerfall
         src/qml/window/Splash.qml
         src/qml/window/windowState.js
         src/qml/window/Game/GameView.qml
-        src/qml/window/Game/Map/qmldir
+        
         src/qml/window/Game/Map/Tile.qml
-        src/qml/window/Game/Entity/qmldir
+        
         src/qml/window/Game/Entity/Player.qml
         src/qml/window/Game/Entity/PlayerBullet.qml
         src/qml/window/Game/Entity/PlayerLaser.qml
@@ -86,10 +85,6 @@ qt_add_qml_module(GeistZerfall
         src/qml/window/Lore/components/LoreControlButton.qml
         src/qml/window/Lore/effects/AudioEffect.qml
         src/qml/window/Lore/effects/ParticleEffect.qml
-        src/qml/window/Lore/chapters/chapter01.json
-        src/qml/window/Lore/chapters/prologue.json
-        src/qml/window/Game/battles/battle01.json
-        src/qml/window/Game/battles/battle02.json
     SOURCES
         src/cpp/Entity/Entity.cpp
         src/cpp/Entity/Entity.h

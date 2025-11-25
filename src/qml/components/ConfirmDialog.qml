@@ -52,34 +52,20 @@ Item {
         z: 1
     }
 
-    // 右上角关闭按钮
-    Rectangle {
+    // 右上角关闭按钮（使用 AppButton 以保持统一样式）
+    AppButton {
         id: closeBtn
-        width: 32
-        height: 32
+        width: 40
+        height: 40
         anchors.right: dialogBg.right
         anchors.rightMargin: 12
         anchors.top: dialogBg.top
         anchors.topMargin: 12
-        radius: 16
-        color: closeBtnMouse.containsMouse ? "#e57373" : "transparent"
-        border.color: "#bbbbbb"
-        border.width: 1
         z: 2
-
-        MouseArea {
-            id: closeBtnMouse
-            anchors.fill: parent
-            hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
-            onClicked: root.visible = false
-        }
-
-        Text {
-            text: "×"
-            anchors.centerIn: parent
-            font.pixelSize: 22
-            color: "#222"
+        text: "×"
+        fontPixelSize: 20
+        onClicked: {
+            root.visible = false
         }
     }
 
