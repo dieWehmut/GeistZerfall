@@ -145,7 +145,7 @@ Item {
         anchors.bottom: parent.bottom
         height: parent.height * 0.28
         z: 100
-        visible: !(root.contentData && (root.contentData.type === "title" || root.contentData.isTitle))
+        visible: !!( !(root.contentData && (root.contentData.type === "title" || root.contentData.isTitle)) )
         
         // 白色背景
         color: "#F5F5F5"
@@ -194,7 +194,7 @@ Item {
         color: "#CC000000"
         border.color: "#88FFFFFF"
         border.width: 1
-        visible: root.contentData && (root.contentData.speakerName || root.contentData.speaker !== undefined)
+        visible: !!(root.contentData && (root.contentData.speakerName || root.contentData.speaker !== undefined))
         anchors.bottom: textBox.top
         anchors.bottomMargin: -6
         y: textBox.y - height - 6
@@ -246,7 +246,7 @@ Item {
     Item {
         id: titleContainer
         anchors.fill: parent
-        visible: root.contentData && (root.contentData.type === "title" || root.contentData.isTitle)
+        visible: !!(root.contentData && (root.contentData.type === "title" || root.contentData.isTitle))
         z: 60
 
         // 半透明遮罩（可选）

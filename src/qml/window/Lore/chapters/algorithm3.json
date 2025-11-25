@@ -1,0 +1,31 @@
+{
+	"meta": { "chapterId": "algorithm3" },
+	"nodes": {
+		"1": {
+			"background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+			"contents": [
+				{ "type": "title", "text": "算法题3", "isTitle": true, "mode": "scene" }
+			],
+			"nextNode": "2"
+		},
+		"2": {
+			"background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+			"contents": [
+				{ "type": "text", "text": "3.“最长上升子序列（LIS）”的 DP 状态转移方程为（）", "mode": "scene" }
+			],
+			"choices": [
+				{ "text": "dp[i] = dp[i−1] + 1", "next": "3" },
+				{ "text": "dp[i] = max(dp[j]) + 1（j < i, a[j] < a[i]）", "next": "3" },
+				{ "text": "dp[i] = min(dp[j]) + 1", "next": "3" },
+				{ "text": "dp[i] = dp[i−1] − 1", "next": "3" }
+			]
+		},
+		"3": {
+			"background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+			"contents": [
+				{ "type": "text", "text": "下一题：algorithm4", "mode": "scene" }
+			],
+			"nextChapter": "algorithm4"
+		}
+	}
+}

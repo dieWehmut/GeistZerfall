@@ -1,0 +1,23 @@
+{
+	"meta": { "chapterId": "leap2b" },
+	"nodes": {
+		"1": {
+			"background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+			"contents": [
+				{ "type": "title", "text": "跳跃2b", "isTitle": true, "mode": "scene" }
+			],
+			"nextNode": "2"
+		},
+		"2": {
+			"background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+			"contents": [
+				{ "type": "text", "text": "选择吧", "mode": "scene" }
+			],
+			"choices": [
+				{ "text": "想多了，继续上课吧", "next": "be3" },
+				{ "text": "假的吧", "next": "be4" }
+			]
+		}
+	}
+}
+

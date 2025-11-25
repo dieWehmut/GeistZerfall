@@ -26,11 +26,14 @@ Item {
     Rectangle {
         id: background
         anchors.fill: parent
-        // 透明背景并移除边框，达到“无框”视觉效果
-        color: "transparent"
-        border.width: 0
-        border.color: "transparent"
+        // 默认透明背景，带白色边框；悬浮/按下时变为白底黑边
+        property color targetColor: (pressArea.containsMouse || __active) ? "white" : "transparent"
+        property color targetBorderColor: (pressArea.containsMouse || __active) ? "#000000" : "#FFFFFF"
+        color: targetColor
+        border.width: 2
+        border.color: targetBorderColor
         Behavior on color { ColorAnimation { duration: 120 } }
+        Behavior on border.color { ColorAnimation { duration: 120 } }
     }
 
     Row {
