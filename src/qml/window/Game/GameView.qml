@@ -140,7 +140,7 @@ Item {
 			gameViewRoot.snipeHeld = true;
 			try { if (playerObj && typeof playerObj.snipeStart === 'function') playerObj.snipeStart(); } catch(e) {}
 		}
-		tileScale = 1.5 / 2.0;
+		tileScale = 1 / 3.0;
 		sightMask.radius = sightMask.baseRadius * tileScale;
 		try { if (fireTimer && fireTimer.running) fireTimer.stop(); } catch(e) {}
 		try { if (playerItem && typeof playerItem.startBulletRecharge === 'function') playerItem.startBulletRecharge(); } catch(e) {}
@@ -1921,8 +1921,10 @@ Item {
 		// pass reference to dynamic sight mask so overlay uses current visible radius
 		sightMaskRef: sightMask
 		active: playerObj && playerObj.teleportMode
-		playerVisualWidth: playerItem ? playerItem.width : 0
-		playerVisualHeight: playerItem ? playerItem.height : 0
+		// Pass the visual (screen-space) size of the player so the overlay
+		// can correctly convert to world units when tileScale != 1.
+		playerVisualWidth: playerItem ? (playerItem.width * tileScale) : 0
+		playerVisualHeight: playerItem ? (playerItem.height * tileScale) : 0
 		mapClamp: ({ width: mapCols * tileSize, height: mapRows * tileSize })
 		enemyBackends: enemyBackends
 	}

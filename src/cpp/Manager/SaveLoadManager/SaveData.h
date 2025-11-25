@@ -13,8 +13,11 @@ struct PlayerSaveData {
     double sight{0};
     int hp{10000};
     int maxHp{10000};
-    int mp{0};
-    int maxMp{0};
+    // two MP-like resources used by client: mp1 = bulletCd, mp2 = laserCd
+    int mp1{0};
+    int maxMp1{0};
+    int mp2{0};
+    int maxMp2{0};
 
     void write(QDataStream &out) const;
     bool read(QDataStream &in);
@@ -29,6 +32,8 @@ struct SaveData {
     QString loreChapter;
     QString loreNode;
     int loreIndex{0};
+    // JSON string containing history entries (encoded in QML as JSON.stringify(historyPanel.historyData))
+    QString loreHistory;
     QString loreMusic;
     int loreMusicLoops{-1};
     bool loreMusicStopped{false};

@@ -9,11 +9,13 @@ Item {
     visible: false
     z: 3000
 
-    // 历史记录数据 [{mode, speaker, text, node, index, music, musicLoops, stopMusic}]
+    // 历史记录数据 [{mode, speaker, text, branch, node, index, music, musicLoops, stopMusic}]
     property var historyData: []
     
     signal closeRequested()
     // 当用户点击跳转图标时发出 (nodeId, contentIndex)
+    // 保持原有信号签名以向后兼容：第一参数仍然是字符串
+    // 如果需要携带分支信息，传入 JSON 字符串：{"branch":"chapterId","node":"nodeId"}
     signal jumpRequested(string nodeId, int contentIndex)
 
     // 半透明背景遮罩
@@ -163,10 +165,19 @@ Item {
                                     anchors.top: parent.top
                                     anchors.topMargin: 6
                                     onClicked: {
-                                        // modelData 应包含 node 与 index
+                                        // modelData 应包含 node 与 index，且现在可能包含 branch
                                         if (modelData.node !== undefined && modelData.index !== undefined) {
-                                            console.log("HistoryPanel: jump requested to", modelData.node, modelData.index);
-                                            root.jumpRequested(modelData.node, modelData.index);
+                                            var nodeParam = modelData.node;
+                                            // 如果包含 branch，则以 JSON 形式传递（向 LoreView 兼容）
+                                            if (modelData.branch !== undefined && modelData.branch !== "") {
+                                                try {
+                                                    nodeParam = JSON.stringify({ branch: modelData.branch, node: modelData.node });
+                                                } catch (e) {
+                                                    nodeParam = modelData.node;
+                                                }
+                                            }
+                                            console.log("HistoryPanel: jump requested to", nodeParam, modelData.index);
+                                            root.jumpRequested(nodeParam, modelData.index);
                                         } else {
                                             console.log("HistoryPanel: jump data missing for item");
                                         }
@@ -305,18 +316,55 @@ Item {
         return (historyData && historyData.length > 0) ? historyData[historyData.length - 1] : null;
     }
 
-    // 比较是否同一条记录（以 node+index+text 为准）
-    function _isSameEntry(a, nodeId, idx, text) {
-        return a && a.node === (nodeId || "") && a.index === ((idx !== undefined) ? idx : -1) && a.text === (text || "");
+    // 将可能为 JSON 编码或纯字符串的 node 参数解析为 {branch, node}
+    function _parseNodeParam(nodeParam) {
+        var res = { branch: "", node: "" };
+        if (nodeParam === undefined || nodeParam === null) return res;
+        if (typeof nodeParam === "string") {
+            // 尝试解析 JSON（我们在发射 jumpRequested 时用 JSON 编码 branch+node）
+            try {
+                var p = JSON.parse(nodeParam);
+                if (p && (p.node !== undefined)) {
+                    res.node = p.node || "";
+                    res.branch = p.branch || "";
+                    return res;
+                }
+            } catch (e) { /* not JSON */ }
+            // 不是 JSON，则视为纯 node id（branch 为空）
+            res.node = nodeParam || "";
+            return res;
+        }
+        if (typeof nodeParam === "object") {
+            res.node = nodeParam.node || "";
+            res.branch = nodeParam.branch || "";
+            return res;
+        }
+        // 其他类型，转为字符串
+        res.node = String(nodeParam);
+        return res;
+    }
+
+    // 比较是否同一条记录（以 branch+node+index+text 为准）
+    function _isSameEntry(a, branchId, nodeId, idx, text) {
+        if (!a) return false;
+        var b = a.branch || "";
+        var n = a.node || "";
+        var i = (a.index !== undefined) ? a.index : -1;
+        var t = a.text || "";
+        return b === (branchId || "") && n === (nodeId || "") && i === ((idx !== undefined) ? idx : -1) && t === (text || "");
     }
 
     // 裁剪历史到指定条目（保留该条目，删除其后的条目）
     function trimHistoryTo(nodeId, contentIdx) {
         if (!historyData || historyData.length === 0) return;
+        var param = _parseNodeParam(nodeId);
         var target = -1;
         for (var i = 0; i < historyData.length; i++) {
             var e = historyData[i];
-            if (e.node === (nodeId || "") && e.index === ((contentIdx !== undefined) ? contentIdx : -1)) {
+            var eBranch = e.branch || "";
+            var eNode = e.node || "";
+            var eIndex = (e.index !== undefined) ? e.index : -1;
+            if (eBranch === (param.branch || "") && eNode === (param.node || "") && eIndex === ((contentIdx !== undefined) ? contentIdx : -1)) {
                 target = i;
             }
         }
@@ -328,9 +376,13 @@ Item {
     // 添加历史记录（自动去重：如果与最后一条相同则不再添加）
     // nodeId: 对应的 node 键 (string)， contentIdx: 对应内容索引 (int)
     // musicInfo: 可选，包含 music(字符串)、musicLoops(整数) 或 stopMusic(true)
-    function addHistory(mode, speaker, text, nodeId, contentIdx, music, musicLoops, stopMusic) {
+    // 添加历史记录（自动去重：如果与最后一条相同则不再添加）
+    // branchId: 所属章节/分支标识 (string)
+    // nodeId: 对应的 node 键 (string)， contentIdx: 对应内容索引 (int)
+    // musicInfo: 可选，包含 music(字符串)、musicLoops(整数) 或 stopMusic(true)
+    function addHistory(mode, speaker, text, branchId, nodeId, contentIdx, music, musicLoops, stopMusic) {
         var last = _lastEntry();
-        if (_isSameEntry(last, nodeId, contentIdx, text)) {
+        if (_isSameEntry(last, branchId, nodeId, contentIdx, text)) {
             return; // 与最后一条一致，跳过
         }
 
@@ -338,6 +390,7 @@ Item {
             mode: mode,
             speaker: speaker || "",
             text: text || "",
+            branch: branchId || "",
             node: nodeId || "",
             index: (contentIdx !== undefined) ? contentIdx : -1,
             music: music || "",

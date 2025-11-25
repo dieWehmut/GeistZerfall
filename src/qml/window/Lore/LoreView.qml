@@ -81,6 +81,25 @@ Item {
 
         // 加载章节数据
         loadChapter(currentChapter);
+
+        // 尝试从 SaveLoadManager 中恢复历史（如果存在）。这允许在切换界面后恢复历史窗内容。
+        try {
+            if (typeof SaveLoadManager !== 'undefined' && SaveLoadManager && SaveLoadManager.loreHistory && SaveLoadManager.loreHistory !== "") {
+                try {
+                    var parsedHist = JSON.parse(SaveLoadManager.loreHistory);
+                    if (historyPanel) {
+                        historyPanel.historyData = parsedHist;
+                        // 裁剪历史到当前保存的进度，避免恢复后出现超出当前进度的后续记录
+                        try {
+                            var trimParam = JSON.stringify({ branch: currentChapter, node: currentNode });
+                            historyPanel.trimHistoryTo(trimParam, currentContentIndex);
+                        } catch (etrim) { /* ignore */ }
+                    }
+                } catch (ehist) {
+                    console.log('LoreView: failed to parse saved loreHistory', ehist);
+                }
+            }
+        } catch (er) { console.log('LoreView: restore history from SaveLoadManager failed', er); }
     }
 
     Component.onDestruction: {
@@ -109,6 +128,14 @@ Item {
             SaveLoadManager.loreChapter = currentChapter || "";
             SaveLoadManager.loreNode = currentNode || "";
             SaveLoadManager.loreIndex = currentContentIndex || 0;
+            // 保存历史数据为 JSON 字符串，允许历史在界面切换后恢复
+            try {
+                if (historyPanel && historyPanel.historyData) {
+                    SaveLoadManager.loreHistory = JSON.stringify(historyPanel.historyData);
+                } else {
+                    SaveLoadManager.loreHistory = "";
+                }
+            } catch (eh) { SaveLoadManager.loreHistory = ""; }
             SaveLoadManager.battleId = "";
             SaveLoadManager.loreMusicStopped = lastMusicStopped;
             SaveLoadManager.loreMusic = lastMusicStopped ? "" : (lastMusicSource || "");
@@ -133,7 +160,13 @@ Item {
         try {
             var scanArray = [];
             if (historyPanel && historyPanel.historyData && historyPanel.historyData.length > 0) {
-                scanArray = historyPanel.historyData;
+                // 仅使用与当前章节匹配的历史条目以恢复音乐
+                for (var hi = 0; hi < historyPanel.historyData.length; ++hi) {
+                    var he = historyPanel.historyData[hi];
+                    if (!he || !he.branch || he.branch === currentChapter) {
+                        scanArray.push(he);
+                    }
+                }
             } else if (chapterData && chapterData.nodes && chapterData.nodes[currentNode]) {
                 var nodeObj = chapterData.nodes[currentNode];
                 if (nodeObj && nodeObj.contents) {
@@ -289,7 +322,7 @@ Item {
                         }
                         var hText = hContent.text || "";
                         if (hText !== "") {
-                            historyPanel.addHistory(hMode, hSpeaker, hText, currentNode, hi, hContent.music, hContent.musicLoops, hContent.stopMusic);
+                            historyPanel.addHistory(hMode, hSpeaker, hText, currentChapter, currentNode, hi, hContent.music, hContent.musicLoops, hContent.stopMusic);
                         }
                     }
                 }
@@ -341,7 +374,7 @@ Item {
             var text = content.text || "";
             if (text !== "") {
                 // 记录对应的 node id 与内容索引，以及音乐指令，供历史跳转使用
-                historyPanel.addHistory(currentMode, speaker, text, currentNode, currentContentIndex,
+                historyPanel.addHistory(currentMode, speaker, text, currentChapter, currentNode, currentContentIndex,
                                         content.music, content.musicLoops, content.stopMusic);
             }
         }
@@ -757,10 +790,31 @@ Item {
         }
         onJumpRequested: function(nodeId, contentIndex) {
             console.log("LoreView: jumpRequested", nodeId, contentIndex);
-            if (nodeId && chapterData && chapterData.nodes && chapterData.nodes[nodeId]) {
+            // nodeId 可能是 JSON 编码的 {branch,node} 或者纯 nodeId 字符串
+            var targetBranch = currentChapter;
+            var targetNode = nodeId;
+            try {
+                if (typeof nodeId === 'string') {
+                    var parsed = JSON.parse(nodeId);
+                    if (parsed && parsed.node !== undefined) {
+                        targetBranch = parsed.branch || currentChapter;
+                        targetNode = parsed.node;
+                    }
+                }
+            } catch (eparse) {
+                // not JSON, keep as-is
+            }
+
+            // 如果目标章节不同，切换章节并加载
+            if (targetBranch && targetBranch !== currentChapter) {
+                currentChapter = targetBranch;
+                loadChapter(currentChapter);
+            }
+
+            if (targetNode && chapterData && chapterData.nodes && chapterData.nodes[targetNode]) {
                 // 裁剪历史记录到目标位置，避免重复
                 historyPanel.trimHistoryTo(nodeId, contentIndex);
-                currentNode = nodeId;
+                currentNode = targetNode;
                 currentContentIndex = contentIndex >= 0 ? contentIndex : 0;
                 historyPanel.close();
                 // 先更新内容
@@ -770,17 +824,18 @@ Item {
                     var effectiveMusic = null;
                     var effectiveLoops = undefined;
                     var shouldStop = false;
-                    // 从后往前扫描历史数组
+                    // 从后往前扫描历史数组，注意匹配 branch + node + index
                     for (var i = historyPanel.historyData.length - 1; i >= 0; i--) {
                         var h = historyPanel.historyData[i];
-                        if (h.node === currentNode && h.index === currentContentIndex) {
+                        var hBranch = (h.branch !== undefined) ? h.branch : currentChapter;
+                        if (hBranch === currentChapter && h.node === currentNode && h.index === currentContentIndex) {
                             // 当前记录本身也可能包含音乐指令
                         }
-                        if (h.stopMusic) {
+                        if (h.stopMusic && hBranch === currentChapter) {
                             shouldStop = true;
                             break;
                         }
-                        if (h.music && h.music !== "") {
+                        if (h.music && h.music !== "" && hBranch === currentChapter) {
                             effectiveMusic = h.music;
                             effectiveLoops = h.musicLoops;
                             break;
