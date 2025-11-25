@@ -280,7 +280,10 @@ bool SaveLoad::loadSlot(int slot, const QString &folderPath) {
                         QString b = obj.value("branch").toString("");
                         QString n = obj.value("node").toString("");
                         int idx = obj.value("index").toInt(-1);
-                        if (b == last.loreChapter && n == last.loreNode && idx == last.loreIndex) {
+                        // Allow matching entries that either explicitly belong to the saved branch
+                        // OR have an empty branch (older history entries may not contain branch info).
+                        bool branchMatches = (b.isEmpty() || b == last.loreChapter);
+                        if (branchMatches && n == last.loreNode && idx == last.loreIndex) {
                             target = i;
                             break;
                         }
@@ -392,7 +395,8 @@ bool SaveLoad::loadPlayer(const QString &folderPath) {
                         QString b = obj.value("branch").toString("");
                         QString n = obj.value("node").toString("");
                         int idx = obj.value("index").toInt(-1);
-                        if (b == last.loreChapter && n == last.loreNode && idx == last.loreIndex) {
+                        bool branchMatches = (b.isEmpty() || b == last.loreChapter);
+                        if (branchMatches && n == last.loreNode && idx == last.loreIndex) {
                             target = i;
                             break;
                         }
