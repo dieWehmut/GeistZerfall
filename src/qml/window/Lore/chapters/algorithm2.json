@@ -2,14 +2,14 @@
 	"meta": { "chapterId": "algorithm2" },
 	"nodes": {
 		"1": {
-			"background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+			"background": "qrc:/resource/image/bg/lore/2_Question_Options.png",
 			"contents": [
 				{ "type": "title", "text": "算法题2", "isTitle": true, "mode": "scene" }
 			],
 			"nextNode": "2"
 		},
 		"2": {
-			"background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+			"background": "qrc:/resource/image/bg/lore/2_Question.png",
 			"contents": [
 				{ "type": "text", "text": "2.下列递归方程中，时间复杂度为 O(2ⁿ) 的是（）", "mode": "scene" }
 			],
@@ -21,9 +21,9 @@
 			]
 		},
 		"3": {
-			"background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+			"background": "qrc:/resource/image/bg/lore/2_Options_Question_Answer.png",
 			"contents": [
-				{ "type": "text", "text": "下一题：algorithm3", "mode": "scene" }
+				{ "type": "text", "text": "2T(n−1) 每层倍增子问题，递归树规模呈指数增长为 O(2ⁿ)", "mode": "scene" }
 			],
 			"nextChapter": "algorithm3"
 		}
