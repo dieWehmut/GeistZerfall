@@ -5,8 +5,8 @@
 
 // PlayerSaveData serialization: versioned per-player block.
 void PlayerSaveData::write(QDataStream &out) const {
-    // bump to version 3 to include hp/maxHp/mp/maxMp
-    quint32 version = 3;
+    // player sub-version: 4 = includes hp/maxHp and two mp fields (mp1/maxMp1, mp2/maxMp2)
+    quint32 version = 4;
     out << version;
     out << pos.x();
     out << pos.y();
@@ -14,16 +14,19 @@ void PlayerSaveData::write(QDataStream &out) const {
     out << sight;
     out << hp;
     out << maxHp;
-    out << mp;
-    out << maxMp;
+    out << mp1;
+    out << maxMp1;
+    out << mp2;
+    out << maxMp2;
 }
 
 bool PlayerSaveData::read(QDataStream &in) {
     quint32 version = 0;
     in >> version;
     if (in.status() != QDataStream::Ok) return false;
-    if (version == 1) {
-        // old flat format: (version, x, y, speed, sight) but version==1 indicates original SaveData layout
+
+    if (version == 1 || version == 2) {
+        // old flat format: (version, x, y, speed, sight)
         double x = 0, y = 0;
         in >> x;
         in >> y;
@@ -32,18 +35,12 @@ bool PlayerSaveData::read(QDataStream &in) {
         if (in.status() != QDataStream::Ok) return false;
         pos.setX(x);
         pos.setY(y);
-        return true;
-    } else if (version == 2) {
-        double x = 0, y = 0;
-        in >> x;
-        in >> y;
-        in >> speed;
-        in >> sight;
-        if (in.status() != QDataStream::Ok) return false;
-        pos.setX(x);
-        pos.setY(y);
+        // defaults for newer fields
+        hp = 10000; maxHp = 10000;
+        mp1 = mp2 = 0; maxMp1 = maxMp2 = 0;
         return true;
     } else if (version == 3) {
+        // v3: added hp/maxHp and a single mp field
         double x = 0, y = 0;
         in >> x;
         in >> y;
@@ -51,21 +48,41 @@ bool PlayerSaveData::read(QDataStream &in) {
         in >> sight;
         in >> hp;
         in >> maxHp;
-        in >> mp;
-        in >> maxMp;
+        int oldMp = 0, oldMaxMp = 0;
+        in >> oldMp;
+        in >> oldMaxMp;
+        if (in.status() != QDataStream::Ok) return false;
+        pos.setX(x);
+        pos.setY(y);
+        // map single mp into mp1
+        mp1 = oldMp; maxMp1 = oldMaxMp;
+        mp2 = 0; maxMp2 = 0;
+        return true;
+    } else if (version == 4) {
+        double x = 0, y = 0;
+        in >> x;
+        in >> y;
+        in >> speed;
+        in >> sight;
+        in >> hp;
+        in >> maxHp;
+        in >> mp1;
+        in >> maxMp1;
+        in >> mp2;
+        in >> maxMp2;
         if (in.status() != QDataStream::Ok) return false;
         pos.setX(x);
         pos.setY(y);
         return true;
     }
-    // unknown version
+
     qWarning() << "PlayerSaveData: unknown version" << version;
     return false;
 }
 
 void SaveData::write(QDataStream &out) const {
-    // bump top-level version to 5 to include lore music state in addition to previous fields
-    quint32 topVersion = 5;
+    // bump top-level version to 7 to include player sub-version 4 and loreHistory
+    quint32 topVersion = 7;
     out << topVersion;
     // write player block
     player.write(out);
@@ -78,6 +95,8 @@ void SaveData::write(QDataStream &out) const {
     out << loreMusic;
     out << loreMusicLoops;
     out << static_cast<quint8>(loreMusicStopped ? 1 : 0);
+    // write lore history JSON (may be empty)
+    out << loreHistory;
     // write enemy list
     quint32 enemyCount = static_cast<quint32>(enemies.size());
     out << enemyCount;
@@ -90,43 +109,14 @@ bool SaveData::read(QDataStream &in) {
     quint32 topVersion = 0;
     in >> topVersion;
     if (in.status() != QDataStream::Ok) return false;
+
+    // Top-level backward compatibility handling
     if (topVersion == 1) {
-        // In version 1 we expect the same sequence as original SaveData (player-only), but
-        // original files started with version==1 followed by x,y,speed,sight. To remain
-        // compatible, we'll treat this as a player block with version==1 already consumed.
-        // However older files had only a single version number then values; our PlayerSaveData
-        // reader expects a player-subversion next. To handle both cases, we peek the next
-        // value and decide. We'll attempt to read using PlayerSaveData::read which expects a
-        // player-version value next; but old files will have x (double) instead. So we need
-        // to handle that case: if next token is a double we assume old layout and reconstruct.
-
-        // Try to read next as quint32 (player version) safely by peeking raw buffer state.
-        // QDataStream doesn't provide a direct peek; instead we'll read into a quint32 and check
-        // status; if reading as quint32 fails, assume old layout and reset stream by recreating
-        // an error state — simpler approach: since original files wrote version(1) then x (double),
-        // reading next as quint32 will reinterpret the double bits; but that's unsafe. Instead,
-        // we detect file size: if there are exactly 4 values after top version, treat as old format.
-
-        // Practical approach: attempt to read a quint32 (playerVersion). If playerVersion is 1 or 2
-        // we'll proceed. If it looks obviously invalid (very large), we'll fallback treating it
-        // as old layout where that quint32 is actually the double x's bit pattern. To avoid
-        // complex heuristics, we'll assume authors saved with the original simple format and thus
-        // that next value is actually double. We'll check stream.device()->bytesAvailable() to
-        // roughly decide. Simpler: try reading playerVersion, then if reading subsequent doubles
-        // fails, we'll reset and parse old-style manually. For simplicity in Qt without resetting,
-        // we'll implement a best-effort: read a quint32, if it's 1 or 2 use it, otherwise treat as
-        // old-format where we've already consumed part; can't robustly rewind here, so instead we
-        // will fallback to older behaviour by assuming the first quint32 we read was actually the
-        // double's bit pattern. To keep code simple and reliable, prefer to detect old-format by
-        // checking remaining bytes: old-format after topVersion contains 4 doubles (x,y,speed,sight)
-        // => 4 * sizeof(double) bytes. New-format contains a quint32 + 4 doubles => sizeof(quint32) + 4*sizeof(double).
-
-        // Determine remaining bytes in device if possible
+        // old layout: directly player simple block (no player sub-version)
         QIODevice *dev = in.device();
         qint64 bytesAvailable = dev ? dev->bytesAvailable() : -1;
-        const qint64 oldBytes = 4 * (qint64)sizeof(double);
+        const qint64 oldBytes = 4 * static_cast<qint64>(sizeof(double));
         if (bytesAvailable == oldBytes) {
-            // old layout: read x,y,speed,sight directly
             double x=0,y=0;
             in >> x;
             in >> y;
@@ -135,24 +125,23 @@ bool SaveData::read(QDataStream &in) {
             if (in.status() != QDataStream::Ok) return false;
             player.pos.setX(x);
             player.pos.setY(y);
+            // defaults
+            player.hp = 10000; player.maxHp = 10000;
+            player.mp1 = player.mp2 = 0; player.maxMp1 = player.maxMp2 = 0;
             return true;
         } else {
-            // assume player sub-block with its own version
-            // read player block via PlayerSaveData::read
-            // Note: PlayerSaveData::read expects to read a quint32 version first
-            // so we simply call it.
-            bool ok = player.read(in);
-            return ok;
+            if (!player.read(in)) return false;
+            view = "game";
+            loreChapter.clear(); loreNode.clear(); loreIndex = 0; battleId.clear(); loreMusic.clear(); loreMusicLoops = -1; loreMusicStopped = false;
+            enemies.clear();
+            return true;
         }
     }
-    else if (topVersion == 2) {
-        // New top-level: player sub-block followed by enemy list
+
+    if (topVersion == 2) {
         if (!player.read(in)) return false;
-        // v2 had no view/lore: default to game
         view = "game";
-        loreChapter.clear();
-        loreNode.clear();
-        loreIndex = 0;
+        loreChapter.clear(); loreNode.clear(); loreIndex = 0;
         quint32 enemyCount = 0;
         in >> enemyCount;
         if (in.status() != QDataStream::Ok) return false;
@@ -163,18 +152,16 @@ bool SaveData::read(QDataStream &in) {
             enemies.append(e);
         }
         return true;
-    } else if (topVersion == 3) {
-        // v3: player, view/lore, enemies (no battleId)
+    }
+
+    if (topVersion == 3) {
         if (!player.read(in)) return false;
         in >> view;
         in >> loreChapter;
         in >> loreNode;
         in >> loreIndex;
         if (in.status() != QDataStream::Ok) return false;
-        battleId.clear();
-        loreMusic.clear();
-    loreMusicLoops = -1;
-        loreMusicStopped = false;
+        battleId.clear(); loreMusic.clear(); loreMusicLoops = -1; loreMusicStopped = false;
         quint32 enemyCount = 0;
         in >> enemyCount;
         if (in.status() != QDataStream::Ok) return false;
@@ -185,7 +172,9 @@ bool SaveData::read(QDataStream &in) {
             enemies.append(e);
         }
         return true;
-    } else if (topVersion == 4) {
+    }
+
+    if (topVersion == 4) {
         if (!player.read(in)) return false;
         in >> view;
         in >> loreChapter;
@@ -193,9 +182,7 @@ bool SaveData::read(QDataStream &in) {
         in >> loreIndex;
         in >> battleId;
         if (in.status() != QDataStream::Ok) return false;
-        loreMusic.clear();
-    loreMusicLoops = -1;
-        loreMusicStopped = false;
+        loreMusic.clear(); loreMusicLoops = -1; loreMusicStopped = false;
         quint32 enemyCount = 0;
         in >> enemyCount;
         if (in.status() != QDataStream::Ok) return false;
@@ -206,7 +193,37 @@ bool SaveData::read(QDataStream &in) {
             enemies.append(e);
         }
         return true;
-    } else if (topVersion == 5) {
+    }
+
+    if (topVersion >= 7) {
+        // v7+ includes loreHistory
+        if (!player.read(in)) return false;
+        in >> view;
+        in >> loreChapter;
+        in >> loreNode;
+        in >> loreIndex;
+        in >> battleId;
+        in >> loreMusic;
+        in >> loreMusicLoops;
+        quint8 stoppedByte = 0;
+        in >> stoppedByte;
+        loreMusicStopped = (stoppedByte != 0);
+        in >> loreHistory;
+        if (in.status() != QDataStream::Ok) return false;
+        quint32 enemyCount = 0;
+        in >> enemyCount;
+        if (in.status() != QDataStream::Ok) return false;
+        enemies.clear();
+        for (quint32 i=0;i<enemyCount;++i) {
+            EnemySaveData e;
+            if (!e.read(in)) return false;
+            enemies.append(e);
+        }
+        return true;
+    }
+
+    if (topVersion >= 5) {
+        // v5 and v6: include lore music fields but no loreHistory
         if (!player.read(in)) return false;
         in >> view;
         in >> loreChapter;
@@ -228,8 +245,10 @@ bool SaveData::read(QDataStream &in) {
             if (!e.read(in)) return false;
             enemies.append(e);
         }
+        loreHistory.clear();
         return true;
     }
+
     qWarning() << "SaveData: unknown top-level version" << topVersion;
     return false;
 }

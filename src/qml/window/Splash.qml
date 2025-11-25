@@ -16,7 +16,7 @@ Item {
         }
     }
 
-    // 两个阶段容器：blackPage -> whitePage
+    // 3个阶段容器
     Rectangle {
         id: blackPage
         anchors.fill: parent
@@ -59,6 +59,38 @@ Item {
     }
 
     Rectangle {
+        id: midBlackPage
+        anchors.fill: parent
+        color: "black"
+        opacity: 0.0
+
+        // 中间黑色说明页（纯属虚构等说明）
+        Column {
+            anchors.centerIn: parent
+            width: parent.width * 0.8
+            spacing: 16
+
+            Text {
+                text: "本游戏纯属虚构"
+                font.pixelSize: 36
+                color: "white"
+                font.bold: true
+                horizontalAlignment: Text.AlignHCenter
+                anchors.horizontalCenter: parent.horizontalCenter
+            }
+
+            Text {
+                text: "游戏中的人物、地点、事件均为虚构，如有雷同，纯属巧合。"
+                wrapMode: Text.WordWrap
+                font.pixelSize: 20
+                color: "white"
+                horizontalAlignment: Text.AlignHCenter
+                anchors.horizontalCenter: parent.horizontalCenter
+            }
+        }
+    }
+
+    Rectangle {
         id: whitePage
         anchors.fill: parent
         color: "white"
@@ -91,14 +123,26 @@ Item {
         }
     }
 
-    // 使用 Timer 控制两个阶段：black 7s -> fade -> white 3s -> finish
-    Timer { id: blackTimer; interval: 7000; repeat: false; running: true; onTriggered: startFadeToWhite() }
+    // 使用 Timer 控制三个阶段：black 7s -> fade -> mid 5s -> fade -> white 3s -> finish
+    Timer { id: blackTimer; interval: 7000; repeat: false; running: true; onTriggered: startFadeToMid() }
 
-    // fade 动画单独控制
+    // fade 动画：black -> mid
     ParallelAnimation {
-        id: fadeAnim
+        id: fadeToMidAnim
         running: false
         PropertyAnimation { target: blackPage; property: "opacity"; to: 0.0; duration: 600 }
+        PropertyAnimation { target: midBlackPage; property: "opacity"; to: 1.0; duration: 600 }
+        onStopped: {
+            // 启动中间页面计时器
+            midTimer.running = true
+        }
+    }
+
+    // fade 动画：mid -> white
+    ParallelAnimation {
+        id: fadeToWhiteAnim
+        running: false
+        PropertyAnimation { target: midBlackPage; property: "opacity"; to: 0.0; duration: 600 }
         PropertyAnimation { target: whitePage; property: "opacity"; to: 1.0; duration: 600 }
         onStopped: {
             // 启动白页计时器
@@ -108,38 +152,59 @@ Item {
         }
     }
 
+    Timer { id: midTimer; interval: 5000; repeat: false; running: false; onTriggered: startFadeToWhite() }
+
     Timer { id: whiteTimer; interval: 3000; repeat: false; running: false; onTriggered: finishSplash() }
 
+    function startFadeToMid() {
+        fadeToMidAnim.start();
+    }
+
     function startFadeToWhite() {
-        fadeAnim.start();
+        fadeToWhiteAnim.start();
     }
 
     // Progress splash by one stage on each click: black -> white -> finish
     function stepSplash() {
         try {
-            // if black is still visible (opacity > 0.5), start fading to white
-            if (blackPage.opacity > 0.5 && fadeAnim.running === false) {
+            // if black is still visible (opacity > 0.5), start fading to mid
+            if (blackPage.opacity > 0.5 && fadeToMidAnim.running === false) {
                 // stop the blackTimer so automatic transition won't duplicate
                 blackTimer.stop();
-                startFadeToWhite();
+                startFadeToMid();
                 return;
             }
-            // if fade is in progress, wait for it to stop then finish
-            if (fadeAnim.running) {
-                // ensure white timer is stopped and finish immediately
-                fadeAnim.stop();
-                whitePage.whiteTitleEntered = true
-                finishSplash();
-                return;
-            }
-            // otherwise we are on white page (or nearly), finish splash
+                // if first fade is in progress, stop it and goto mid timer / show mid immediately
+                if (fadeToMidAnim.running) {
+                    fadeToMidAnim.stop();
+                    midTimer.running = true;
+                    return;
+                }
+                // if we are now on the middle black page, start fading to white
+                if (midBlackPage.opacity > 0.5 && fadeToWhiteAnim.running === false) {
+                    midTimer.stop();
+                    startFadeToWhite();
+                    return;
+                }
+
+                // if second fade is in progress, stop it and jump to finish
+                if (fadeToWhiteAnim.running) {
+                    fadeToWhiteAnim.stop();
+                    whitePage.whiteTitleEntered = true
+                    finishSplash();
+                    return;
+                }
+
+                // otherwise we are on white page (or nearly), finish splash
             finishSplash();
         } catch (e) { console.log('stepSplash error', e); }
     }
 
     function skipAll() {
         // 停止所有动画与计时器，然后平滑跳转到主菜单
-        fadeAnim.stop();
+        fadeToMidAnim.stop();
+        fadeToWhiteAnim.stop();
+        midTimer.stop();
         whiteTimer.stop();
         blackTimer.stop();
         try {

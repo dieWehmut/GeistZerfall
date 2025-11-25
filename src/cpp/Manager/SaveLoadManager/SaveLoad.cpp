@@ -14,6 +14,9 @@
 #include <QPainter>
 #include <QUrl>
 #include <QFileInfo>
+#include <QJsonDocument>
+#include <QJsonArray>
+#include <QJsonObject>
 #include <QDateTime>
 #include <QDir>
 #include <QFile>
@@ -264,6 +267,43 @@ bool SaveLoad::loadSlot(int slot, const QString &folderPath) {
     bool ok = last.read(in);
     // attempt to read appended timeLeftSeconds (if present)
     if (ok) {
+        // Trim loreHistory stored in this save to the saved progress (chapter/node/index)
+        try {
+            QString orig = last.loreHistory;
+            if (!orig.isEmpty()) {
+                QJsonDocument doc = QJsonDocument::fromJson(orig.toUtf8());
+                if (doc.isArray()) {
+                    QJsonArray arr = doc.array();
+                    int target = -1;
+                    for (int i = arr.size() - 1; i >= 0; --i) {
+                        QJsonObject obj = arr.at(i).toObject();
+                        QString b = obj.value("branch").toString("");
+                        QString n = obj.value("node").toString("");
+                        int idx = obj.value("index").toInt(-1);
+                        if (b == last.loreChapter && n == last.loreNode && idx == last.loreIndex) {
+                            target = i;
+                            break;
+                        }
+                    }
+                    if (target >= 0 && target < arr.size() - 1) {
+                        QJsonArray newArr;
+                        for (int i = 0; i <= target; ++i) newArr.append(arr.at(i));
+                        QJsonDocument newDoc(newArr);
+                        last.loreHistory = QString::fromUtf8(newDoc.toJson(QJsonDocument::Compact));
+                        // rewrite the slot file to store trimmed loreHistory
+                        QFile wf(filePath);
+                        if (wf.open(QIODevice::WriteOnly)) {
+                            QDataStream out(&wf);
+                            out.setVersion(QDataStream::Qt_5_15);
+                            last.write(out);
+                            // append remaining countdown seconds for compatibility
+                            out << static_cast<qint32>(last.timeLeftSeconds);
+                            wf.close();
+                        }
+                    }
+                }
+            }
+        } catch (...) { /* ignore errors */ }
         if (in.device()) {
             qint64 available = in.device()->bytesAvailable();
             if (available >= static_cast<qint64>(sizeof(qint32))) {
@@ -286,6 +326,8 @@ bool SaveLoad::loadSlot(int slot, const QString &folderPath) {
         emit maxHpChanged();
         emit mpChanged();
         emit maxMpChanged();
+        emit mp2Changed();
+        emit maxMp2Changed();
         emit viewChanged();
         emit loreChapterChanged();
         emit loreNodeChanged();
@@ -337,6 +379,43 @@ bool SaveLoad::loadPlayer(const QString &folderPath) {
     bool ok = last.read(in);
     // attempt to read appended timeLeftSeconds (if present)
     if (ok) {
+        // Trim loreHistory stored in this save to the saved progress (chapter/node/index)
+        try {
+            QString orig = last.loreHistory;
+            if (!orig.isEmpty()) {
+                QJsonDocument doc = QJsonDocument::fromJson(orig.toUtf8());
+                if (doc.isArray()) {
+                    QJsonArray arr = doc.array();
+                    int target = -1;
+                    for (int i = arr.size() - 1; i >= 0; --i) {
+                        QJsonObject obj = arr.at(i).toObject();
+                        QString b = obj.value("branch").toString("");
+                        QString n = obj.value("node").toString("");
+                        int idx = obj.value("index").toInt(-1);
+                        if (b == last.loreChapter && n == last.loreNode && idx == last.loreIndex) {
+                            target = i;
+                            break;
+                        }
+                    }
+                    if (target >= 0 && target < arr.size() - 1) {
+                        QJsonArray newArr;
+                        for (int i = 0; i <= target; ++i) newArr.append(arr.at(i));
+                        QJsonDocument newDoc(newArr);
+                        last.loreHistory = QString::fromUtf8(newDoc.toJson(QJsonDocument::Compact));
+                        // write back trimmed save file (rewrite auto.dat)
+                        QFile wf(filePath);
+                        if (wf.open(QIODevice::WriteOnly)) {
+                            QDataStream out(&wf);
+                            out.setVersion(QDataStream::Qt_5_15);
+                            last.write(out);
+                            // append remaining countdown seconds for compatibility (preserve previously read value)
+                            out << static_cast<qint32>(last.timeLeftSeconds);
+                            wf.close();
+                        }
+                    }
+                }
+            }
+        } catch (...) { /* non-fatal: ignore trimming errors */ }
         if (in.device()) {
             qint64 available = in.device()->bytesAvailable();
             if (available >= static_cast<qint64>(sizeof(qint32))) {
@@ -356,6 +435,8 @@ bool SaveLoad::loadPlayer(const QString &folderPath) {
         emit maxHpChanged();
         emit mpChanged();
         emit maxMpChanged();
+        emit mp2Changed();
+        emit maxMp2Changed();
         emit viewChanged();
         emit loreChapterChanged();
         emit loreNodeChanged();
@@ -435,8 +516,10 @@ bool SaveLoad::createDefaultAuto(const QString &folderPath, double posX, double 
     const int defaultMaxHp = 100;
     last.player.maxHp = defaultMaxHp;
     last.player.hp = defaultMaxHp;
-    last.player.maxMp = 0;
-    last.player.mp = 0;
+    last.player.maxMp1 = 0;
+    last.player.mp1 = 0;
+    last.player.maxMp2 = 0;
+    last.player.mp2 = 0;
     last.view = "game";
     last.battleId.clear();
     last.loreMusic.clear();
@@ -450,6 +533,8 @@ bool SaveLoad::createDefaultAuto(const QString &folderPath, double posX, double 
     emit maxHpChanged();
     emit mpChanged();
     emit maxMpChanged();
+    emit mp2Changed();
+    emit maxMp2Changed();
     emit viewChanged();
     emit loreChapterChanged();
     emit loreNodeChanged();

@@ -2,3 +2,6 @@ src/resource/
 .vscode
 .qtcreator
 build
+CMakeLists.txt.user
+*.user
+cmake-build-*/

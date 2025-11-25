@@ -1,7 +1,0 @@
-module Entity
-Player 1.0 Player.qml
-PlayerBullet 1.0 PlayerBullet.qml
-PlayerLaser 1.0 PlayerLaser.qml
-TeleportCircle 1.0 TeleportCircle.qml
-TeleportOverlay 1.0 TeleportOverlay.qml
-PlayerWave 1.0 PlayerWave.qml

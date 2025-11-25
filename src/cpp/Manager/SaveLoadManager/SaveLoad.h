@@ -17,12 +17,15 @@ class SaveLoad : public QObject {
     Q_PROPERTY(int maxHp READ maxHp WRITE setMaxHp NOTIFY maxHpChanged)
     Q_PROPERTY(int mp READ mp WRITE setMp NOTIFY mpChanged)
     Q_PROPERTY(int maxMp READ maxMp WRITE setMaxMp NOTIFY maxMpChanged)
+    Q_PROPERTY(int mp2 READ mp2 WRITE setMp2 NOTIFY mp2Changed)
+    Q_PROPERTY(int maxMp2 READ maxMp2 WRITE setMaxMp2 NOTIFY maxMp2Changed)
     // View and Lore metadata
     Q_PROPERTY(QString view READ view WRITE setView NOTIFY viewChanged)
     Q_PROPERTY(QString loreChapter READ loreChapter WRITE setLoreChapter NOTIFY loreChapterChanged)
     Q_PROPERTY(QString loreNode READ loreNode WRITE setLoreNode NOTIFY loreNodeChanged)
     Q_PROPERTY(int loreIndex READ loreIndex WRITE setLoreIndex NOTIFY loreIndexChanged)
     Q_PROPERTY(QString loreMusic READ loreMusic WRITE setLoreMusic NOTIFY loreMusicChanged)
+    Q_PROPERTY(QString loreHistory READ loreHistory WRITE setLoreHistory NOTIFY loreHistoryChanged)
     Q_PROPERTY(int loreMusicLoops READ loreMusicLoops WRITE setLoreMusicLoops NOTIFY loreMusicLoopsChanged)
     Q_PROPERTY(bool loreMusicStopped READ loreMusicStopped WRITE setLoreMusicStopped NOTIFY loreMusicStoppedChanged)
     Q_PROPERTY(QString battleId READ battleId WRITE setBattleId NOTIFY battleIdChanged)
@@ -69,13 +72,16 @@ public:
     double sight() const { return last.player.sight; }
     int hp() const { return last.player.hp; }
     int maxHp() const { return last.player.maxHp; }
-    int mp() const { return last.player.mp; }
-    int maxMp() const { return last.player.maxMp; }
+    int mp() const { return last.player.mp1; }
+    int maxMp() const { return last.player.maxMp1; }
+    int mp2() const { return last.player.mp2; }
+    int maxMp2() const { return last.player.maxMp2; }
     QString view() const { return last.view; }
     QString loreChapter() const { return last.loreChapter; }
     QString loreNode() const { return last.loreNode; }
     int loreIndex() const { return last.loreIndex; }
     QString loreMusic() const { return last.loreMusic; }
+    QString loreHistory() const { return last.loreHistory; }
     int loreMusicLoops() const { return last.loreMusicLoops; }
     bool loreMusicStopped() const { return last.loreMusicStopped; }
     QString battleId() const { return last.battleId; }
@@ -90,13 +96,16 @@ public:
     void setSight(double s) { if (last.player.sight != s) { last.player.sight = s; emit sightChanged(); } }
     void setHp(int value) { if (last.player.hp != value) { last.player.hp = value; emit hpChanged(); } }
     void setMaxHp(int value) { if (last.player.maxHp != value) { last.player.maxHp = value; emit maxHpChanged(); } }
-    void setMp(int value) { if (last.player.mp != value) { last.player.mp = value; emit mpChanged(); } }
-    void setMaxMp(int value) { if (last.player.maxMp != value) { last.player.maxMp = value; emit maxMpChanged(); } }
+    void setMp(int value) { if (last.player.mp1 != value) { last.player.mp1 = value; emit mpChanged(); } }
+    void setMaxMp(int value) { if (last.player.maxMp1 != value) { last.player.maxMp1 = value; emit maxMpChanged(); } }
+    void setMp2(int value) { if (last.player.mp2 != value) { last.player.mp2 = value; emit mp2Changed(); } }
+    void setMaxMp2(int value) { if (last.player.maxMp2 != value) { last.player.maxMp2 = value; emit maxMp2Changed(); } }
     void setView(const QString &v) { if (last.view != v) { last.view = v; emit viewChanged(); } }
     void setLoreChapter(const QString &c) { if (last.loreChapter != c) { last.loreChapter = c; emit loreChapterChanged(); } }
     void setLoreNode(const QString &n) { if (last.loreNode != n) { last.loreNode = n; emit loreNodeChanged(); } }
     void setLoreIndex(int idx) { if (last.loreIndex != idx) { last.loreIndex = idx; emit loreIndexChanged(); } }
     void setLoreMusic(const QString &m) { if (last.loreMusic != m) { last.loreMusic = m; emit loreMusicChanged(); } }
+    void setLoreHistory(const QString &h) { if (last.loreHistory != h) { last.loreHistory = h; emit loreHistoryChanged(); } }
     void setLoreMusicLoops(int loops) { if (last.loreMusicLoops != loops) { last.loreMusicLoops = loops; emit loreMusicLoopsChanged(); } }
     void setLoreMusicStopped(bool stopped) { if (last.loreMusicStopped != stopped) { last.loreMusicStopped = stopped; emit loreMusicStoppedChanged(); } }
     void setBattleId(const QString &id) { if (last.battleId != id) { last.battleId = id; emit battleIdChanged(); } }
@@ -114,11 +123,14 @@ signals:
     void maxHpChanged();
     void mpChanged();
     void maxMpChanged();
+    void mp2Changed();
+    void maxMp2Changed();
     void viewChanged();
     void loreChapterChanged();
     void loreNodeChanged();
     void loreIndexChanged();
     void loreMusicChanged();
+    void loreHistoryChanged();
     void loreMusicLoopsChanged();
     void loreMusicStoppedChanged();
     void battleIdChanged();
