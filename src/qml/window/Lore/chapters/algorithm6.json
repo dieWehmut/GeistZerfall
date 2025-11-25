@@ -1,0 +1,31 @@
+{
+	"meta": { "chapterId": "algorithm6" },
+	"nodes": {
+		"1": {
+			"background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+			"contents": [
+				{ "type": "title", "text": "算法题6", "isTitle": true, "mode": "scene" }
+			],
+			"nextNode": "2"
+		},
+		"2": {
+			"background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+			"contents": [
+				{ "type": "text", "text": "6.对于一个有向无环图（DAG）求最长路径，应使用（）", "mode": "scene" }
+			],
+			"choices": [
+				{ "text": "BFS", "next": "3" },
+				{ "text": "DFS", "next": "3" },
+				{ "text": "拓扑排序 + DP", "next": "3" },
+				{ "text": "Dijkstra", "next": "3" }
+			]
+		},
+		"3": {
+			"background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+			"contents": [
+				{ "type": "text", "text": "下一题：algorithm7", "mode": "scene" }
+			],
+			"nextChapter": "algorithm7"
+		}
+	}
+}

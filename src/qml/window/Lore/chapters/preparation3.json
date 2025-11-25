@@ -1,0 +1,23 @@
+{
+	"meta": { "chapterId": "preparation3" },
+	"nodes": {
+		"1": {
+			"background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+			"contents": [
+				{ "type": "title", "text": "准备3", "isTitle": true, "mode": "scene" }
+			],
+			"nextNode": "2"
+		},
+		"2": {
+			"background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+			"contents": [
+				{ "type": "text", "text": "选择吧", "mode": "scene" }
+			],
+			"choices": [
+				{ "text": "没有时间了", "next": "leap3" },
+				{ "text": "欲速则不达", "next": "battle04" }
+			]
+		}
+	}
+}
+

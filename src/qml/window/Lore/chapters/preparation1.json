@@ -1,0 +1,28 @@
+{
+	"meta": { "chapterId": "preparation1" },
+	"nodes": {
+		"1": {
+			"background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+			"contents": [
+				{ "type": "title", "text": "准备", "isTitle": true, "mode": "scene" }
+			],
+			"nextNode": "2"
+		},
+		"2": {
+			"background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+			"characters": [
+				{ "name": "藤田 旦治", "position": "left", "scale": 1.0 },
+				{ "name": "清原 凛", "position": "right", "scale": 1.0 }
+			],
+			"contents": [
+				{ "type": "text", "text": "选择吧", "mode": "scene", "speaker": 0 }
+			],
+			"choices": [
+				{ "text": "放松一下", "next": "battle01" },
+				{ "text": "不玩了，直接开始吧", "next": "leap1" },
+				{ "text": "不行不行，不当小白鼠", "next": "be1" }
+			]
+		}
+	}
+}
+

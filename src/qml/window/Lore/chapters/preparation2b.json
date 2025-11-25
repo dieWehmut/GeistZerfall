@@ -1,0 +1,23 @@
+{
+	"meta": { "chapterId": "preparation2b" },
+	"nodes": {
+		"1": {
+			"background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+			"contents": [
+				{ "type": "title", "text": "准备2b", "isTitle": true, "mode": "scene" }
+			],
+			"nextNode": "2"
+		},
+		"2": {
+			"background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+			"contents": [
+				{ "type": "text", "text": "选择吧", "mode": "scene" }
+			],
+			"choices": [
+				{ "text": "不玩那个神人游戏了", "next": "leap2b" },
+				{ "text": "机不可失", "next": "battle03" }
+			]
+		}
+	}
+}
+

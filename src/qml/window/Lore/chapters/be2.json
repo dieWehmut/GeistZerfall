@@ -1,0 +1,20 @@
+{
+	"meta": { "chapterId": "be2" },
+	"nodes": {
+		"1": {
+			"background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+			"contents": [
+				{ "type": "title", "text": "结局", "isTitle": true, "mode": "scene" }
+			],
+			"nextNode": "2"
+		},
+		"2": {
+			"background": "qrc:/resource/image/bg/lore/shenLinGate.png",
+			"contents": [
+				{ "type": "text", "text": "游戏结束", "mode": "scene" }
+			],
+			"action": "gameOver"
+		}
+	}
+}
+

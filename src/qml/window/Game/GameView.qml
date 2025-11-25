@@ -463,6 +463,28 @@ Item {
 		function navigateByResult(obj) {
 			if (!obj) return false;
 			try {
+				// Support legacy `next` key used in battle JSONs (e.g. { "next": "leap1" })
+				if (obj.next) {
+					var tgt = obj.next;
+					try {
+						var testPath = ":/qml/window/Lore/chapters/" + tgt + ".json";
+						var testObj = fileReader.readJsonFile(testPath);
+						if (testObj && testObj.nodes) {
+							try { if (typeof WindowState !== 'undefined' && WindowState.setLoreState) WindowState.setLoreState({ chapter: tgt, node: "", index: 0, mode: "auto", auto: true }); } catch(e) { console.log('GameView: setLoreState for next failed', e); }
+							try {
+								if (window && typeof window.smoothReplaceSource === 'function') {
+									window.smoothReplaceSource("qml/window/Lore/LoreView.qml", 600);
+								} else if (window && typeof window.replaceSource === 'function') {
+									window.replaceSource("qml/window/Lore/LoreView.qml");
+								} else if (window && typeof window.pushSource === 'function') {
+									window.pushSource("qml/window/Lore/LoreView.qml");
+								}
+							} catch(eNav) { console.log('GameView: navigate to Lore failed (next)', eNav); }
+							return true;
+						}
+					} catch(eTest) { /* not a chapter */ }
+				}
+
 				if (obj.nextChapter || obj.nextNode) {
 					var chap = obj.nextChapter || obj.chapter || "";
 					var node = obj.nextNode || obj.node || "";
