@@ -7,10 +7,10 @@ Item {
     width: 300
     height: 40
     
-    property int value: 50
-    property int minValue: 0
-    property int maxValue: 100
-    property int step: 1
+    property real value: 50
+    property real minValue: 0
+    property real maxValue: 100
+    property real step: 1
     // previous value for change detection
     property int _prevValue: value
     // flag when value recently changed (used to color the numeric display)
@@ -95,8 +95,8 @@ Item {
                 onXChanged: {
                     if (dragArea.drag.active) {
                         var percent = x / (sliderTrack.width - width)
-                        var rawVal = root.minValue + percent * (root.maxValue - root.minValue)
-                        var newVal = Math.round(rawVal / root.step) * root.step
+                            var rawVal = root.minValue + percent * (root.maxValue - root.minValue)
+                            var newVal = Math.round(rawVal / root.step) * root.step
                         if (newVal !== root.value) {
                             root.value = newVal
                         }
@@ -159,10 +159,10 @@ Item {
         // Number Display (black when recently changed, otherwise white)
         Text {
             id: valueText
-            text: root.value
+            text: (root.step < 1) ? Number(root.value).toFixed(3) : Math.round(root.value)
             font.pixelSize: 24
             color: root._valueIsRecent ? "black" : "white"
-            width: 40
+            width: 60
             horizontalAlignment: Text.AlignRight
             anchors.verticalCenter: parent.verticalCenter
         }

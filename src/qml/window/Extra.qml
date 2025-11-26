@@ -55,12 +55,12 @@ Item {
             SoundEffect {
                 id: hoverSfx
                 source: "qrc:/resource/audio/SoundEffect/buttonHover.wav"
-                volume: 0.9 * (typeof window !== 'undefined' ? window.masterVolume * window.sfxVolume : 1.0)
+                volume: 0.9 * (typeof window !== 'undefined' ? window.masterVolume * window.sysSfxVolume : 1.0)
             }
             SoundEffect {
                 id: clickSfx
                 source: "qrc:/resource/audio/SoundEffect/buttonClick.wav"
-                volume: 1.0 * (typeof window !== 'undefined' ? window.masterVolume * window.sfxVolume : 1.0)
+                volume: 1.0 * (typeof window !== 'undefined' ? window.masterVolume * window.sysSfxVolume : 1.0)
             }
 
             property int cols: 3
@@ -180,7 +180,7 @@ Item {
             Shortcut {
                 sequence: "Esc"
                 onActivated: {
-                    if (window && window.showNormal) window.showNormal();
+                    if (window && window.setFullscreen) window.setFullscreen(false);
                     if (typeof fullscreenBtn !== 'undefined') fullscreenBtn.checked = false;
                     if (typeof windowBtn !== 'undefined') windowBtn.checked = true;
                 }

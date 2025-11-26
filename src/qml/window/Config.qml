@@ -12,11 +12,16 @@ Item {
 					var settings = SaveLoadManager.loadSystem();
 					if (settings) {
 						if (settings.fullscreen !== undefined) {
-							fullscreenBtn.checked = !!settings.fullscreen;
-							windowBtn.checked = !fullscreenBtn.checked;
-							if (fullscreenBtn.checked) { if (window && window.showFullScreen) window.showFullScreen(); }
-							else { if (window && window.showNormal) window.showNormal(); }
-						}
+								fullscreenBtn.checked = !!settings.fullscreen;
+								windowBtn.checked = !fullscreenBtn.checked;
+								if (fullscreenBtn.checked) { if (window && window.setFullscreen) window.setFullscreen(true); }
+								else { if (window && window.setFullscreen) window.setFullscreen(false); }
+							} else {
+								// no saved settings -> default to fullscreen
+								fullscreenBtn.checked = true;
+								windowBtn.checked = false;
+								try { if (window && window.setFullscreen) window.setFullscreen(true); } catch(e) {}
+							}
 						if (settings.textSkip !== undefined) {
 							if (settings.textSkip === 'all') { textSkipAllBtn.checked = true; textSkipReadBtn.checked = false; }
 							else { textSkipReadBtn.checked = true; textSkipAllBtn.checked = false; }
@@ -26,8 +31,17 @@ Item {
 						if (settings.masterVolume !== undefined) masterSlider.value = Math.round((settings.masterVolume || 0.0) * 100);
 						if (settings.bgmVolume !== undefined) bgmSlider.value = Math.round((settings.bgmVolume || 0.0) * 100);
 						if (settings.sfxVolume !== undefined) sfxSlider.value = Math.round((settings.sfxVolume || 0.0) * 100);
+						if (settings.sysSfxVolume !== undefined) sysSfxSlider.value = Math.round((settings.sysSfxVolume || 0.0) * 100);
 						if (settings.textSpeed !== undefined) textSpeedSlider.value = settings.textSpeed;
-						if (settings.autoModeSpeed !== undefined) autoModeSlider.value = settings.autoModeSpeed;
+						if (settings.autoModeWait !== undefined) autoModeSlider.value = settings.autoModeWait;
+					}
+					// aspect ratio
+					if (settings.aspectRatio !== undefined) {
+						if (settings.aspectRatio === '4:3') { aspect43Btn.checked = true; aspect169Btn.checked = false; }
+						else { aspect169Btn.checked = true; aspect43Btn.checked = false; }
+					} else {
+						// default to 16:9 when no stored setting
+						aspect169Btn.checked = true; aspect43Btn.checked = false;
 					}
 				}
 			} catch(e) { console.log('Config: loadSystem failed', e); }
@@ -47,8 +61,13 @@ Item {
 				s.masterVolume = (masterSlider.value / 100.0);
 				s.bgmVolume = (bgmSlider.value / 100.0);
 				s.sfxVolume = (sfxSlider.value / 100.0);
+				// system SFX (UI sounds like button hover/click)
+				s.sysSfxVolume = (sysSfxSlider.value / 100.0);
 				s.textSpeed = textSpeedSlider.value;
-				s.autoModeSpeed = autoModeSlider.value;
+				// store auto mode wait time in seconds (integer)
+				s.autoModeWait = autoModeSlider.value;
+				// aspect ratio preference
+				try { s.aspectRatio = (aspect43Btn.checked ? '4:3' : '16:9'); } catch(e) {}
 				SaveLoadManager.saveSystem(s);
 			} catch(e) { console.log('Config: persistSystemSettings failed', e); }
 		}
@@ -75,9 +94,9 @@ Item {
 	Shortcut {
 		sequence: "Esc"
 		onActivated: {
-			// if fullscreen button exists try to restore normal; fallback to window.showNormal
-			if (window && window.showNormal) {
-				window.showNormal && window.showNormal();
+			// if fullscreen button exists try to restore normal; call window.setFullscreen so we persist
+			if (window && window.setFullscreen) {
+				window.setFullscreen(false);
 			}
 			// also unset fullscreen button state if present
 			if (typeof fullscreenBtn !== 'undefined') fullscreenBtn.checked = false;
@@ -104,8 +123,6 @@ Item {
 		anchors.verticalCenter: parent.verticalCenter
 		transform: Scale { xScale: scaleFactor; yScale: scaleFactor; origin.x: baseWidth/2; origin.y: baseHeight/2 }
 
-		// 背景图
-		// ...existing code for other children of contentRoot...
 
 		// 标题
 		Text {
@@ -153,7 +170,13 @@ Item {
 							checkable: true
 							checked: !fullscreenBtn.checked
 							onClicked: {
-								window.showNormal && window.showNormal();
+								// If already windowed, keep button state and do nothing
+								try {
+									if (window && window.visibility !== Window.FullScreen) {
+										checked = true; fullscreenBtn.checked = false; return;
+									}
+								} catch(e) {}
+								window.setFullscreen && window.setFullscreen(false);
 								fullscreenBtn.checked = false;
 								persistSystemSettings();
 							}
@@ -166,8 +189,54 @@ Item {
 							checkable: true
 							checked: false
 							onClicked: {
-								window.showFullScreen && window.showFullScreen();
+								// If already fullscreen, restore visual checked state and do nothing
+								try {
+									if (window && window.visibility === Window.FullScreen) {
+										checked = true; windowBtn.checked = false; return;
+									}
+								} catch(e) {}
+								window.setFullscreen && window.setFullscreen(true);
 								windowBtn.checked = false;
+								persistSystemSettings();
+							}
+						}
+					}
+				}
+
+				// 画面比例
+				Column {
+					spacing: 8
+					Text {
+						text: "画面比例"
+						font.pixelSize: 28
+						color: "white"
+						font.bold: true
+						style: Text.Outline; styleColor: "black"
+					}
+					Row {
+						spacing: 12
+						AppButton {
+							id: aspect169Btn
+							text: "16:9"
+							width: 140; height: 50
+							fontPixelSize: 20
+							checkable: true
+							checked: true
+							onClicked: {
+								checked = true; aspect43Btn.checked = false;
+								try { if (window && window.applyAspectRatio) window.applyAspectRatio('16:9'); } catch(e) {}
+								persistSystemSettings();
+							}
+						}
+						AppButton {
+							id: aspect43Btn
+							text: "4:3"
+							width: 140; height: 50
+							fontPixelSize: 20
+							checkable: true
+							onClicked: {
+								checked = true; aspect169Btn.checked = false;
+								try { if (window && window.applyAspectRatio) window.applyAspectRatio('4:3'); } catch(e) {}
 								persistSystemSettings();
 							}
 						}
@@ -178,7 +247,7 @@ Item {
 				Column {
 					spacing: 8
 					Text {
-						text: "文本跳过"
+						text: "可快进文本"
 						font.pixelSize: 28
 						color: "white"
 						font.bold: true
@@ -211,7 +280,7 @@ Item {
 				Column {
 					spacing: 8
 					Text {
-						text: "选项后快进"
+						text: "选项后继续快进"
 						font.pixelSize: 28
 						color: "white"
 						font.bold: true
@@ -298,7 +367,7 @@ Item {
 
 				// 背景音乐
 				Column { spacing: 5
-					Text { text: "背景音乐"; font.pixelSize: 28; color: "white"; font.bold: true; style: Text.Outline; styleColor: "black" }
+					Text { text: "BGM(背景音乐)"; font.pixelSize: 28; color: "white"; font.bold: true; style: Text.Outline; styleColor: "black" }
 					ConfigSlider { id: bgmSlider; Component.onCompleted: value = Math.round((typeof window !== 'undefined' ? window.bgmVolume : 1.0) * 100); onValueChanged: { if (typeof window !== 'undefined') window.bgmVolume = value / 100.0; persistSystemSettings(); } }
 					Row { spacing: 10
 						AppButton { id: bgmOnBtn; text: "ON"; width: 100; height: 40; fontPixelSize: 18; checkable: true; checked: (typeof window !== 'undefined' ? window.bgmVolume > 0.0 : true); onClicked: { if (typeof window !== 'undefined') { window.bgmVolume = 1.0; bgmOnBtn.checked = true; bgmOffBtn.checked = false; bgmSlider.value = Math.round(window.bgmVolume * 100); } persistSystemSettings(); } }
@@ -308,13 +377,23 @@ Item {
 
 				// 音效
 				Column { spacing: 5
-					Text { text: "效果音"; font.pixelSize: 28; color: "white"; font.bold: true; style: Text.Outline; styleColor: "black" }
+					Text { text: "SE(游戏效果音)"; font.pixelSize: 28; color: "white"; font.bold: true; style: Text.Outline; styleColor: "black" }
 					ConfigSlider { id: sfxSlider; Component.onCompleted: value = Math.round((typeof window !== 'undefined' ? window.sfxVolume : 1.0) * 100); onValueChanged: { if (typeof window !== 'undefined') window.sfxVolume = value / 100.0; persistSystemSettings(); } }
 					Row { spacing: 8
 						AppButton { id: sfxOnBtn; text: "ON"; width: 100; height: 40; fontPixelSize: 18; checkable: true; checked: (typeof window !== 'undefined' ? window.sfxVolume > 0.0 : true); onClicked: { if (typeof window !== 'undefined') { window.sfxVolume = 1.0; sfxOnBtn.checked = true; sfxOffBtn.checked = false; sfxSlider.value = Math.round(window.sfxVolume * 100); } persistSystemSettings(); } }
 						AppButton { id: sfxOffBtn; text: "OFF"; width: 100; height: 40; fontPixelSize: 18; checkable: true; checked: (typeof window !== 'undefined' ? window.sfxVolume === 0.0 : false); onClicked: { if (typeof window !== 'undefined') { window.sfxVolume = 0.0; sfxOffBtn.checked = true; sfxOnBtn.checked = false; sfxSlider.value = Math.round(window.sfxVolume * 100); } persistSystemSettings(); } }
 					}
 				}
+
+					// 系统音效（用于 UI 按钮悬浮/点击）
+					Column { spacing: 5
+						Text { text: "SE(系统效果音)"; font.pixelSize: 28; color: "white"; font.bold: true; style: Text.Outline; styleColor: "black" }
+						ConfigSlider { id: sysSfxSlider; Component.onCompleted: value = Math.round((typeof window !== 'undefined' ? window.sysSfxVolume : 1.0) * 100); onValueChanged: { if (typeof window !== 'undefined') window.sysSfxVolume = value / 100.0; persistSystemSettings(); } }
+						Row { spacing: 8
+							AppButton { id: sysSfxOnBtn; text: "ON"; width: 100; height: 40; fontPixelSize: 18; checkable: true; checked: (typeof window !== 'undefined' ? window.sysSfxVolume > 0.0 : true); onClicked: { if (typeof window !== 'undefined') { window.sysSfxVolume = 1.0; sysSfxOnBtn.checked = true; sysSfxOffBtn.checked = false; sysSfxSlider.value = Math.round(window.sysSfxVolume * 100); } persistSystemSettings(); } }
+							AppButton { id: sysSfxOffBtn; text: "OFF"; width: 100; height: 40; fontPixelSize: 18; checkable: true; checked: (typeof window !== 'undefined' ? window.sysSfxVolume === 0.0 : false); onClicked: { if (typeof window !== 'undefined') { window.sysSfxVolume = 0.0; sysSfxOffBtn.checked = true; sysSfxOnBtn.checked = false; sysSfxSlider.value = Math.round(window.sysSfxVolume * 100); } persistSystemSettings(); } }
+						}
+					}
 
 			}
 
@@ -323,13 +402,13 @@ Item {
 				spacing: 12
 
 				Column { spacing: 5
-					Text { text: "文字显示速度"; font.pixelSize: 28; color: "white"; font.bold: true; style: Text.Outline; styleColor: "black" }
-					ConfigSlider { id: textSpeedSlider; value: 50; onValueChanged: persistSystemSettings() }
+					Text { text: "每个文字显示时间 (秒)"; font.pixelSize: 28; color: "white"; font.bold: true; style: Text.Outline; styleColor: "black" }
+						ConfigSlider { id: textSpeedSlider; value: 0.03; minValue: 0.005; maxValue: 0.25; step: 0.005; onValueChanged: { if (typeof window !== 'undefined') window.__textSpeed = value; persistSystemSettings(); } }
 				}
 
 				Column { spacing: 5
-					Text { text: "自动模式速度"; font.pixelSize: 28; color: "white"; font.bold: true; style: Text.Outline; styleColor: "black" }
-					ConfigSlider { id: autoModeSlider; value: 50; onValueChanged: persistSystemSettings() }
+					Text { text: "自动模式等待时间 (秒)"; font.pixelSize: 28; color: "white"; font.bold: true; style: Text.Outline; styleColor: "black" }
+					ConfigSlider { id: autoModeSlider; value: 3; minValue: 1; maxValue: 10; step: 1; onValueChanged: { if (typeof window !== 'undefined') window.__autoModeWait = value; persistSystemSettings(); } }
 				}
 			}
 		}

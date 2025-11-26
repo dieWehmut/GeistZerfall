@@ -99,7 +99,7 @@ Item {
 					// make the rolling ball larger and scale with tileScaleRef
 					var ballRadius = Math.max(36, 48 * (tileScaleRef || 1));
 					ctx.beginPath();
-					ctx.fillStyle = '#890505ff'; // different color than the beam
+					ctx.fillStyle = '#ff0000'; // red rolling orb along the laser
 					ctx.arc(bx, by, ballRadius, 0, Math.PI*2);
 					ctx.fill();
 				} catch(e) {}

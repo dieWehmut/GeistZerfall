@@ -45,7 +45,7 @@ Item {
 	Shortcut {
 		sequence: "Esc"
 		onActivated: {
-			if (window && window.showNormal) window.showNormal();
+			if (window && window.setFullscreen) window.setFullscreen(false);
 			if (typeof fullscreenBtn !== 'undefined') fullscreenBtn.checked = false;
 			if (typeof windowBtn !== 'undefined') windowBtn.checked = true;
 		}

@@ -6,6 +6,9 @@ import "../windowState.js" as WindowState
 Item {
     id: root
     anchors.fill: parent
+    focus: true
+
+    // Use attached Keys handlers below (attached properties are required)
 
     property string currentChapter: ""
     property string currentNode: ""
@@ -100,6 +103,8 @@ Item {
                 }
             }
         } catch (er) { console.log('LoreView: restore history from SaveLoadManager failed', er); }
+        // Ensure this view receives keyboard focus so attached Keys handlers work
+        Qt.callLater(function() { try { root.forceActiveFocus(); } catch (e) { /* ignore */ } });
     }
 
     Component.onDestruction: {
@@ -464,9 +469,20 @@ Item {
         if (!node || !node.contents || currentContentIndex >= node.contents.length) return;
         var content = node.contents[currentContentIndex];
         if (!content || content.type === "title" || content.isTitle) return;
-        var delay = 3000;
+        var delay;
+        // Per-content override (assumed to be milliseconds if present)
         if (content.autoDelay !== undefined) {
             delay = Math.max(500, content.autoDelay);
+        } else {
+            // Global setting (seconds) stored on window.__autoModeWait — convert to ms
+            var globalSec = (typeof window !== 'undefined' && window.__autoModeWait !== undefined) ? Number(window.__autoModeWait) : undefined;
+            if (globalSec !== undefined && !isNaN(globalSec)) {
+                // enforce reasonable bounds: minimum 1s
+                delay = Math.max(1000, Math.round(globalSec * 1000));
+            } else {
+                // fallback default 3000 ms
+                delay = 3000;
+            }
         }
         autoAdvanceTimer.interval = delay;
         autoAdvanceTimer.restart();
@@ -1035,13 +1051,91 @@ Item {
         onNo: function() { /* 关闭后自动隐藏 */ }
     }
 
-    // ESC 键返回
+
+    // Backup shortcuts: ensure Enter/Space advance even if focus isn't held
     Shortcut {
-        sequence: "Esc"
+        sequence: "Return"
         onActivated: {
-            if (window && window.goBack) {
-                window.goBack();
+            if (historyPanel && historyPanel.visible) return;
+            if (confirmTitleDialog && confirmTitleDialog.visible) return;
+            if (choiceDialog && choiceDialog.visible) return;
+            var tc = getActiveTextComponent();
+            if (tc && tc.typing) {
+                try { tc.finishTyping(); } catch(e) {}
+            } else {
+                nextContent();
+                persistLoreState();
             }
         }
+    }
+
+    Shortcut {
+        sequence: "Space"
+        onActivated: {
+            if (historyPanel && historyPanel.visible) return;
+            if (confirmTitleDialog && confirmTitleDialog.visible) return;
+            if (choiceDialog && choiceDialog.visible) return;
+            var tc = getActiveTextComponent();
+            if (tc && tc.typing) {
+                try { tc.finishTyping(); } catch(e) {}
+            } else {
+                nextContent();
+                persistLoreState();
+            }
+        }
+    }
+
+    Keys.onPressed: function(event) {
+        if (historyPanel && historyPanel.visible) return;
+        if (confirmTitleDialog && confirmTitleDialog.visible) return;
+        if (choiceDialog && choiceDialog.visible) return;
+        if (event.key === Qt.Key_Enter || event.key === Qt.Key_Return) {
+            var tc = getActiveTextComponent();
+            if (tc && tc.typing) {
+                try { tc.finishTyping(); } catch(e) {}
+            } else {
+                nextContent();
+            }
+            event.accepted = true;
+        } else if (event.key === Qt.Key_Control) {
+            fastForwardTimer.start();
+            event.accepted = true;
+        }
+    }
+
+    Keys.onReleased: function(event) {
+        if (event.key === Qt.Key_Control) {
+            fastForwardTimer.stop();
+            event.accepted = true;
+        }
+    }
+
+    Timer {
+        id: fastForwardTimer
+        interval: 200
+        repeat: true
+        onTriggered: nextContent()
+    }
+	Shortcut {
+		sequence: "Esc"
+		onActivated: {
+			if (window && window.setFullscreen) window.setFullscreen(false);
+			if (typeof fullscreenBtn !== 'undefined') fullscreenBtn.checked = false;
+			if (typeof windowBtn !== 'undefined') windowBtn.checked = true;
+		}
+	}
+    // Helper: find active text component (contentLoader item or scene.textBox item)
+    function getActiveTextComponent() {
+        try {
+            if (contentLoader && contentLoader.item) {
+                if (typeof contentLoader.item.typing !== 'undefined' || typeof contentLoader.item.finishTyping === 'function') return contentLoader.item;
+            }
+        } catch(e) {}
+        try {
+            if (scene) {
+                if (typeof scene.typing !== 'undefined' || typeof scene.finishTyping === 'function') return scene;
+            }
+        } catch(e) {}
+        return null;
     }
 }
