@@ -9,6 +9,11 @@ Item {
     property var nodeData: null
     // 当前内容（通常为 { type: "text", text: "..." }）
     property var contentData: null
+    // typing animation state for scene-mode text
+    property string fullText: contentData ? (contentData.text || "") : ""
+    property int revealIndex: 0
+    property string displayedText: ""
+    property bool typing: false
     // 暴露底部文本框，用于外部定位按钮栏
     property alias textBoxItem: textBox
     // 外部可设置的底部预留高度，避免按钮遮挡文本
@@ -180,9 +185,59 @@ Item {
             color: "#222222"
             font.pixelSize: Math.max(20, parent.height * 0.11)
             lineHeight: 1.3
-            text: (root.contentData && root.contentData.text) ? root.contentData.text : ""
+            text: displayedText
             z: 2
         }
+    }
+
+
+    // Use per-character interval so each character is displayed for window.__textSpeed seconds
+    function _sceneCalcCharIntervalMs() {
+        var seconds = (typeof window !== 'undefined' && window.__textSpeed) ? Number(window.__textSpeed) : 0.03;
+        var ms = Math.round(seconds * 1000);
+        if (ms < 8) ms = 8;
+        return ms;
+    }
+
+    Timer {
+        id: sceneTypingTimer
+        interval: _sceneCalcCharIntervalMs()
+        repeat: true
+        running: false
+        onTriggered: {
+            try {
+                revealIndex = Math.min(fullText.length, revealIndex + 1);
+                displayedText = fullText.substring(0, revealIndex);
+                if (revealIndex >= fullText.length) {
+                    typing = false;
+                    sceneTypingTimer.stop();
+                }
+            } catch(e) { console.log('sceneTypingTimer error', e); }
+        }
+    }
+
+    onContentDataChanged: {
+        fullText = contentData ? (contentData.text || "") : "";
+        revealIndex = 0;
+        displayedText = "";
+        if (fullText && fullText.length > 0) {
+            typing = true;
+            var seconds = (typeof window !== 'undefined' && window.__textSpeed) ? Number(window.__textSpeed) : 0.03;
+            sceneTypingTimer.interval = Math.max(8, Math.round(seconds * 1000));
+            sceneTypingTimer.start();
+        } else {
+            typing = false;
+            sceneTypingTimer.stop();
+        }
+    }
+
+    function finishTyping() {
+        try {
+            sceneTypingTimer.stop();
+            displayedText = fullText;
+            revealIndex = fullText.length;
+            typing = false;
+        } catch(e) {}
     }
 
     // 角色名标签（紧贴文字框上方，并根据说话角色靠左/居中/靠右）

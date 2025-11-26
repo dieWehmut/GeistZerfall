@@ -86,11 +86,11 @@ Item {
     SoundEffect {
         id: hoverSfx
         source: "qrc:/resource/audio/SoundEffect/buttonHover.wav"
-        volume: 0.9 * (typeof window !== 'undefined' ? window.masterVolume * window.sfxVolume : 1.0)
+        volume: 0.9 * (typeof window !== 'undefined' ? window.masterVolume * (typeof window.sysSfxVolume !== 'undefined' ? window.sysSfxVolume : window.sfxVolume) : 1.0)
     }
     SoundEffect {
         id: clickSfx
         source: "qrc:/resource/audio/SoundEffect/buttonClick.wav"
-        volume: 1.0 * (typeof window !== 'undefined' ? window.masterVolume * window.sfxVolume : 1.0)
+        volume: 1.0 * (typeof window !== 'undefined' ? window.masterVolume * (typeof window.sysSfxVolume !== 'undefined' ? window.sysSfxVolume : window.sfxVolume) : 1.0)
     }
 }

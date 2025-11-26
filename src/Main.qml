@@ -32,6 +32,51 @@ Window {
     property real masterVolume: 1.0
     property real bgmVolume: 1.0
     property real sfxVolume: 1.0
+    // 系统效果音量（用于 UI 按钮等系统音效）
+    property real sysSfxVolume: 1.0
+    // Persisted UI settings exposed on window for other components
+    property real __autoModeWait: 3
+    // __textSpeed now represents per-character display time (seconds)
+    property real __textSpeed: 0.03
+    property string __aspectRatio: "16:9"
+
+    Component.onCompleted: {
+        // Load and apply persisted system settings at application startup so
+        // these global settings take effect without opening Config.qml.
+        try {
+            if (typeof SaveLoadManager !== 'undefined' && SaveLoadManager) {
+                var settings = SaveLoadManager.loadSystem();
+                if (settings) {
+                    if (settings.masterVolume !== undefined) window.masterVolume = Number(settings.masterVolume);
+                    if (settings.bgmVolume !== undefined) window.bgmVolume = Number(settings.bgmVolume);
+                    if (settings.sfxVolume !== undefined) window.sfxVolume = Number(settings.sfxVolume);
+                    // apply fullscreen if requested; if settings missing, default to fullscreen
+                    if (!settings || settings.fullscreen === undefined) {
+                        // no saved settings => default to fullscreen on fresh start
+                        try { window.setFullscreen && window.setFullscreen(true); } catch(e) { console.log('default fullscreen failed', e); }
+                    } else if (settings.fullscreen !== undefined) {
+                        try {
+                            // use centralized setter so we persist the value as well
+                            window.setFullscreen && window.setFullscreen(!!settings.fullscreen);
+                        } catch(e) { console.log('apply fullscreen failed', e); }
+                    }
+                    // text speed / auto mode wait are UI concerns, but store on window so other components can read
+                    if (settings.textSpeed !== undefined) window.__textSpeed = settings.textSpeed;
+                    if (settings.autoModeWait !== undefined) window.__autoModeWait = settings.autoModeWait; else window.__autoModeWait = 3; // default 3s
+                    if (settings.aspectRatio !== undefined) window.__aspectRatio = settings.aspectRatio; else window.__aspectRatio = '16:9';
+                    // Apply aspect ratio on startup when not fullscreen so window size matches stored preference
+                    try { if (window.visibility !== Window.FullScreen && window.__aspectRatio) window.applyAspectRatio(window.__aspectRatio); } catch(e) {}
+                    // ensure content base matches stored aspect and update viewport sizing
+                    try {
+                        if (window.__aspectRatio === '4:3') window.contentBaseH = 960; else window.contentBaseH = 720;
+                        updateViewport();
+                    } catch(e) {}
+                    // textSkip: expose as a simple flag on window for other modules
+                    if (settings.textSkip !== undefined) window.__textSkip = settings.textSkip;
+                }
+            }
+        } catch(e) { console.log('Main: loadSystem at startup failed', e); }
+    }
 
     // 当前正在播放的音乐 source（用于避免重复切换）
     property string currentMusic: ""
@@ -73,6 +118,65 @@ Window {
         } catch (e) {
             console.log("stopMusic error:", e);
         }
+    }
+
+    // Unified fullscreen toggler which also persists the value to system.dat
+    // Use this instead of calling showFullScreen/showNormal directly so we always
+    // keep SaveLoad::system.dat in sync with the window state.
+    function setFullscreen(enabled) {
+        try {
+            if (enabled) {
+                window.showFullScreen && window.showFullScreen();
+            } else {
+                window.showNormal && window.showNormal();
+            }
+
+            // persist only the fullscreen flag while preserving other keys
+            if (typeof SaveLoadManager !== 'undefined' && SaveLoadManager) {
+                var s = SaveLoadManager.loadSystem() || {};
+                s.fullscreen = !!enabled;
+                SaveLoadManager.saveSystem(s);
+            }
+            // schedule a viewport update on next tick so layout applies after platform window state changes
+            try { Qt.callLater(updateViewport); } catch(e) {}
+        } catch (e) { console.log('setFullscreen failed', e); }
+    }
+
+    // When visibility changes (e.g., entering/exiting full screen), refresh viewport
+    onVisibilityChanged: {
+        try {
+            // layout may need to recalc after native window state changes
+            Qt.callLater(updateViewport);
+        } catch(e) { console.log('visibility change updateViewport failed', e); }
+    }
+
+    // Apply aspect ratio preference (e.g. '16:9' or '4:3')
+    function applyAspectRatio(aspect) {
+        try {
+            window.__aspectRatio = aspect;
+            // persist immediately so it's available next start
+            if (typeof SaveLoadManager !== 'undefined' && SaveLoadManager) {
+                var s = SaveLoadManager.loadSystem() || {};
+                s.aspectRatio = aspect;
+                SaveLoadManager.saveSystem(s);
+            }
+
+            // update content base so chosen aspect applies (letterbox in fullscreen)
+            try {
+                if (aspect === '4:3') window.contentBaseH = 960; else window.contentBaseH = 720;
+            } catch(e) {}
+
+            // If we're in windowed mode (not FullScreen) also resize the whole application window
+            try {
+                if (window.visibility !== Window.FullScreen) {
+                    // Use the contentBase values as the new window size so entire window matches chosen aspect
+                    window.width = window.contentBaseW;
+                    window.height = window.contentBaseH;
+                }
+            } catch(e) {}
+
+            try { updateViewport(); } catch(e) {}
+        } catch (e) { console.log('applyAspectRatio failed', e); }
     }
 
     // 关闭窗口前先自动存档
@@ -143,11 +247,37 @@ Window {
         } catch (e) { console.log('autosaveBeforeExit error', e); }
     }
 
+    // Content viewport: center-aligned loader whose size follows chosen aspect ratio
+    property int contentBaseW: 1280
+    // derive contentBaseH from the chosen aspect ratio so QML change handler naming won't break
+    property int contentBaseH: (window.__aspectRatio === '4:3' ? 960 : 720)
+    function updateViewport() {
+        try {
+            var baseW = window.contentBaseW;
+            var baseH = window.contentBaseH;
+            // compute scale to fit within actual window size
+            var scale = Math.min(window.width / baseW, window.height / baseH);
+            // apply pixel-rounded sizes to loader
+            mainLoader.width = Math.round(baseW * scale);
+            mainLoader.height = Math.round(baseH * scale);
+            mainLoader.x = Math.round((window.width - mainLoader.width) / 2);
+            mainLoader.y = Math.round((window.height - mainLoader.height) / 2);
+        } catch(e) { console.log('updateViewport failed', e); }
+    }
+
+    // When contentBaseH changes (due to aspect change), update viewport
+    onContentBaseHChanged: updateViewport
+
+    onWidthChanged: updateViewport
+    onHeightChanged: updateViewport
+
     Loader {
         id: mainLoader
-        anchors.fill: parent
+        // initially sized by updateViewport in Component.onCompleted
         source: "qml/window/Splash.qml"
         property alias mainLoader: mainLoader
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.verticalCenter: parent.verticalCenter
     }
 
 
