@@ -1,13 +1,44 @@
 <RCC>
     <qresource prefix="/">
         <!-- Characters -->
-        <file>resource/image/characters/FujitaTanji.png</file>
+        <file>resource/image/characters/FujitaTanji_black.png</file>
+        <file>resource/image/characters/FujitaTanji_red.png</file>
         <file>resource/image/characters/KiyoharaRin.png</file>
+        <file>resource/image/characters/KiyoharaRin_black.png</file>
+        <file>resource/image/characters/KiyoharaRin_gray.png</file>
+        <file>resource/image/characters/KiyoharaRin_red.png</file>
+        <file>resource/image/characters/KiyoharaRin_Child_gray.png</file>
+        <file>resource/image/characters/KiyoharaRin_Child_red.png</file>
         <file>resource/image/characters/NagumoToki.png</file>
+        <file>resource/image/characters/NagumoToki_black.png</file>
+        <file>resource/image/characters/NagumoToki_gray.png</file>
+        <file>resource/image/characters/NagumoToki_red.png</file>
+        <file>resource/image/characters/NagumoKaede.png</file>
+        <file>resource/image/characters/NagumoKaede_black.png</file>
+        <file>resource/image/characters/NagumoKaede_gray.png</file>
+        <file>resource/image/characters/NagumoKaede_red.png</file>
         <file>resource/image/characters/OriharaRen.png</file>
+        <file>resource/image/characters/OriharaRen_black.png</file>
+        <file>resource/image/characters/OriharaRen_gray.png</file>
+        <file>resource/image/characters/OriharaRen_red.png</file>
         <file>resource/image/characters/TodoHimari.png</file>
-        <file>resource/image/characters/TokonatsuWataru.png</file>
-        <file>resource/image/characters/KiyoharaRin_Child.png</file>
+        <file>resource/image/characters/TodoHimari_black.png</file>
+        <file>resource/image/characters/TodoHimari_gray.png</file>
+        <file>resource/image/characters/TodoHimari_red.png</file>
+        <file>resource/image/characters/TodoHimari_Child.png</file>
+        <file>resource/image/characters/TodoHimari_Child_black.png</file>
+        <file>resource/image/characters/TodoHimari_Child_gray.png</file>
+        <file>resource/image/characters/TodoHimari_Child_red.png</file>
+        <file>resource/image/characters/MaleDoctor.png</file>
+        <file>resource/image/characters/MaleDoctor_black.png</file>
+        <file>resource/image/characters/MaleDoctor_gray.png</file>
+        <file>resource/image/characters/MaleDoctor_red.png</file>
+        <file>resource/image/characters/FemaleDoctor.png</file>
+        <file>resource/image/characters/FemaleDoctor_black.png</file>
+        <file>resource/image/characters/FemaleDoctor_gray.png</file>
+        <file>resource/image/characters/FemaleDoctor_red.png</file>
+        <file>resource/image/characters/TokonatsuWataru_black.png</file>
+        <file>resource/image/characters/TokonatsuWataru_red.png</file>
         <!-- Backgrounds - main / lore -->
         <file>resource/image/bg/mainmenu.png</file>
         <file>resource/image/bg/lore/shenLinGate.png</file>
@@ -116,7 +147,7 @@
         <file>resource/image/bg/battle/enemy6Spawn.png</file>
         <file>resource/image/bg/battle/enemy7Spawn.png</file>
         <!-- Entities  -->
-        <file>resource/image/entity/playerNormal.png</file>
+        <file>resource/image/entity/player.png</file>
         <file>resource/image/entity/enemy1.png</file>
         <file>resource/image/entity/enemy2.png</file>
         <file>resource/image/entity/enemy3.png</file>
@@ -124,6 +155,9 @@
         <file>resource/image/entity/enemy5.png</file>
         <file>resource/image/entity/enemy6.png</file>
         <file>resource/image/entity/enemy7.png</file>
+        <file>resource/image/entity/playerBullet.png</file>
+        <file>resource/image/entity/playerWave.png</file>
+        <file>resource/image/entity/playerCircle.png</file>
         <file>resource/image/entity/enemy1Bullet1.png</file>
         <file>resource/image/entity/enemy1Bullet2.png</file>
         <file>resource/image/entity/enemy1Bullet3.png</file>
@@ -157,6 +191,7 @@
         <file>resource/image/entity/enemy4Bullet5.png</file>
         <file>resource/image/entity/enemy5Bullet.png</file>
         <file>resource/image/entity/enemy7Bullet.png</file>
-        <file>resource/image/entity/playerBullet.png</file>
+
+
     </qresource>
 </RCC>

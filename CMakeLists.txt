@@ -83,6 +83,7 @@ qt_add_qml_module(GeistZerfall
         src/qml/window/Lore/components/LoreControlBar.qml
         src/qml/window/Lore/components/ConfigSlider.qml
         src/qml/window/Lore/components/LoreControlButton.qml
+        src/qml/window/Lore/components/characterImageMap.js
         src/qml/window/Lore/effects/AudioEffect.qml
         src/qml/window/Lore/effects/ParticleEffect.qml
     SOURCES
