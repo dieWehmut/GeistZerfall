@@ -25,7 +25,7 @@ Item {
     Image {
         id: sprite
         anchors.centerIn: parent
-        source: "qrc:/resource/image/entity/playerNormal.png"
+        source: "qrc:/resource/image/entity/playerWave.png"
         width: parent.width
         height: parent.height
         opacity: 0.95

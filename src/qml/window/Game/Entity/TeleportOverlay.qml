@@ -17,7 +17,7 @@ Item {
     ) ? (sightMaskRef.radius / tileScale) * teleportDistanceMultiplier : ((playerObj && typeof playerObj.sight !== 'undefined') ? playerObj.sight * teleportDistanceMultiplier : teleportDistance * teleportDistanceMultiplier)
     property var mapWrapperRef: null
     property var mapClamp: ({ width: 0, height: 0 })
-    property string teleportSprite: "qrc:/resource/image/entity/playerNormal.png"
+    property string teleportSprite: "qrc:/resource/image/entity/playerCircle.png"
     property real playerSpriteSize: 96
     property real playerVisualWidth: 0
     property real playerVisualHeight: 0

@@ -1,4 +1,5 @@
 import QtQuick
+import "characterImageMap.js" as CharMap
 
 // VisualScene.qml - 背景 + 立绘 + 底部文字框
 Item {
@@ -42,6 +43,10 @@ Item {
         delegate: Item {
             width: parent ? parent.width : 0
             height: parent ? parent.height : 0
+            // whether to show portrait image for this character instance
+            // - can be controlled per-content via content.showPortrait (false -> hide all portraits for line)
+            // - OR per-character via character model { showPortrait: false }
+            property bool showPortrait: (root.contentData && root.contentData.hasOwnProperty('showPortrait')) ? root.contentData.showPortrait : (modelData && modelData.hasOwnProperty('showPortrait') ? modelData.showPortrait : true)
             // 立绘图片
             Image {
                 id: ch
@@ -53,6 +58,9 @@ Item {
                 width: height * (implicitWidth > 0 ? implicitWidth/implicitHeight : 0.6)
                 anchors.verticalCenter: parent.verticalCenter
 
+                // visibility -- portrait can be hidden (but name badge still follows the character position)
+                visible: showPortrait
+
                 // 位置：left/center/right（可用 x/y 覆盖）
                 anchors.horizontalCenter: undefined
                 anchors.left: undefined
@@ -60,7 +68,14 @@ Item {
                 anchors.bottom: undefined
 
                 Component.onCompleted: {
+                    // default position: center if position not specified
                     var pos = modelData && modelData.position ? modelData.position : "center";
+                    // If only a single character exists, ensure the model has a position set to 'center'
+                    if ((!modelData || modelData.position === undefined) && root.nodeData && root.nodeData.characters && root.nodeData.characters.length === 1) {
+                        // set on modelData (this will update the underlying nodeData.characters entry)
+                        if (modelData) modelData.position = "center";
+                        pos = "center";
+                    }
                     if (pos === "left") {
                         anchors.left = parent.left
                         anchors.margins = parent.width * 0.06
@@ -92,25 +107,46 @@ Item {
     // 存放立绘 image 实例的数组（由 delegate 填充）
     property var characterInstances: []
 
-    // 角色名到图片路径的映射表
-    property var characterImageMap: ({
-        "南雲 時": "qrc:/resource/image/characters/NagumoToki.png",
-        "東堂 陽葵": "qrc:/resource/image/characters/TodoHimari.png",
-        "藤田 旦治": "qrc:/resource/image/characters/FujitaTanji.png",
-        "常夏 航": "qrc:/resource/image/characters/TokonatsuHimari.png",
-        "折原 蓮": "qrc:/resource/image/characters/OriharaRen.png",
-        "清原 凛": "qrc:/resource/image/characters/KiyoharaRin.png",
-        "清原 凛(6岁)": "qrc:/resource/image/characters/KiyoharaRin_Child.png"
-    })
+    // Use the shared JS mapping file for character images (included at file top)
 
-    // 根据角色定义获取图片路径（支持仅用 name 或完整定义）
+    // 根据角色定义获取图片路径（支持仅用 name 或完整定义），使用共享 characterImageMap.js
     function getCharacterImage(charData) {
-        if (!charData) return "";
-        // 优先使用显式 image
-        if (charData.image) return charData.image;
-        // 否则根据 name 查找映射表
-        if (charData.name && characterImageMap[charData.name]) {
-            return characterImageMap[charData.name];
+        // charData is usually an object from nodeData.characters, but some places pass just the name string
+        return CharMap.getCharacterImageFor(charData);
+    }
+
+    // Resolve a display name for a content's speaker which can be index number or string
+    function getSpeakerDisplayName(content) {
+        if (!content) return "";
+        // content.speakerName takes precedence (line override)
+        // else if speaker is an index, check the character model's speakerName property (character-level override)
+        if (content.speakerName) return content.speakerName;
+        if (content.speaker !== undefined) {
+            if (typeof content.speaker === 'number') {
+                var idx = content.speaker;
+                if (root.nodeData && root.nodeData.characters && root.nodeData.characters.length > idx) {
+                    var ch = root.nodeData.characters[idx];
+                    // prefer model-specific speakerName override if provided on character definition
+                    if (ch && ch.speakerName) return ch.speakerName;
+                    if (ch && ch.name) return ch.name;
+                }
+                return "";
+            } else if (typeof content.speaker === 'string') {
+                // string can be either a character name or a custom label; preserve it
+                // if a matching character entry defines a model-specific speakerName, prefer that
+                try {
+                    if (root.nodeData && root.nodeData.characters) {
+                        for (var i = 0; i < root.nodeData.characters.length; ++i) {
+                            var cn = root.nodeData.characters[i];
+                            if (cn && cn.name === content.speaker) {
+                                if (cn.speakerName) return cn.speakerName;
+                                break;
+                            }
+                        }
+                    }
+                } catch (e) {}
+                return content.speaker;
+            }
         }
         return "";
     }
@@ -120,11 +156,24 @@ Item {
         try {
             if (!nameBadge.visible) return;
             var pos = nameBadge.speakerPosition;
-            // 如果 content 指定 speaker 索引且该实例存在，则把 badge 对齐到角色图像边缘
+            // 支持 speaker 为 number 或 string，如果为 string 且匹配 characters.name 则按索引对齐
             if (root.contentData && root.contentData.speaker !== undefined) {
                 var si = root.contentData.speaker;
-                if (root.characterInstances && root.characterInstances.length > si && root.characterInstances[si]) {
-                    var inst = root.characterInstances[si];
+                var idxToUse = undefined;
+                if (typeof si === 'number') idxToUse = si;
+                else if (typeof si === 'string') {
+                    // find matching character by name
+                    try {
+                        if (root.nodeData && root.nodeData.characters) {
+                            for (var i = 0; i < root.nodeData.characters.length; ++i) {
+                                var cn = root.nodeData.characters[i];
+                                if (cn && cn.name === si) { idxToUse = i; break; }
+                            }
+                        }
+                    } catch (e) {}
+                }
+                if (idxToUse !== undefined && root.characterInstances && root.characterInstances.length > idxToUse && root.characterInstances[idxToUse]) {
+                    var inst = root.characterInstances[idxToUse];
                     // mapToItem to get inst position relative to root
                     var pt = inst.mapToItem(root, 0, 0);
                     // align near the top of textBox and horizontally near the character image
@@ -260,9 +309,23 @@ Item {
             var s = "center";
             if (root.contentData) {
                 if (root.contentData.speakerName) s = (root.contentData.speakerPos ? root.contentData.speakerPos : s);
-                else if (root.contentData.speaker !== undefined && root.nodeData && root.nodeData.characters && root.nodeData.characters.length > root.contentData.speaker) {
-                    var ch = root.nodeData.characters[root.contentData.speaker];
-                    if (ch && ch.position) s = ch.position;
+                else if (root.contentData.speaker !== undefined) {
+                    if (typeof root.contentData.speaker === 'number') {
+                        if (root.nodeData && root.nodeData.characters && root.nodeData.characters.length > root.contentData.speaker) {
+                            var ch = root.nodeData.characters[root.contentData.speaker];
+                            if (ch && ch.position) s = ch.position;
+                        }
+                    } else if (typeof root.contentData.speaker === 'string') {
+                        // if speaker string matches a character, use its position
+                        try {
+                            if (root.nodeData && root.nodeData.characters) {
+                                for (var pi = 0; pi < root.nodeData.characters.length; ++pi) {
+                                    var cn = root.nodeData.characters[pi];
+                                    if (cn && cn.name === root.contentData.speaker && cn.position) { s = cn.position; break; }
+                                }
+                            }
+                        } catch (e) {}
+                    }
                 }
             }
             return s;
@@ -290,7 +353,7 @@ Item {
             color: "#FFFFFF"
             font.bold: true
             font.pixelSize: 16
-            text: (root.contentData && root.contentData.speakerName) ? root.contentData.speakerName : (root.contentData && root.contentData.speaker !== undefined && root.nodeData && root.nodeData.characters && root.nodeData.characters.length > root.contentData.speaker ? (root.nodeData.characters[root.contentData.speaker].name ? root.nodeData.characters[root.contentData.speaker].name : "") : "")
+            text: getSpeakerDisplayName(root.contentData)
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
             z: 85

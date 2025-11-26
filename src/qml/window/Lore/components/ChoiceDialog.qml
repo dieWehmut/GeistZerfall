@@ -18,8 +18,27 @@ Item {
         
         MouseArea {
             anchors.fill: parent
-            onClicked: {
-                // 阻止点击穿透
+            onClicked: function(mouse) {
+                // Allow clicks on the control bar to pass through so LoreControlButton remains clickable
+                try {
+                    // 'root' is the ChoiceDialog Item; its parent is the LoreView instance
+                    var loreView = root.parent;
+                    if (loreView && loreView.controlBarLoader) {
+                        var cb = loreView.controlBarLoader;
+                        // mouse.x/y are in this MouseArea's coordinates which match the view coordinates
+                        var inCbX = (mouse.x >= cb.x && mouse.x <= (cb.x + cb.width));
+                        var inCbY = (mouse.y >= cb.y && mouse.y <= (cb.y + cb.height));
+                        if (inCbX && inCbY) {
+                            // don't accept the event so it can pass through to the control bar below
+                            mouse.accepted = false;
+                            return;
+                        }
+                    }
+                } catch (e) {
+                    console.log('ChoiceDialog: overlay click passthrough check failed', e);
+                }
+                // Otherwise, accept to prevent clicks from passing through
+                mouse.accepted = true;
             }
         }
     }

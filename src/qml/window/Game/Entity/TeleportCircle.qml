@@ -6,7 +6,7 @@ Item {
     property color hoverColor: Qt.rgba(0.95, 0.95, 1.0, 0.95)
     property real ringWidth: 6
     property real radius: 52
-    property string spriteSource: "qrc:/resource/image/entity/playerNormal.png"
+    property string spriteSource: "qrc:/resource/image/entity/playerCircle.png"
     property real spriteSize: 96
     property real tileScale: 1.0
     property bool interactive: true

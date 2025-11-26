@@ -320,9 +320,24 @@ Item {
                         if (hMode === 'scene') {
                             if (hContent.speakerName) {
                                 hSpeaker = hContent.speakerName;
-                            } else if (hContent.speaker !== undefined && node.characters && node.characters.length > hContent.speaker) {
-                                var ch = node.characters[hContent.speaker];
-                                if (ch && ch.name) hSpeaker = ch.name;
+                            } else if (hContent.speaker !== undefined) {
+                                if (typeof hContent.speaker === 'number') {
+                                    if (node.characters && node.characters.length > hContent.speaker) {
+                                        var ch = node.characters[hContent.speaker];
+                                        if (ch && ch.name) hSpeaker = ch.name;
+                                    }
+                                } else if (typeof hContent.speaker === 'string') {
+                                    var s = hContent.speaker;
+                                    var matched = false;
+                                    try {
+                                        if (node.characters) {
+                                            for (var cc = 0; cc < node.characters.length; ++cc) {
+                                                if (node.characters[cc] && node.characters[cc].name === s) { hSpeaker = s; matched = true; break; }
+                                            }
+                                        }
+                                    } catch (em) {}
+                                    if (!matched) hSpeaker = s;
+                                }
                             }
                         }
                         var hText = hContent.text || "";
@@ -368,11 +383,25 @@ Item {
                 // 优先使用 speakerName
                 if (content.speakerName) {
                     speaker = content.speakerName;
-                } else if (content.speaker !== undefined && node.characters && node.characters.length > content.speaker) {
-                    // 否则从 characters 数组中获取
-                    var character = node.characters[content.speaker];
-                    if (character && character.name) {
-                        speaker = character.name;
+                } else if (content.speaker !== undefined) {
+                    // content.speaker can be a numeric index or a string name/custom label
+                    if (typeof content.speaker === 'number') {
+                        if (node.characters && node.characters.length > content.speaker) {
+                            var character = node.characters[content.speaker];
+                            if (character && character.name) speaker = character.name;
+                        }
+                    } else if (typeof content.speaker === 'string') {
+                        // if it matches any character's name, use it; otherwise just use the string as label
+                        var s = content.speaker;
+                        var matched = false;
+                        try {
+                            if (node.characters) {
+                                for (var ci = 0; ci < node.characters.length; ++ci) {
+                                    if (node.characters[ci] && node.characters[ci].name === s) { speaker = s; matched = true; break; }
+                                }
+                            }
+                        } catch (e) {}
+                        if (!matched) speaker = s;
                     }
                 }
             }
@@ -539,10 +568,17 @@ Item {
         // 到达节点末尾且存在分支选项时，弹出选择对话框
         if (node.choices && node.choices.length > 0) {
             console.log("LoreView: node has choices at end, showing choice dialog", node.choices);
-            try {
-                choiceDialog.choices = node.choices;
-                choiceDialog.visible = true;
-            } catch (e) { console.log('LoreView: show choice dialog error', e); }
+                try {
+                    // Ensure any active typing finishes immediately when choices appear
+                    try {
+                        var activeTc = getActiveTextComponent();
+                        if (activeTc && activeTc.typing) {
+                            try { activeTc.finishTyping(); } catch (eft) { console.log('LoreView: finishTyping on choice show failed', eft); }
+                        }
+                    } catch (et) { /* ignore */ }
+                    choiceDialog.choices = node.choices;
+                    choiceDialog.visible = true;
+                } catch (e) { console.log('LoreView: show choice dialog error', e); }
             setAutoMode(false);
             return;
         }
@@ -599,7 +635,8 @@ Item {
         id: controlBarLoader
         source: "qrc:/qml/components/LoreControlBar.qml"
         // 采用手动坐标定位，避免宽高为0时锚点失效导致左上角位置
-        z: 1500
+        // Elevate the control bar above the choice dialog so it remains clickable
+        z: (choiceDialog && choiceDialog.visible) ? 3400 : 1500
         active: true
         // make control bar visible whenever we're in "scene" mode and not a title screen
         // (don't depend on scene.textBoxItem existing at bind time)
@@ -624,7 +661,16 @@ Item {
 
                 obj.autoToggled.connect(function(enabled) { setAutoMode(enabled); });
 
-                obj.skipClicked.connect(function() { titleAutoAdvanceTimer.stop(); nextContent(); persistLoreState(); });
+                obj.skipClicked.connect(function() {
+                    titleAutoAdvanceTimer.stop();
+                    // If current text is typing, finish it immediately — otherwise advance
+                    try {
+                        var tcskip = getActiveTextComponent();
+                        if (tcskip && tcskip.typing) { tcskip.finishTyping(); return; }
+                    } catch (e) { }
+                    nextContent();
+                    persistLoreState();
+                });
 
                 obj.historyClicked.connect(function() { autoAdvanceTimer.stop(); historyPanel.open(); persistLoreState(); });
 
@@ -742,8 +788,21 @@ Item {
             console.log("LoreView: clicked, advancing content");
             // 点击时也停止标题自动切换计时器
             titleAutoAdvanceTimer.stop();
-            nextContent();
-            persistLoreState();
+            // 如果当前文字正在打字，则先完成打字；否则才前进到下一条
+            try {
+                var tc = getActiveTextComponent();
+                if (tc && tc.typing) {
+                    try { tc.finishTyping(); } catch(e) { console.log('LoreView: finishTyping failed', e); }
+                } else {
+                    nextContent();
+                    persistLoreState();
+                }
+            } catch(e) {
+                console.log('LoreView: click handling error', e);
+                // fallback behavior
+                nextContent();
+                persistLoreState();
+            }
         }
         z: 1000
     }
@@ -751,14 +810,31 @@ Item {
     // 鼠标滚轮处理器(向下滚动前进)
     WheelHandler {
         target: root
-        enabled: !historyPanel.visible && !confirmTitleDialog.visible && !choiceDialog.visible  // 历史或对话框打开时禁用
+        // Allow wheel events even when choice dialog is visible: we want wheel-up to open history while choices are shown
+        enabled: !historyPanel.visible && !confirmTitleDialog.visible
         onWheel: function(event) {
             // 向下滚动时 angleDelta.y < 0
             if (event.angleDelta.y < 0) {
+                // If the choice dialog is visible, ignore wheel-down (do not advance)
+                if (choiceDialog && choiceDialog.visible) {
+                    console.log("LoreView: wheel down ignored while choice dialog visible");
+                    return;
+                }
                 console.log("LoreView: wheel down, advancing content");
                 titleAutoAdvanceTimer.stop();
-                nextContent();
-                persistLoreState();
+                try {
+                    var tcw = getActiveTextComponent();
+                    if (tcw && tcw.typing) {
+                        try { tcw.finishTyping(); } catch(e) { console.log('LoreView: finishTyping failed', e); }
+                    } else {
+                        nextContent();
+                        persistLoreState();
+                    }
+                } catch(e) {
+                    console.log('LoreView: wheel handling error', e);
+                    nextContent();
+                    persistLoreState();
+                }
             } else if (event.angleDelta.y > 0) {
                 // 向上滚动时打开历史面板
                 console.log("LoreView: wheel up, opening history");
@@ -835,6 +911,8 @@ Item {
                 historyPanel.close();
                 // 先更新内容
                 showCurrentContent();
+                // Ensure any visible choice dialog is hidden after jumping via history
+                try { if (choiceDialog && choiceDialog.visible) { choiceDialog.visible = false; choiceDialog.choices = []; } } catch(e) {}
                 // 跳转后恢复音乐：回溯历史找到距离当前最近的有效音乐指令（music 或 stopMusic）
                 try {
                     var effectiveMusic = null;
@@ -1098,7 +1176,17 @@ Item {
             }
             event.accepted = true;
         } else if (event.key === Qt.Key_Control) {
-            fastForwardTimer.start();
+            // If current text is typing, finish it immediately; otherwise start fast-forward
+            try {
+                var tcctrl = getActiveTextComponent();
+                if (tcctrl && tcctrl.typing) {
+                    try { tcctrl.finishTyping(); } catch (e) { }
+                } else {
+                    fastForwardTimer.start();
+                }
+            } catch (e) {
+                fastForwardTimer.start();
+            }
             event.accepted = true;
         }
     }
