@@ -30,6 +30,12 @@ Item {
     property string savedMusicSource: ""
     property int savedMusicLoops: -1
     property bool savedMusicStopped: false
+    // 已读进度：结构为 { chapterId: { nodeId: highestReadIndex, ... }, ... }
+    property var readProgress: {}
+    // 当前的跳过模式（'read' 或 'all'），由快进按钮/按键启动时设置
+    property string __skipMode: ""
+    // 标记在显示选项时是否应在选择后继续快进
+    property bool __ffPendingChoice: false
 
     Component.onCompleted: {
         // 优先从 WindowState 恢复进度
@@ -103,8 +109,33 @@ Item {
                 }
             }
         } catch (er) { console.log('LoreView: restore history from SaveLoadManager failed', er); }
+        // 尝试加载已读进度（progress.dat）以支持只对已读文本启用快进
+        try {
+            if (typeof SaveLoadManager !== 'undefined' && SaveLoadManager && typeof SaveLoadManager.loadProgress === 'function') {
+                var p = SaveLoadManager.loadProgress();
+                if (p && Object.keys(p).length > 0) {
+                    readProgress = p;
+                }
+            }
+        } catch (eLoadProgress) { console.log('LoreView: loadProgress failed', eLoadProgress); }
         // Ensure this view receives keyboard focus so attached Keys handlers work
         Qt.callLater(function() { try { root.forceActiveFocus(); } catch (e) { /* ignore */ } });
+    }
+
+    // 标记已读内容并持久化到 progress.dat
+    function markContentRead(branch, nodeId, index) {
+        try {
+            if (typeof SaveLoadManager === 'undefined' || !SaveLoadManager) return;
+            if (!readProgress) readProgress = {};
+            var chapterMap = readProgress[branch];
+            if (!chapterMap) chapterMap = {};
+            var prev = chapterMap[nodeId];
+            if (prev === undefined || index > prev) {
+                chapterMap[nodeId] = index;
+                readProgress[branch] = chapterMap;
+                try { SaveLoadManager.saveProgress(readProgress); } catch (es) { /* ignore save errors */ }
+            }
+        } catch (e) { /* ignore */ }
     }
 
     Component.onDestruction: {
@@ -343,6 +374,8 @@ Item {
                         var hText = hContent.text || "";
                         if (hText !== "") {
                             historyPanel.addHistory(hMode, hSpeaker, hText, currentChapter, currentNode, hi, hContent.music, hContent.musicLoops, hContent.stopMusic);
+                            // 标记为已读
+                            try { markContentRead(currentChapter, currentNode, hi); } catch (e) { }
                         }
                     }
                 }
@@ -410,6 +443,8 @@ Item {
                 // 记录对应的 node id 与内容索引，以及音乐指令，供历史跳转使用
                 historyPanel.addHistory(currentMode, speaker, text, currentChapter, currentNode, currentContentIndex,
                                         content.music, content.musicLoops, content.stopMusic);
+                // 标记为已读（用于支持仅对已读文本启用快进）
+                try { markContentRead(currentChapter, currentNode, currentContentIndex); } catch (e) { }
             }
         }
 
@@ -537,12 +572,34 @@ Item {
             currentContentIndex++;
             console.log("LoreView: advancing to content index", currentContentIndex);
             showCurrentContent();
+            // If we're fast-forwarding and user prefers 'read' skipping, stop when new content is UNREAD
+            try {
+                var isFF = (fastForwardTimer && fastForwardTimer.running) ? true : false;
+                var skipMode = (root.__skipMode !== undefined) ? root.__skipMode : (function(){ try { var s = (typeof SaveLoadManager !== 'undefined' && SaveLoadManager) ? SaveLoadManager.loadSystem() : {}; return (s && s.textSkip) ? s.textSkip : 'read'; } catch(e){ return 'read'; } })();
+                if (isFF && skipMode === 'read') {
+                    // current content is at currentContentIndex
+                    var curNode = chapterData.nodes[currentNode];
+                    var curContent = curNode && curNode.contents ? curNode.contents[currentContentIndex] : null;
+                    if (curContent && (curContent.type === 'text' || curContent.type === 'title')) {
+                        var already = false;
+                        try { already = !!(readProgress && readProgress[currentChapter] && readProgress[currentChapter][currentNode] !== undefined && readProgress[currentChapter][currentNode] >= currentContentIndex); } catch (er) { already = false; }
+                        if (!already) {
+                            // we've landed on an unread content -> stop fast-forward so player can read it
+                            try { fastForwardTimer.stop(); } catch(e) {}
+                        }
+                    } else {
+                        // non-text content: stop fast-forward to avoid skipping choices/actions
+                        try { fastForwardTimer.stop(); } catch(e) {}
+                    }
+                }
+            } catch (ef) { }
             return;
         }
 
         // 到达节点末尾，检查是否有 action
         if (node.action) {
             setAutoMode(false);
+            try { fastForwardTimer.stop(); } catch(e) {}
             console.log("LoreView: triggering action", node.action);
             if (node.action === "startBattle") {
                 var battleId = node.actionParams ? node.actionParams.battleId : "battle01";
@@ -577,9 +634,19 @@ Item {
                         }
                     } catch (et) { /* ignore */ }
                     choiceDialog.choices = node.choices;
+                    // decide whether to resume fast-forward after choice based on user setting
+                    try {
+                        var resumeOpt = false;
+                        if (typeof SaveLoadManager !== 'undefined' && SaveLoadManager && typeof SaveLoadManager.loadSystem === 'function') {
+                            var sysC = SaveLoadManager.loadSystem() || {};
+                            resumeOpt = !!sysC.optionFastForward;
+                        }
+                        root.__ffPendingChoice = (!!(fastForwardTimer && fastForwardTimer.running) && resumeOpt);
+                    } catch (ef) { root.__ffPendingChoice = false; }
                     choiceDialog.visible = true;
                 } catch (e) { console.log('LoreView: show choice dialog error', e); }
             setAutoMode(false);
+                try { fastForwardTimer.stop(); } catch(e) {}
             return;
         }
 
@@ -589,6 +656,21 @@ Item {
             currentNode = node.nextNode;
             currentContentIndex = 0;
             showCurrentContent();
+            // If fast-forwarding, check whether first content is unread and stop if so
+            try {
+                if (fastForwardTimer && fastForwardTimer.running) {
+                    var skipModeNN = (root.__skipMode !== undefined) ? root.__skipMode : (function(){ try { var s = (typeof SaveLoadManager !== 'undefined' && SaveLoadManager) ? SaveLoadManager.loadSystem() : {}; return (s && s.textSkip) ? s.textSkip : 'read'; } catch(e){ return 'read'; } })();
+                    var nnContent = chapterData.nodes[currentNode] && chapterData.nodes[currentNode].contents ? chapterData.nodes[currentNode].contents[0] : null;
+                    if (skipModeNN === 'read') {
+                        var alreadyNN = !!(readProgress && readProgress[currentChapter] && readProgress[currentChapter][currentNode] !== undefined && readProgress[currentChapter][currentNode] >= 0);
+                        if (nnContent && (nnContent.type === 'text' || nnContent.type === 'title')) {
+                            if (!alreadyNN) try { fastForwardTimer.stop(); } catch(e) {}
+                        } else {
+                            try { fastForwardTimer.stop(); } catch(e) {}
+                        }
+                    }
+                }
+            } catch(e) {}
             return;
         }
 
@@ -600,10 +682,28 @@ Item {
             currentNode = "";
             currentContentIndex = 0;
             loadChapter(currentChapter);
+            // After loading, check fast-forward stopping condition similarly
+            try {
+                if (fastForwardTimer && fastForwardTimer.running) {
+                    var skipModeNC = (root.__skipMode !== undefined) ? root.__skipMode : (function(){ try { var s = (typeof SaveLoadManager !== 'undefined' && SaveLoadManager) ? SaveLoadManager.loadSystem() : {}; return (s && s.textSkip) ? s.textSkip : 'read'; } catch(e){ return 'read'; } })();
+                    var firstNodeKey;
+                    for (var k in chapterData.nodes) { firstNodeKey = k; break; }
+                    var firstContent = (firstNodeKey && chapterData.nodes[firstNodeKey] && chapterData.nodes[firstNodeKey].contents) ? chapterData.nodes[firstNodeKey].contents[0] : null;
+                    if (skipModeNC === 'read') {
+                        var alreadyFirst = !!(readProgress && readProgress[currentChapter] && readProgress[currentChapter][firstNodeKey] !== undefined && readProgress[currentChapter][firstNodeKey] >= 0);
+                        if (firstContent && (firstContent.type === 'text' || firstContent.type === 'title')) {
+                            if (!alreadyFirst) try { fastForwardTimer.stop(); } catch(e) {}
+                        } else {
+                            try { fastForwardTimer.stop(); } catch(e) {}
+                        }
+                    }
+                }
+            } catch(e) {}
             return;
         }
 
         console.log("LoreView: reached end of chapter");
+        try { fastForwardTimer.stop(); } catch(e) {}
     }
 
     // 动态圆圈
@@ -667,8 +767,32 @@ Item {
                     try {
                         var tcskip = getActiveTextComponent();
                         if (tcskip && tcskip.typing) { tcskip.finishTyping(); return; }
+                        // mark next content to be shown instantly (ignore per-char speed)
+                        try { if (typeof window !== 'undefined') window.__skipInstantNext = true; } catch (e) {}
                     } catch (e) { }
-                    nextContent();
+                    // Start fast-forwarding until we hit an unread text (or user setting allows skipping all)
+                    try {
+                        // reload user preference at start
+                        var sys = (typeof SaveLoadManager !== 'undefined' && SaveLoadManager && typeof SaveLoadManager.loadSystem === 'function') ? SaveLoadManager.loadSystem() : {};
+                        root.__skipMode = (sys && sys.textSkip) ? sys.textSkip : 'read';
+                    } catch (e) {
+                        root.__skipMode = 'read';
+                    }
+                    // If current content is a text/title and user chose 'read' skip, do not start skipping now
+                    try {
+                        var curNodeObj = (chapterData && chapterData.nodes) ? chapterData.nodes[currentNode] : null;
+                        var curCont = (curNodeObj && curNodeObj.contents) ? curNodeObj.contents[currentContentIndex] : null;
+                        var curIsText = curCont && (curCont.type === 'text' || curCont.type === 'title');
+                        var isAlreadyRead = !!(readProgress && readProgress[currentChapter] && readProgress[currentChapter][currentNode] !== undefined && readProgress[currentChapter][currentNode] >= currentContentIndex);
+                        if (root.__skipMode === 'read' && curIsText && !isAlreadyRead) {
+                            // current is unread -> don't start skipping
+                        } else {
+                            fastForwardTimer.start();
+                        }
+                    } catch (e2) {
+                        fastForwardTimer.start();
+                    }
+                    // persist current state so save knows we started skip
                     persistLoreState();
                 });
 
@@ -985,6 +1109,34 @@ Item {
                     currentContentIndex = 0;
                     choiceDialog.visible = false;
                     showCurrentContent();
+                    // Respect user setting: if optionAutoContinue enabled, resume auto mode
+                    try {
+                        var autoContinue = false;
+                        if (typeof window !== 'undefined' && window.__optionAutoContinue !== undefined) autoContinue = !!window.__optionAutoContinue;
+                        else if (typeof SaveLoadManager !== 'undefined' && SaveLoadManager) {
+                            var sys = SaveLoadManager.loadSystem() || {};
+                            if (sys.optionAutoContinue !== undefined) autoContinue = !!sys.optionAutoContinue;
+                        }
+                        if (autoContinue) {
+                            setAutoMode(true);
+                            scheduleAutoAdvance();
+                        }
+                    } catch(eac) { console.log('LoreView: apply autoContinue read failed', eac); }
+                    // Resume fast-forward if it was pending and allowed (and not blocked by unread first content)
+                    try {
+                        if (root.__ffPendingChoice) {
+                            root.__ffPendingChoice = false;
+                            // obey skip mode: do not resume if current content is unread in 'read' mode
+                            var skipModeA = (root.__skipMode !== undefined && root.__skipMode !== "") ? root.__skipMode : (function(){ try { var s = (typeof SaveLoadManager !== 'undefined' && SaveLoadManager) ? SaveLoadManager.loadSystem() : {}; return (s && s.textSkip) ? s.textSkip : 'read'; } catch(e){ return 'read'; } })();
+                            var curNodeObjA = (chapterData && chapterData.nodes) ? chapterData.nodes[currentNode] : null;
+                            var curContA = (curNodeObjA && curNodeObjA.contents) ? curNodeObjA.contents[currentContentIndex] : null;
+                            var curIsTextA = curContA && (curContA.type === 'text' || curContA.type === 'title');
+                            var alreadyA = !!(readProgress && readProgress[currentChapter] && readProgress[currentChapter][currentNode] !== undefined && readProgress[currentChapter][currentNode] >= currentContentIndex);
+                            if (!(skipModeA === 'read' && curIsTextA && !alreadyA)) {
+                                try { fastForwardTimer.start(); } catch(e) {}
+                            }
+                        }
+                    } catch (erf) { root.__ffPendingChoice = false; }
                     return;
                 }
                 // case B: next refers to another chapter id (try to load it)
@@ -998,6 +1150,38 @@ Item {
                         currentContentIndex = 0;
                         choiceDialog.visible = false;
                         loadChapter(target);
+                        // Respect user setting: if optionAutoContinue enabled, resume auto mode after chapter loads
+                        try {
+                            var autoContinue2 = false;
+                            if (typeof window !== 'undefined' && window.__optionAutoContinue !== undefined) autoContinue2 = !!window.__optionAutoContinue;
+                            else if (typeof SaveLoadManager !== 'undefined' && SaveLoadManager) {
+                                var sys2 = SaveLoadManager.loadSystem() || {};
+                                if (sys2.optionAutoContinue !== undefined) autoContinue2 = !!sys2.optionAutoContinue;
+                            }
+                            if (autoContinue2) {
+                                // loadChapter will call showCurrentContent; schedule re-enabling after a tick
+                                Qt.callLater(function() { try { setAutoMode(true); scheduleAutoAdvance(); } catch(e) {} });
+                            }
+                        } catch(eac2) { console.log('LoreView: apply autoContinue read failed', eac2); }
+                        // Resume fast-forward after chapter change if it was pending
+                        try {
+                            if (root.__ffPendingChoice) {
+                                root.__ffPendingChoice = false;
+                                Qt.callLater(function() {
+                                    try {
+                                        var skipModeB = (root.__skipMode !== undefined && root.__skipMode !== "") ? root.__skipMode : (function(){ try { var s = (typeof SaveLoadManager !== 'undefined' && SaveLoadManager) ? SaveLoadManager.loadSystem() : {}; return (s && s.textSkip) ? s.textSkip : 'read'; } catch(e){ return 'read'; } })();
+                                        // find first node key
+                                        var firstKeyB;
+                                        for (var kk in chapterData.nodes) { firstKeyB = kk; break; }
+                                        var firstCont = (firstKeyB && chapterData.nodes[firstKeyB] && chapterData.nodes[firstKeyB].contents) ? chapterData.nodes[firstKeyB].contents[0] : null;
+                                        var alreadyB = !!(readProgress && readProgress[currentChapter] && readProgress[currentChapter][firstKeyB] !== undefined && readProgress[currentChapter][firstKeyB] >= 0);
+                                        if (!(skipModeB === 'read' && firstCont && (firstCont.type === 'text' || firstCont.type === 'title') && !alreadyB)) {
+                                            try { fastForwardTimer.start(); } catch(e) {}
+                                        }
+                                    } catch(e) {}
+                                });
+                            }
+                        } catch (erf2) { root.__ffPendingChoice = false; }
                         return;
                     }
                 } catch (e) { /* ignore - not a chapter */ }
@@ -1011,6 +1195,7 @@ Item {
                             if (typeof transitionManager !== 'undefined' && typeof transitionManager.startBattle === 'function') {
                                 choiceDialog.visible = false;
                                 setAutoMode(false);
+                                root.__ffPendingChoice = false;
                                 transitionManager.startBattle(target);
                                 return;
                             }
@@ -1022,6 +1207,7 @@ Item {
                                 window.currentBattleId = target;
                                 choiceDialog.visible = false;
                                 setAutoMode(false);
+                                root.__ffPendingChoice = false;
                                 if (window.replaceSource) window.replaceSource("qml/window/Game/GameView.qml"); else if (window.pushSource) window.pushSource("qml/window/Game/GameView.qml");
                                 return;
                             }
@@ -1032,6 +1218,7 @@ Item {
                 // unknown target
                 console.log("LoreView: choice target not found in current chapter or as chapter:", target);
                 choiceDialog.visible = false;
+                root.__ffPendingChoice = false;
             } catch (e) { console.log('LoreView: onChoiceSelected error', e); }
         }
     }
@@ -1106,6 +1293,48 @@ Item {
         repeat: false
         onTriggered: {
             console.log("LoreView: auto-advance timer triggered");
+            // If the active text is still typing, defer advancing until typing finishes.
+            var active = null;
+            try {
+                if (scene && scene.visible) active = scene;
+                else if (contentLoader && contentLoader.item) active = contentLoader.item;
+            } catch (e) { active = null; }
+
+            if (active && active.typing) {
+                // stop main timer and poll until typing finishes, then wait 1s and advance
+                autoAdvanceTimer.stop();
+                if (!checkTypingTimer.running) checkTypingTimer.start();
+                return;
+            }
+            nextContent();
+        }
+    }
+
+    // Polling timer used when auto-advance fired but text is still typing
+    Timer {
+        id: checkTypingTimer
+        interval: 200
+        repeat: true
+        running: false
+        onTriggered: {
+            var active = null;
+            try {
+                if (scene && scene.visible) active = scene;
+                else if (contentLoader && contentLoader.item) active = contentLoader.item;
+            } catch (e) { active = null; }
+            if (!active || !active.typing) {
+                checkTypingTimer.stop();
+                postTypingAdvanceTimer.start();
+            }
+        }
+    }
+
+    // After typing finishes, wait this long (ms) before advancing
+    Timer {
+        id: postTypingAdvanceTimer
+        interval: 1000
+        repeat: false
+        onTriggered: {
             nextContent();
         }
     }
@@ -1182,7 +1411,20 @@ Item {
                 if (tcctrl && tcctrl.typing) {
                     try { tcctrl.finishTyping(); } catch (e) { }
                 } else {
-                    fastForwardTimer.start();
+                            try {
+                                var sys2 = (typeof SaveLoadManager !== 'undefined' && SaveLoadManager && typeof SaveLoadManager.loadSystem === 'function') ? SaveLoadManager.loadSystem() : {};
+                                root.__skipMode = (sys2 && sys2.textSkip) ? sys2.textSkip : 'read';
+                            } catch (ee) { root.__skipMode = 'read'; }
+                            // If current content is a text/title and user chose 'read' skip, do not start skipping now
+                            try {
+                                var curN = (chapterData && chapterData.nodes) ? chapterData.nodes[currentNode] : null;
+                                var curC = (curN && curN.contents) ? curN.contents[currentContentIndex] : null;
+                                var curIsT = curC && (curC.type === 'text' || curC.type === 'title');
+                                var already = !!(readProgress && readProgress[currentChapter] && readProgress[currentChapter][currentNode] !== undefined && readProgress[currentChapter][currentNode] >= currentContentIndex);
+                                if (!(root.__skipMode === 'read' && curIsT && !already)) {
+                                    fastForwardTimer.start();
+                                }
+                            } catch (ee2) { fastForwardTimer.start(); }
                 }
             } catch (e) {
                 fastForwardTimer.start();

@@ -22,11 +22,24 @@ Item {
         displayedText = "";
         // start typing if there's text
         if (fullText && fullText.length > 0) {
+            // If global "skip all" setting is enabled, reveal instantly
+            if (typeof window !== 'undefined' && window.__textSkip === 'all') {
+                finishTyping();
+                return;
+            }
+
+            // If the previous action requested instant-next (from SKIP), honor it and reveal instantly
+            if (typeof window !== 'undefined' && window.__skipInstantNext) {
+                window.__skipInstantNext = false;
+                finishTyping();
+                return;
+            }
+
             typing = true;
             // compute milliseconds per character from global seconds setting (window.__textSpeed)
             var seconds = (typeof window !== 'undefined' && window.__textSpeed) ? Number(window.__textSpeed) : 0.008;
             var iv = Math.round(seconds * 1000);
-            if (iv < 1) iv = 1; if (iv > 15) iv = 15;
+            if (iv < 1) iv = 1; if (iv > 35) iv = 35;
             typingTimer.interval = iv;
             typingTimer.start();
         } else {
@@ -41,7 +54,7 @@ Item {
         var seconds = (typeof window !== 'undefined' && window.__textSpeed) ? Number(window.__textSpeed) : 0.008;
         var ms = Math.round(seconds * 1000);
         if (ms < 1) ms = 1;
-        if (ms > 15) ms = 15;
+        if (ms > 35) ms = 35;
         return ms;
     }
 

@@ -46,7 +46,14 @@ Item {
             // whether to show portrait image for this character instance
             // - can be controlled per-content via content.showPortrait (false -> hide all portraits for line)
             // - OR per-character via character model { showPortrait: false }
-            property bool showPortrait: (root.contentData && root.contentData.hasOwnProperty('showPortrait')) ? root.contentData.showPortrait : (modelData && modelData.hasOwnProperty('showPortrait') ? modelData.showPortrait : true)
+            // Default behavior: if neither content nor model specify showPortrait, portraits are visible.
+            property bool showPortrait: (function() {
+                try {
+                    if (root.contentData && root.contentData.showPortrait !== undefined) return !!root.contentData.showPortrait;
+                    if (modelData && modelData.showPortrait !== undefined) return !!modelData.showPortrait;
+                } catch(e) {}
+                return true;
+            })()
             // 立绘图片
             Image {
                 id: ch
@@ -60,7 +67,8 @@ Item {
                 anchors.bottomMargin: 0
 
                 // visibility -- portrait can be hidden (but name badge still follows the character position)
-                visible: showPortrait
+                // only show if portrait explicitly allowed and an image source is available
+                visible: showPortrait && source !== ""
 
                 // 位置：left/center/right（可用 x/y 覆盖）
                 anchors.horizontalCenter: undefined
@@ -245,9 +253,9 @@ Item {
     function _sceneCalcCharIntervalMs() {
         var seconds = (typeof window !== 'undefined' && window.__textSpeed) ? Number(window.__textSpeed) : 0.008;
         var ms = Math.round(seconds * 1000);
-        // clamp to 1ms - 15ms to match new slider bounds
+        // clamp to 1ms - 35ms to match slider bounds
         if (ms < 1) ms = 1;
-        if (ms > 15) ms = 15;
+        if (ms > 35) ms = 35;
         return ms;
     }
 
@@ -275,11 +283,24 @@ Item {
         revealIndex = 0;
         displayedText = "";
         if (fullText && fullText.length > 0) {
+            // Honor global "skip all" setting: reveal instantly
+            if (typeof window !== 'undefined' && window.__textSkip === 'all') {
+                finishTyping();
+                return;
+            }
+
+            // If SKIP requested next instant display, honor and clear the flag
+            if (typeof window !== 'undefined' && window.__skipInstantNext) {
+                window.__skipInstantNext = false;
+                finishTyping();
+                return;
+            }
+
             typing = true;
             var seconds = (typeof window !== 'undefined' && window.__textSpeed) ? Number(window.__textSpeed) : 0.008;
             var ms = Math.round(seconds * 1000);
             if (ms < 1) ms = 1;
-            if (ms > 15) ms = 15;
+            if (ms > 35) ms = 35;
             sceneTypingTimer.interval = ms;
             sceneTypingTimer.start();
         } else {

@@ -106,6 +106,52 @@ QVariantMap SaveLoad::loadSystem(const QString &folderPath) {
     out = doc.object().toVariantMap();
     return out;
 }
+
+bool SaveLoad::saveProgress(const QVariantMap &progress, const QString &folderPath) {
+    QString dirPath = QDir::cleanPath(QCoreApplication::applicationDirPath() + "/" + folderPath);
+    QDir dir;
+    if (!dir.exists(dirPath)) {
+        if (!dir.mkpath(dirPath)) {
+            qWarning() << "SaveLoad::saveProgress: cannot create dir" << dirPath;
+            return false;
+        }
+    }
+    QString filePath = dirPath + "/progress.dat";
+    QFile f(filePath);
+    if (!f.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        qWarning() << "SaveLoad::saveProgress: cannot open file for write:" << filePath;
+        return false;
+    }
+    QJsonObject obj = QJsonObject::fromVariantMap(progress);
+    QJsonDocument doc(obj);
+    QByteArray bytes = doc.toJson(QJsonDocument::Compact);
+    qint64 written = f.write(bytes);
+    f.close();
+    return written == bytes.size();
+}
+
+QVariantMap SaveLoad::loadProgress(const QString &folderPath) {
+    QVariantMap out;
+    QString dirPath = QDir::cleanPath(QCoreApplication::applicationDirPath() + "/" + folderPath);
+    QString filePath = dirPath + "/progress.dat";
+    QFile f(filePath);
+    if (!f.exists()) return out;
+    if (!f.open(QIODevice::ReadOnly)) {
+        qWarning() << "SaveLoad::loadProgress: cannot open file for read:" << filePath;
+        return out;
+    }
+    QByteArray data = f.readAll();
+    f.close();
+    QJsonParseError perr;
+    QJsonDocument doc = QJsonDocument::fromJson(data, &perr);
+    if (perr.error != QJsonParseError::NoError) {
+        qWarning() << "SaveLoad::loadProgress: parse error" << perr.errorString();
+        return out;
+    }
+    if (!doc.isObject()) return out;
+    out = doc.object().toVariantMap();
+    return out;
+}
 bool SaveLoad::saveAuto(const QString &folderPath) {
     // For backward compatibility this still saves the same auto.dat but using the new top-level format.
     return savePlayer(folderPath);
