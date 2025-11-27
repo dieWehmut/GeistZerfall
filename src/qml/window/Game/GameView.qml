@@ -158,7 +158,7 @@ Item {
 			gameViewRoot.snipeHeld = true;
 			try { if (playerObj && typeof playerObj.snipeStart === 'function') playerObj.snipeStart(); } catch(e) {}
 		}
-		tileScale = 1.5 / 2.0;
+		tileScale = 1 / 3.0;
 		sightMask.radius = sightMask.baseRadius * tileScale;
 		try { if (fireTimer && fireTimer.running) fireTimer.stop(); } catch(e) {}
 		try { if (playerItem && typeof playerItem.startBulletRecharge === 'function') playerItem.startBulletRecharge(); } catch(e) {}

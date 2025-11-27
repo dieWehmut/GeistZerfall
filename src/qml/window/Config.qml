@@ -33,7 +33,14 @@ Item {
 						if (settings.sfxVolume !== undefined) sfxSlider.value = Math.round((settings.sfxVolume || 0.0) * 100);
 						if (settings.sysSfxVolume !== undefined) sysSfxSlider.value = Math.round((settings.sysSfxVolume || 0.0) * 100);
 						if (settings.textSpeed !== undefined) textSpeedSlider.value = settings.textSpeed;
-						if (settings.textBoxOpacity !== undefined) textBoxOpacitySlider.value = Math.round((settings.textBoxOpacity || 1.0) * 100);
+						if (settings.textBoxOpacity !== undefined) {
+							textBoxOpacitySlider.value = Math.round(settings.textBoxOpacity * 100);
+							try { if (typeof window !== 'undefined') window.__textBoxOpacity = settings.textBoxOpacity; } catch(e) {}
+						} else {
+							// default to 60% when no stored setting
+							textBoxOpacitySlider.value = 60;
+							try { if (typeof window !== 'undefined') window.__textBoxOpacity = 0.6; } catch(e) {}
+						}
 						if (settings.autoModeWait !== undefined) autoModeSlider.value = settings.autoModeWait;
 					}
 					// aspect ratio
@@ -149,6 +156,7 @@ Item {
 			// Text / auto defaults
 			try { textSpeedSlider.value = 0.008; } catch(e) {}
 			try { textBoxOpacitySlider.value = 100; } catch(e) {}
+				try { textBoxOpacitySlider.value = 60; if (typeof window !== 'undefined') window.__textBoxOpacity = 0.6; } catch(e) {}
 			try { autoModeSlider.value = 3; } catch(e) {}
 
 			// Aspect ratio default
@@ -477,7 +485,7 @@ Item {
 				Column { spacing: 5
 					Text { text: "每个文字显示时间 (秒)"; font.pixelSize: 28; color: "white"; font.bold: true; style: Text.Outline; styleColor: "black";
 						anchors.left: parent.left; anchors.leftMargin: 0 }
-					ConfigSlider { id: textSpeedSlider; leftAligned: true; leftMargin: 0; value: 0.008; minValue: 0.001; maxValue: 0.015; step: 0.001; onValueChanged: { if (typeof window !== 'undefined') window.__textSpeed = value; persistSystemSettings(); } }
+					ConfigSlider { id: textSpeedSlider; leftAligned: true; leftMargin: 0; value: 0.008; minValue: 0.001; maxValue: 0.035; step: 0.001; onValueChanged: { if (typeof window !== 'undefined') window.__textSpeed = value; persistSystemSettings(); } }
 				}
 
 				Column { spacing: 5
@@ -492,7 +500,18 @@ Item {
 					Text { text: "文本栏透明度"; font.pixelSize: 28; color: "white"; font.bold: true; style: Text.Outline; styleColor: "black";
 						anchors.left: parent.left; anchors.leftMargin: 0 }
 					Row { anchors.left: parent.left; anchors.leftMargin: 0; spacing: 12
-						ConfigSlider { id: textBoxOpacitySlider; leftAligned: true; leftMargin: 0; value: 100; minValue: 0; maxValue: 100; step: 1; Component.onCompleted: { value = (typeof window !== 'undefined' ? Math.round((window.__textBoxOpacity || 1.0) * 100) : 100); } onValueChanged: { if (typeof window !== 'undefined') window.__textBoxOpacity = value / 100.0; persistSystemSettings(); } }
+						ConfigSlider {
+												id: textBoxOpacitySlider;
+												leftAligned: true; leftMargin: 0; value: 60; minValue: 0; maxValue: 100; step: 1;
+												Component.onCompleted: {
+													if (typeof window !== 'undefined' && window.__textBoxOpacity !== undefined) {
+														value = Math.round(window.__textBoxOpacity * 100);
+													} else {
+														value = 60;
+													}
+												}
+												onValueChanged: { if (typeof window !== 'undefined') window.__textBoxOpacity = value / 100.0; persistSystemSettings(); }
+											}
 					}
 
 					// 测试框：用于实时测试文字速度和文字框透明度
@@ -501,9 +520,9 @@ Item {
 						anchors.left: parent.left
 						anchors.leftMargin: 0
 						anchors.right: parent.right
-						anchors.rightMargin: 24
-						height: 120
-						color: Qt.rgba(0.96, 0.96, 0.96, (typeof window !== 'undefined' && window.__textBoxOpacity !== undefined ? Number(window.__textBoxOpacity) : 1.0))
+						anchors.rightMargin: 14
+						height: 180
+						color: Qt.rgba(0.96, 0.96, 0.96, (typeof window !== 'undefined' && window.__textBoxOpacity !== undefined ? Number(window.__textBoxOpacity) : 0.6))
 						border.color: "#CCCCCC"
 						radius: 6
 						z: 2
@@ -514,12 +533,37 @@ Item {
 								Text { id: speedInfo; text: (typeof window !== 'undefined' ? (Math.round(window.__textSpeed * 1000) + " ms/char") : "") ; color: "#AAAAAA"; font.pixelSize: 12 }
 							}
 						}
-						// local state for typing test
-						property string testFull: "这是用于测试的示例文本，测试文字显示速度与背景透明度。"
+						// local state for typing test: cycle two long paragraphs for auto-mode testing
+						property var testParagraphs: [
+							"幸苦这是用于测试的第一段示例文本，用来验证自动模式下逐字显示、暂停与切换行为。此段文字较长，应覆盖多行并让你能观察到逐字播放的节奏与速度设置对于文本可读性的影响。",
+							"这是第二段测试文本，用于在第一段播放完成后自动切换并继续播放，以便测试连续段落的自动模式和延迟处理。第二段也应足够长，从而验证段落间的停顿与循环重播逻辑。"
+						]
+						property int testParagraphIndex: 0
+						property string testFull: testParagraphs.length > 0 ? testParagraphs[0] : ""
 						property int testRevealIndex: 0
 						property string testDisplayed: ""
-						Timer { id: testTimer; interval: Math.max(1, Math.round((typeof window !== 'undefined' && window.__textSpeed ? window.__textSpeed : 0.008) * 1000)); repeat: true; running: true; onTriggered: { try { if (textBoxTest.testRevealIndex < textBoxTest.testFull.length) { textBoxTest.testRevealIndex = Math.min(textBoxTest.testFull.length, textBoxTest.testRevealIndex + 1); textBoxTest.testDisplayed = textBoxTest.testFull.substr(0, textBoxTest.testRevealIndex); } else { textBoxTest.testRevealIndex = 0; textBoxTest.testDisplayed = ""; } } catch(e) {} } }
-						function restartTest() { testTimer.stop(); textBoxTest.testDisplayed = ""; textBoxTest.testRevealIndex = 0; testTimer.interval = Math.max(1, Math.round((typeof window !== 'undefined' && window.__textSpeed ? window.__textSpeed : 0.008) * 1000)); testTimer.start(); }
+						Timer { id: testTimer; interval: Math.max(1, Math.round((typeof window !== 'undefined' && window.__textSpeed ? window.__textSpeed : 0.008) * 1000)); repeat: true; running: true; onTriggered: {
+							try {
+								if (textBoxTest.testRevealIndex < textBoxTest.testFull.length) {
+									textBoxTest.testRevealIndex = Math.min(textBoxTest.testFull.length, textBoxTest.testRevealIndex + 1);
+									textBoxTest.testDisplayed = textBoxTest.testFull.substr(0, textBoxTest.testRevealIndex);
+								} else {
+									// finished current paragraph: pause briefly, then switch to next paragraph and restart
+									testTimer.stop();
+									pauseBetweenParagraphs.start();
+								}
+							} catch(e) {}
+						} }
+						Timer { id: pauseBetweenParagraphs; interval: 1000; running: false; repeat: false; onTriggered: {
+							textBoxTest.testParagraphIndex = (textBoxTest.testParagraphIndex + 1) % textBoxTest.testParagraphs.length;
+							textBoxTest.testFull = textBoxTest.testParagraphs[textBoxTest.testParagraphIndex];
+							textBoxTest.testRevealIndex = 0;
+							textBoxTest.testDisplayed = "";
+							testTimer.interval = Math.max(1, Math.round((typeof window !== 'undefined' && window.__textSpeed ? window.__textSpeed : 0.008) * 1000));
+							testTimer.start();
+						} }
+
+						function restartTest() { pauseBetweenParagraphs.stop(); testTimer.stop(); textBoxTest.testParagraphIndex = 0; textBoxTest.testFull = textBoxTest.testParagraphs[0]; textBoxTest.testDisplayed = ""; textBoxTest.testRevealIndex = 0; testTimer.interval = Math.max(1, Math.round((typeof window !== 'undefined' && window.__textSpeed ? window.__textSpeed : 0.008) * 1000)); testTimer.start(); }
 						onVisibleChanged: {
 							speedInfo.text = (typeof window !== 'undefined' ? (Math.round(window.__textSpeed * 1000) + " ms/char") : "");
 							if (visible) restartTest();

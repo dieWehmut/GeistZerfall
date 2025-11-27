@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls
+import QtMultimedia 6.5
 
 Item {
     id: root
@@ -65,10 +66,24 @@ Item {
                 anchors.fill: parent
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
+                onEntered: { try { leftHoverSfx.play(); } catch(e) {} }
                 onClicked: {
+                    try { leftClickSfx.play(); } catch(e) {}
                     root.value = Math.max(root.minValue, root.value - root.step)
                 }
             }
+            // hover / click SFX
+            SoundEffect {
+                id: leftHoverSfx
+                source: "qrc:/resource/audio/SoundEffect/buttonHover.wav"
+                volume: 0.9 * (typeof window !== 'undefined' ? window.masterVolume * (typeof window.sysSfxVolume !== 'undefined' ? window.sysSfxVolume : window.sfxVolume) : 1.0)
+            }
+            SoundEffect {
+                id: leftClickSfx
+                source: "qrc:/resource/audio/SoundEffect/buttonClick.wav"
+                volume: 1.0 * (typeof window !== 'undefined' ? window.masterVolume * (typeof window.sysSfxVolume !== 'undefined' ? window.sysSfxVolume : window.sfxVolume) : 1.0)
+            }
+            
         }
 
         // Slider Area
@@ -193,10 +208,24 @@ Item {
                 anchors.fill: parent
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
+                onEntered: { try { rightHoverSfx.play(); } catch(e) {} }
                 onClicked: {
+                    try { rightClickSfx.play(); } catch(e) {}
                     root.value = Math.min(root.maxValue, root.value + root.step)
                 }
             }
+            // hover / click SFX
+            SoundEffect {
+                id: rightHoverSfx
+                source: "qrc:/resource/audio/SoundEffect/buttonHover.wav"
+                volume: 0.9 * (typeof window !== 'undefined' ? window.masterVolume * (typeof window.sysSfxVolume !== 'undefined' ? window.sysSfxVolume : window.sfxVolume) : 1.0)
+            }
+            SoundEffect {
+                id: rightClickSfx
+                source: "qrc:/resource/audio/SoundEffect/buttonClick.wav"
+                volume: 1.0 * (typeof window !== 'undefined' ? window.masterVolume * (typeof window.sysSfxVolume !== 'undefined' ? window.sysSfxVolume : window.sfxVolume) : 1.0)
+            }
+            
         }
 
         // Number Display (black when recently changed, otherwise white)
