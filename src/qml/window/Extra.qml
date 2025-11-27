@@ -27,6 +27,42 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         transform: Scale { xScale: scaleFactor; yScale: scaleFactor; origin.x: baseWidth/2; origin.y: baseHeight/2 }
 
+            // 解锁百分比显示
+            property int unlockedCount: 0
+            property int totalCount: 6
+            property int unlockedPercent: Math.round(unlockedCount / totalCount * 100)
+
+            function updateUnlockedCount() {
+                var count = 0;
+                for (var i = 1; i <= totalCount; ++i) {
+                    var bid = "battle" + (i < 10 ? ("0" + i) : i);
+                    if (extraGridRoot.isUnlocked(bid)) count++;
+                }
+                unlockedCount = count;
+            }
+
+            Connections {
+                target: SaveLoadManager
+                function onSaved() { updateUnlockedCount(); }
+                function onAutoExistsChanged() { updateUnlockedCount(); }
+            }
+            Component.onCompleted: Qt.callLater(function() { updateUnlockedCount(); });
+
+            Text {
+                id: percentText
+                text: "Unlocked: " + contentRoot.unlockedPercent + "%"
+                anchors.right: parent.right
+                anchors.rightMargin: 32
+                anchors.top: parent.top
+                anchors.topMargin: 24
+                font.pixelSize: 48 // 与左上角标题一致
+                color: "white"
+                font.bold: true
+                style: Text.Outline
+                styleColor: "black"
+                z: 20
+            }
+
         // 标题（与 Config.qml 一致）
         Text {
             text: "EXTRA"
@@ -50,7 +86,39 @@ Item {
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.verticalCenter: parent.verticalCenter
             z: 10
+            
+            // Helper: prefer C++ check to avoid QML XHR limitations
+            function isUnlocked(bid) {
+                try {
+                    if (typeof SaveLoadManager !== 'undefined' && SaveLoadManager && typeof SaveLoadManager.hasUnlockedBattle === 'function') {
+                        try { return SaveLoadManager.hasUnlockedBattle(bid); } catch(e) { /* fall through */ }
+                    }
+                } catch (e) {}
+                return false;
+            }
 
+            function refreshBoxes() {
+                try {
+                    if (!gridRoot) return;
+                    var children = gridRoot.children;
+                    for (var i = 0; i < children.length; ++i) {
+                        var c = children[i];
+                        if (c && c.battleId !== undefined) {
+                            try { c.unlocked = isUnlocked(c.battleId); } catch (e) {}
+                        }
+                    }
+                } catch (e) {}
+            }
+
+            Connections {
+                target: SaveLoadManager
+                function onSaved() { refreshBoxes(); }
+                function onAutoExistsChanged() { refreshBoxes(); }
+            }
+            Component.onCompleted: {
+                // initial evaluation
+                Qt.callLater(function() { refreshBoxes(); });
+            }
             // 悬浮与点击音效（绑定到主音量与效果音）
             SoundEffect {
                 id: hoverSfx
@@ -71,6 +139,7 @@ Item {
             property real boxH: 160
 
             Grid {
+                id: gridRoot
                 anchors.centerIn: parent
                 rows: extraGridRoot.rows
                 columns: extraGridRoot.cols
@@ -86,16 +155,18 @@ Item {
                         radius: 8
                         border.color: "#333"
                         border.width: 2
-                        opacity: 0.98
-
+                        
                         property int number: index + 1
                         property string battleId: "battle" + (number < 10 ? ("0" + number) : number)
                         property bool hovered: false
                         property bool pressed: false
-                        // 悬浮时放大更明显，按下时略微回缩更自然
-                        property real currentScale: pressed ? 0.98 : (hovered ? 1.08 : 1.0)
+                        // Unlocked state computed from progress map
+                        property bool unlocked: extraGridRoot.isUnlocked(battleId)
+                        // 悬浮时放大更明显，按下时略微回缩更自然，仅在解锁时生效
+                        property real currentScale: pressed ? 0.98 : (hovered && unlocked ? 1.08 : 1.0)
 
-                        color: (hovered || pressed) ? "#111" : "white"
+                        color: (hovered && unlocked || pressed) ? "#111" : "white"
+                        opacity: unlocked ? 0.98 : 0.7
 
                         Behavior on color { ColorAnimation { duration: 160 } }
                         Behavior on currentScale { NumberAnimation { duration: 140; easing.type: Easing.InOutQuad } }
@@ -105,13 +176,15 @@ Item {
                         MouseArea {
                             anchors.fill: parent
                             hoverEnabled: true
-                            onEntered: { boxRect.hovered = true; try { hoverSfx.play(); } catch(e) {} }
+                            enabled: boxRect.unlocked
+                            onEntered: { boxRect.hovered = true; if (boxRect.unlocked) try { hoverSfx.play(); } catch(e) {} }
                             onExited: { boxRect.hovered = false; boxRect.pressed = false }
-                            onPressed: boxRect.pressed = true
-                            onReleased: boxRect.pressed = false
-                            onCanceled: boxRect.pressed = false
+                            onPressed: { if (boxRect.unlocked) boxRect.pressed = true }
+                            onReleased: { if (boxRect.unlocked) boxRect.pressed = false }
+                            onCanceled: { boxRect.pressed = false }
                             onClicked: {
-                                try { clickSfx.play(); } catch(e) {}
+                                if (!boxRect.unlocked) return;
+                                try { clickSfx.play(); } catch (e) {}
                                 try { SaveLoadManager.battleId = boxRect.battleId; } catch (e1) {}
                                 try { window.currentBattleId = boxRect.battleId; } catch (e2) {}
                                 try {
@@ -123,10 +196,11 @@ Item {
 
                         Text {
                             anchors.centerIn: parent
-                            text: boxRect.number.toString()
-                            // 增大数字字号以适配更大格子
-                            font.pixelSize: 56
-                            color: (boxRect.hovered || boxRect.pressed) ? "white" : "#060606"
+                            // 如果未解锁显示 No Data
+                            text: boxRect.unlocked ? boxRect.number.toString() : "No Data"
+                            // 减小未解锁时的字号以避免换行
+                            font.pixelSize: boxRect.unlocked ? 56 : 28
+                            color: (boxRect.hovered || boxRect.pressed) ? "white" : (boxRect.unlocked ? "#060606" : "#666666")
                             font.bold: true
                         }
                     }

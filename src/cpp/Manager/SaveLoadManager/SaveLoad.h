@@ -72,6 +72,11 @@ public:
     // Reactive property to allow QML bindings to update when auto.dat presence changes
     Q_PROPERTY(bool autoExists READ autoExists NOTIFY autoExistsChanged)
 
+    // Return true if the given battleId is considered unlocked according to progress.dat
+    Q_INVOKABLE bool hasUnlockedBattle(const QString &battleId, const QString &folderPath = "save");
+    // Permanently unlock an extra corresponding to a battle (persisted in progress.dat)
+    Q_INVOKABLE void unlockExtra(const QString &battleId, const QString &folderPath = "save");
+
     double posX() const { return last.player.pos.x(); }
     double posY() const { return last.player.pos.y(); }
     double speed() const { return last.player.speed; }
