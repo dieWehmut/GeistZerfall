@@ -17,6 +17,7 @@
 #include <QJsonDocument>
 #include <QJsonArray>
 #include <QJsonObject>
+#include <QJsonParseError>
 #include <QDateTime>
 #include <QDir>
 #include <QFile>
@@ -122,11 +123,22 @@ bool SaveLoad::saveProgress(const QVariantMap &progress, const QString &folderPa
         qWarning() << "SaveLoad::saveProgress: cannot open file for write:" << filePath;
         return false;
     }
-    QJsonObject obj = QJsonObject::fromVariantMap(progress);
+    // Merge extraUnlocked map if the caller only provided readProgress
+    QVariantMap toWrite = progress;
+    QVariantMap existing = loadProgress(folderPath);
+    if (existing.contains("extraUnlocked") && !toWrite.contains("extraUnlocked")) {
+        toWrite["extraUnlocked"] = existing["extraUnlocked"];
+    }
+    QJsonObject obj = QJsonObject::fromVariantMap(toWrite);
     QJsonDocument doc(obj);
     QByteArray bytes = doc.toJson(QJsonDocument::Compact);
     qint64 written = f.write(bytes);
     f.close();
+    if (written == bytes.size()) {
+        qDebug() << "SaveLoad::saveProgress wrote" << written << "bytes to" << filePath << "data:" << QString(bytes);
+    } else {
+        qWarning() << "SaveLoad::saveProgress write mismatch" << written << "expected" << bytes.size() << "file:" << filePath;
+    }
     return written == bytes.size();
 }
 
@@ -150,6 +162,29 @@ QVariantMap SaveLoad::loadProgress(const QString &folderPath) {
     }
     if (!doc.isObject()) return out;
     out = doc.object().toVariantMap();
+    // Ensure extraUnlocked map exists and initialize default battles to false if absent
+    if (!out.contains("extraUnlocked") || !out["extraUnlocked"].canConvert<QVariantMap>()) {
+        QVariantMap extras;
+        // default set for battle01..battle06
+        for (int i=1;i<=6;++i) {
+            QString bid = QString("battle%1").arg(i, 2, 10, QChar('0'));
+            extras[bid] = false;
+        }
+        out["extraUnlocked"] = extras;
+        // Persist initial structure so future reads clearly indicate default values
+        try {
+            QString dirPath = QDir::cleanPath(QCoreApplication::applicationDirPath() + "/" + folderPath);
+            QString filePath = dirPath + "/progress.dat";
+            QFile f(filePath);
+            if (f.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+                QJsonObject obj = QJsonObject::fromVariantMap(out);
+                QJsonDocument docOut(obj);
+                f.write(docOut.toJson(QJsonDocument::Compact));
+                f.close();
+            }
+        } catch (...) { }
+    }
+    qDebug() << "SaveLoad::loadProgress read from" << filePath << "data:" << QString(data) << "parsed keys:" << out.keys();
     return out;
 }
 bool SaveLoad::saveAuto(const QString &folderPath) {
@@ -641,6 +676,186 @@ bool SaveLoad::createDefaultAuto(const QString &folderPath, double posX, double 
     bool ok = savePlayer(folderPath);
     return ok;
 }
+
+void SaveLoad::unlockExtra(const QString &battleId, const QString &folderPath) {
+    // Mark battle as permanently unlocked under extraUnlocked map
+    QVariantMap progress = loadProgress(folderPath);
+    QVariantMap extraMap;
+    if (progress.contains("extraUnlocked") && progress["extraUnlocked"].canConvert<QVariantMap>()) {
+        extraMap = progress["extraUnlocked"].toMap();
+    }
+    if (!extraMap.value(battleId, false).toBool()) {
+        extraMap[battleId] = true;
+        progress["extraUnlocked"] = extraMap;
+        saveProgress(progress, folderPath);
+        qDebug() << "SaveLoad::unlockExtra persisted unlock for" << battleId;
+        emit saved();
+    } else {
+        qDebug() << "SaveLoad::unlockExtra already unlocked" << battleId;
+    }
+}
+
+bool SaveLoad::hasUnlockedBattle(const QString &battleId, const QString &folderPath) {
+    qDebug() << "SaveLoad::hasUnlockedBattle called for" << battleId << "folder" << folderPath;
+    // Load progress map
+    QVariantMap progress = loadProgress(folderPath);
+    qDebug() << "SaveLoad::hasUnlockedBattle progress keys:" << progress.keys();
+
+    // Prefer explicit persistent map extraUnlocked
+    if (progress.contains("extraUnlocked") && progress["extraUnlocked"].canConvert<QVariantMap>()) {
+        QVariantMap emap = progress["extraUnlocked"].toMap();
+        if (emap.value(battleId, false).toBool()) { qDebug() << "hasUnlockedBattle: found in extraUnlocked" << battleId; return true; }
+    }
+
+    // Backwards compatibility: direct progress key (legacy boolean flag)
+    if (progress.contains(battleId)) { qDebug() << "direct progress contains" << battleId; return true; }
+
+    // Numeric variants: battle1 / battle01
+    QString digits;
+    for (QChar c : battleId) { if (c.isDigit()) digits.append(c); }
+    if (!digits.isEmpty()) {
+        bool ok = false;
+        int num = digits.toInt(&ok);
+        if (ok) {
+            QString a = QString("battle%1").arg(num);
+            if (progress.contains(a)) return true;
+            QString z = num < 10 ? QString("battle0%1").arg(num) : a;
+            if (progress.contains(z)) return true;
+        }
+    }
+
+    // Scan chapter JSON files to find nodes that point to this battle
+    QString appDir = QCoreApplication::applicationDirPath();
+    QString localDir = QDir::cleanPath(appDir + "/qml/window/Lore/chapters");
+    QDir d(localDir);
+    QStringList files;
+    bool useResource = false;
+    if (d.exists()) {
+        files = d.entryList(QStringList() << "*.json", QDir::Files);
+    } else {
+        // try resource path
+        QDir rd(":/qml/window/Lore/chapters");
+        if (rd.exists()) {
+            files = rd.entryList(QStringList() << "*.json", QDir::Files);
+            useResource = true;
+        }
+    }
+
+    qDebug() << "SaveLoad::hasUnlockedBattle scanning files:" << files << "useResource:" << useResource;
+    for (const QString &fn : files) {
+        QString path;
+        if (useResource) path = QString(":/qml/window/Lore/chapters/%1").arg(fn);
+        else path = QDir(d).filePath(fn);
+
+        QFile f(path);
+        if (!f.open(QIODevice::ReadOnly)) { qDebug() << "SaveLoad::hasUnlockedBattle failed to open" << path; continue; }
+        QByteArray data = f.readAll();
+        f.close();
+
+        QJsonParseError perr;
+        QJsonDocument doc = QJsonDocument::fromJson(data, &perr);
+        if (perr.error != QJsonParseError::NoError) continue;
+        if (!doc.isObject()) continue;
+        QJsonObject ch = doc.object();
+        QString chapterId = fn;
+        if (chapterId.endsWith('.')) chapterId.chop(1);
+        chapterId = chapterId.replace(".json", "");
+
+        QJsonObject nodes = ch.value("nodes").toObject();
+        for (auto it = nodes.begin(); it != nodes.end(); ++it) {
+            QString nodeId = it.key();
+            QJsonObject nodeObj = it.value().toObject();
+
+            // Cases that denote a `battle` is triggered:
+            // 1) This node is an explicit battle node (id startsWith battle), and defines next/nextNode/choices that point to the post-battle node
+            // 2) This node is a regular node that has action==startBattle with actionParams.battleId matching the target battle; in that case the node's own next/nextNode defines the post-battle node
+            bool isBattleNode = nodeId.startsWith("battle");
+            bool isStartBattleAction = false;
+            if (nodeObj.contains("action") && nodeObj.value("action").isString() && nodeObj.value("action").toString() == "startBattle") {
+                QJsonObject ap = nodeObj.value("actionParams").toObject();
+                if (ap.contains("battleId") && ap.value("battleId").isString()) {
+                    QString bid = ap.value("battleId").toString();
+                    if (bid == battleId) isStartBattleAction = true;
+                }
+            }
+            if (!isBattleNode && !isStartBattleAction) continue;
+
+            // Enumerate target nodes that represent the node after this battle
+            QStringList targets;
+            if (nodeObj.contains("next") && nodeObj.value("next").isString()) {
+                QString nxt = nodeObj.value("next").toString();
+                if (!nxt.startsWith("battle")) targets.append(nxt);
+            }
+            if (nodeObj.contains("nextNode") && nodeObj.value("nextNode").isString()) {
+                QString nxtn = nodeObj.value("nextNode").toString();
+                if (!nxtn.startsWith("battle")) targets.append(nxtn);
+            }
+            // choices[].next could also point to post-battle nodes (rare but support it)
+            if (nodeObj.contains("choices") && nodeObj.value("choices").isArray()) {
+                QJsonArray choices = nodeObj.value("choices").toArray();
+                for (const QJsonValue &cv : choices) {
+                    if (!cv.isObject()) continue;
+                    QJsonObject choice = cv.toObject();
+                    if (choice.contains("next") && choice.value("next").isString()) {
+                        QString cnext = choice.value("next").toString();
+                        if (!cnext.startsWith("battle")) targets.append(cnext);
+                    }
+                }
+            }
+            if (targets.isEmpty()) continue;
+
+            // For each post-battle target node, check whether it's been read (idx >= 0)
+            for (const QString &tgt : targets) {
+                QVariant vch = progress.value(chapterId);
+                if (!vch.isValid()) continue;
+                QVariantMap chapMap = vch.toMap();
+                if (!chapMap.contains(tgt)) continue;
+                QVariant idxVar = chapMap.value(tgt);
+                if (!idxVar.isValid()) continue;
+                bool okIdx = false;
+                int idx = idxVar.toInt(&okIdx);
+                if (!okIdx) continue;
+                // as long as any content in the post-battle node has been read (idx >= 0), unlock
+                if (idx >= 0) {
+                    qDebug() << "unlocked via" << chapterId << nodeId << "->" << tgt << "(idx=" << idx << ")";
+                    try { unlockExtra(battleId, folderPath); } catch (...) {}
+                    return true;
+                }
+            }
+        }
+    }
+
+    // Fallback: check binary save files (auto.dat and save1..save8.dat) for game saves that reference this battle
+    QString dirPath = QDir::cleanPath(QCoreApplication::applicationDirPath() + "/" + folderPath);
+    QString autoPath = dirPath + "/auto.dat";
+    QFile fa(autoPath);
+    if (fa.exists() && fa.open(QIODevice::ReadOnly)) {
+        QDataStream in(&fa);
+        in.setVersion(QDataStream::Qt_5_15);
+        SaveData sd;
+        if (sd.read(in)) {
+            if (sd.view == "game" && sd.battleId == battleId) { fa.close(); qDebug() << "unlocked via auto.dat"; try { unlockExtra(battleId, folderPath);} catch(...){} return true; }
+        }
+        fa.close();
+    }
+    for (int i=0;i<8;++i) {
+        QString slotPath = QDir(dirPath).filePath(QString("save%1.dat").arg(i+1));
+        QFile fs(slotPath);
+        if (!fs.exists()) continue;
+        if (!fs.open(QIODevice::ReadOnly)) continue;
+        QDataStream in(&fs);
+        in.setVersion(QDataStream::Qt_5_15);
+        SaveData sd;
+        if (sd.read(in)) {
+            if (sd.view == "game" && sd.battleId == battleId) { fs.close(); qDebug() << "unlocked via" << slotPath; try { unlockExtra(battleId, folderPath);} catch(...){} return true; }
+        }
+        fs.close();
+    }
+
+    // Not found; return false
+    return false;
+}
+
 
 bool SaveLoad::removeAuto(const QString &folderPath) {
     QString dirPath = QDir::cleanPath(QCoreApplication::applicationDirPath() + "/" + folderPath);

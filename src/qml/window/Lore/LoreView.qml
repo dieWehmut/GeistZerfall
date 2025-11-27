@@ -124,18 +124,30 @@ Item {
 
     // 标记已读内容并持久化到 progress.dat
     function markContentRead(branch, nodeId, index) {
-        try {
-            if (typeof SaveLoadManager === 'undefined' || !SaveLoadManager) return;
-            if (!readProgress) readProgress = {};
-            var chapterMap = readProgress[branch];
-            if (!chapterMap) chapterMap = {};
-            var prev = chapterMap[nodeId];
-            if (prev === undefined || index > prev) {
-                chapterMap[nodeId] = index;
-                readProgress[branch] = chapterMap;
-                try { SaveLoadManager.saveProgress(readProgress); } catch (es) { /* ignore save errors */ }
-            }
-        } catch (e) { /* ignore */ }
+            try {
+                if (typeof SaveLoadManager === 'undefined' || !SaveLoadManager) return;
+                if (!readProgress) readProgress = {};
+                var chapterMap = readProgress[branch];
+                if (!chapterMap) chapterMap = {};
+                var prev = chapterMap[nodeId];
+                if (prev === undefined || index > prev) {
+                    chapterMap[nodeId] = index;
+                    readProgress[branch] = chapterMap;
+                    try {
+                        // 先读取当前 progress 并合并 extraUnlocked
+                        var currentProgress = SaveLoadManager.loadProgress();
+                        if (currentProgress && currentProgress.extraUnlocked) {
+                            readProgress.extraUnlocked = currentProgress.extraUnlocked;
+                        }
+                        console.log("LoreView: markContentRead -> saving", branch, nodeId, index);
+                        SaveLoadManager.saveProgress(readProgress);
+                        try {
+                            var verify = SaveLoadManager.loadProgress();
+                            console.log("LoreView: markContentRead -> verify loadProgress keys:", Object.keys(verify));
+                        } catch (el) { console.log('LoreView: markContentRead -> verify loadProgress failed', el); }
+                    } catch (es) { console.log('LoreView: markContentRead -> saveProgress failed', es); }
+                }
+            } catch (e) { /* ignore */ }
     }
 
     Component.onDestruction: {
@@ -403,6 +415,42 @@ Item {
         // 计算当前模式（内容优先，其次节点，再章节 meta，最后默认 circle）
         var mode = (content.mode ? content.mode : (node.mode ? node.mode : (chapterData.meta && chapterData.meta.mode ? chapterData.meta.mode : "circle")));
         currentMode = mode;
+
+            // 检查是否刚刚从battle节点跳转到本节点（即上一个节点是battle 或 由某个节点 action startBattle 导致）
+        try {
+            var prevNodeId = null;
+            // 仅在当前节点不是battle节点时检查
+                if (!currentNode.startsWith("battle")) {
+                    // 遍历章节所有节点，查找是否有next/nextNode/choices指向当前节点
+                    for (var nid in chapterData.nodes) {
+                        var nobj = chapterData.nodes[nid];
+                        // case A: the previous node is a battle node (nid startsWith "battle") whose next points to currentNode
+                        if (nobj.next === currentNode && nid.startsWith("battle")) prevNodeId = nid;
+                        if (nobj.nextNode === currentNode && nid.startsWith("battle")) prevNodeId = nid;
+                        if (nobj.choices && Array.isArray(nobj.choices)) {
+                            for (var ci=0;ci<nobj.choices.length;++ci) {
+                                if (nobj.choices[ci].next === currentNode && nid.startsWith("battle")) prevNodeId = nid;
+                            }
+                        }
+                        // case B: the previous node triggered a battle via action startBattle; identify the battle id from actionParams
+                        try {
+                            if (nobj.action === 'startBattle') {
+                                var ap = nobj.actionParams || {};
+                                if (ap && typeof ap.battleId === 'string' && ap.battleId !== '' && (nobj.next === currentNode || nobj.nextNode === currentNode)) {
+                                    prevNodeId = ap.battleId;
+                                }
+                            }
+                        } catch (ea) { }
+                    }
+                }
+            if (prevNodeId) {
+                // 只要曾经进入过battle的下一个节点就解锁extra
+                if (typeof SaveLoadManager !== 'undefined' && SaveLoadManager.unlockExtra) {
+                    SaveLoadManager.unlockExtra(prevNodeId);
+                    console.log("LoreView: unlockExtra called for", prevNodeId);
+                }
+            }
+        } catch(e) { console.log("LoreView: unlockExtra check error", e); }
 
     console.log("LoreView: showing content", currentNode, currentContentIndex, JSON.stringify(content), "mode:", currentMode);
     // 标题画面标记

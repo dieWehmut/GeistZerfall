@@ -535,7 +535,7 @@ Item {
 						}
 						// local state for typing test: cycle two long paragraphs for auto-mode testing
 						property var testParagraphs: [
-							"幸苦这是用于测试的第一段示例文本，用来验证自动模式下逐字显示、暂停与切换行为。此段文字较长，应覆盖多行并让你能观察到逐字播放的节奏与速度设置对于文本可读性的影响。",
+							"这是测试的第一段示例文本，用来验证逐字显示。",
 							"这是第二段测试文本，用于在第一段播放完成后自动切换并继续播放，以便测试连续段落的自动模式和延迟处理。第二段也应足够长，从而验证段落间的停顿与循环重播逻辑。"
 						]
 						property int testParagraphIndex: 0
