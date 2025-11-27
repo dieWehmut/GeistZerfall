@@ -53,10 +53,11 @@ Item {
                 source: root.getCharacterImage(modelData)
                 fillMode: Image.PreserveAspectFit
                 asynchronous: true
-                // 默认高度占屏幕高度的 ~80%
+                // 默认高度占屏幕高度的 ~80%，图片底部与窗口底部对齐，间距为0
                 height: parent.height * 0.8
                 width: height * (implicitWidth > 0 ? implicitWidth/implicitHeight : 0.6)
-                anchors.verticalCenter: parent.verticalCenter
+                anchors.bottom: parent.bottom
+                anchors.bottomMargin: 0
 
                 // visibility -- portrait can be hidden (but name badge still follows the character position)
                 visible: showPortrait
@@ -65,7 +66,6 @@ Item {
                 anchors.horizontalCenter: undefined
                 anchors.left: undefined
                 anchors.right: undefined
-                anchors.bottom: undefined
 
                 Component.onCompleted: {
                     // default position: center if position not specified
@@ -151,44 +151,9 @@ Item {
         return "";
     }
 
-    // 调整 name badge 位置以更精确贴合角色立绘
+    // adjustBadgePosition is no-op now that speaker name is shown inside the text box
     function adjustBadgePosition() {
-        try {
-            if (!nameBadge.visible) return;
-            var pos = nameBadge.speakerPosition;
-            // 支持 speaker 为 number 或 string，如果为 string 且匹配 characters.name 则按索引对齐
-            if (root.contentData && root.contentData.speaker !== undefined) {
-                var si = root.contentData.speaker;
-                var idxToUse = undefined;
-                if (typeof si === 'number') idxToUse = si;
-                else if (typeof si === 'string') {
-                    // find matching character by name
-                    try {
-                        if (root.nodeData && root.nodeData.characters) {
-                            for (var i = 0; i < root.nodeData.characters.length; ++i) {
-                                var cn = root.nodeData.characters[i];
-                                if (cn && cn.name === si) { idxToUse = i; break; }
-                            }
-                        }
-                    } catch (e) {}
-                }
-                if (idxToUse !== undefined && root.characterInstances && root.characterInstances.length > idxToUse && root.characterInstances[idxToUse]) {
-                    var inst = root.characterInstances[idxToUse];
-                    // mapToItem to get inst position relative to root
-                    var pt = inst.mapToItem(root, 0, 0);
-                    // align near the top of textBox and horizontally near the character image
-                    // place badge centered at the character image's center X by default
-                    var targetX = pt.x + inst.width/2 - nameBadge.width/2;
-                    // clamp to screen edges
-                    targetX = Math.max(8, Math.min(root.width - nameBadge.width - 8, targetX));
-                    nameBadge.x = targetX;
-                    return;
-                }
-            }
-
-            // fallback: previous anchor-based adjustPosition
-            nameBadge.adjustPosition();
-        } catch (e) { console.log("VisualScene.adjustBadgePosition error", e); }
+        return;
     }
 
     // 底部文字框
@@ -201,8 +166,8 @@ Item {
         z: 100
         visible: !!( !(root.contentData && (root.contentData.type === "title" || root.contentData.isTitle)) )
         
-        // 白色背景
-        color: "#F5F5F5"
+        // 白色背景, use window.__textBoxOpacity to control alpha
+        color: Qt.rgba(0.96, 0.96, 0.96, (typeof window !== 'undefined' && window.__textBoxOpacity !== undefined ? Number(window.__textBoxOpacity) : 1.0))
         border.color: "#CCCCCC"
         border.width: 2
         radius: 8
@@ -214,7 +179,25 @@ Item {
             fillMode: Image.PreserveAspectFit
             source: (root.nodeData && root.nodeData.textBoxImage) ? root.nodeData.textBoxImage : ""
             visible: source !== ""
+            // also apply the same opacity to any background image
+            opacity: (typeof window !== 'undefined' && window.__textBoxOpacity !== undefined ? Number(window.__textBoxOpacity) : 1.0)
             z: 1
+        }
+
+        // Inline speaker name displayed above the text lines, left-aligned with the first line
+        Text {
+            id: speakerNameText
+            text: getSpeakerDisplayName(root.contentData)
+            visible: !!(root.contentData && (root.contentData.speakerName || root.contentData.speaker !== undefined))
+            color: "#333333"
+            font.pixelSize: 20
+            font.bold: true
+            anchors.left: parent.left
+            z: 3
+            // left margin will be set via textBox.effectiveLeftMargin (keeps text start consistent whether speaker exists or not)
+            anchors.leftMargin: textBox.effectiveLeftMargin
+            anchors.top: parent.top
+            anchors.topMargin: 8
         }
 
         // 文本内容（左对齐名字标签，从 name badge 下方开始）
@@ -224,9 +207,11 @@ Item {
             anchors.right: parent.right
             anchors.top: parent.top
             anchors.bottom: parent.bottom
-            anchors.leftMargin: nameBadge.visible ? root.width * 0.15 : 24
+            // Always use the same left margin so text start aligns whether a speaker exists or not
+            anchors.leftMargin: textBox.effectiveLeftMargin
             anchors.rightMargin: 24
-            anchors.topMargin: nameBadge.visible ? 48 : 24
+            // increase vertical gap between speaker name and first text line slightly
+            anchors.topMargin: (speakerNameText.visible ? (speakerNameText.height + 16) : 24)
             anchors.bottomMargin: Math.max(root.bottomReservedHeight, 24)
             wrapMode: Text.Wrap
             horizontalAlignment: Text.AlignLeft
@@ -237,14 +222,32 @@ Item {
             text: displayedText
             z: 2
         }
+        // effective left margin used for speaker name and the main text so they start at identical x
+        property real effectiveLeftMargin: (root.width * 0.15)
+
+        // Opening quote positioned one character to the left of the text start so the speaker name and
+        // the text body visually align. Visible only when a speaker is present.
+        Text {
+            id: openQuote
+            text: "「"
+            visible: !!(root.contentData && (root.contentData.speakerName || root.contentData.speaker !== undefined))
+            font.pixelSize: textContent.font.pixelSize
+            color: textContent.color
+            y: textContent.y
+            z: 4
+            // position one character left of the main text start
+            x: textContent.x - (textContent.font.pixelSize || 20)
+        }
     }
 
 
     // Use per-character interval so each character is displayed for window.__textSpeed seconds
     function _sceneCalcCharIntervalMs() {
-        var seconds = (typeof window !== 'undefined' && window.__textSpeed) ? Number(window.__textSpeed) : 0.03;
+        var seconds = (typeof window !== 'undefined' && window.__textSpeed) ? Number(window.__textSpeed) : 0.008;
         var ms = Math.round(seconds * 1000);
-        if (ms < 8) ms = 8;
+        // clamp to 1ms - 15ms to match new slider bounds
+        if (ms < 1) ms = 1;
+        if (ms > 15) ms = 15;
         return ms;
     }
 
@@ -266,13 +269,18 @@ Item {
     }
 
     onContentDataChanged: {
-        fullText = contentData ? (contentData.text || "") : "";
+        // If a speaker is present, show the full text wrapped in corner quotes so the typing effect includes them
+        var hasSpeaker = contentData && (contentData.speakerName || contentData.speaker !== undefined);
+        fullText = contentData ? ((hasSpeaker ? ( (contentData.text || "") + "」") : (contentData.text || ""))) : "";
         revealIndex = 0;
         displayedText = "";
         if (fullText && fullText.length > 0) {
             typing = true;
-            var seconds = (typeof window !== 'undefined' && window.__textSpeed) ? Number(window.__textSpeed) : 0.03;
-            sceneTypingTimer.interval = Math.max(8, Math.round(seconds * 1000));
+            var seconds = (typeof window !== 'undefined' && window.__textSpeed) ? Number(window.__textSpeed) : 0.008;
+            var ms = Math.round(seconds * 1000);
+            if (ms < 1) ms = 1;
+            if (ms > 15) ms = 15;
+            sceneTypingTimer.interval = ms;
             sceneTypingTimer.start();
         } else {
             typing = false;
@@ -289,76 +297,7 @@ Item {
         } catch(e) {}
     }
 
-    // 角色名标签（紧贴文字框上方，并根据说话角色靠左/居中/靠右）
-    Rectangle {
-        id: nameBadge
-        width: Math.min(parent.width * 0.35, 260)
-        height: 36
-        radius: 6
-        color: "#CC000000"
-        border.color: "#88FFFFFF"
-        border.width: 1
-        visible: !!(root.contentData && (root.contentData.speakerName || root.contentData.speaker !== undefined))
-        anchors.bottom: textBox.top
-        anchors.bottomMargin: -6
-        y: textBox.y - height - 6
-        z: 80
-
-        // 动态水平定位：优先根据 speaker index -> nodeData.characters[position]
-        property string speakerPosition: {
-            var s = "center";
-            if (root.contentData) {
-                if (root.contentData.speakerName) s = (root.contentData.speakerPos ? root.contentData.speakerPos : s);
-                else if (root.contentData.speaker !== undefined) {
-                    if (typeof root.contentData.speaker === 'number') {
-                        if (root.nodeData && root.nodeData.characters && root.nodeData.characters.length > root.contentData.speaker) {
-                            var ch = root.nodeData.characters[root.contentData.speaker];
-                            if (ch && ch.position) s = ch.position;
-                        }
-                    } else if (typeof root.contentData.speaker === 'string') {
-                        // if speaker string matches a character, use its position
-                        try {
-                            if (root.nodeData && root.nodeData.characters) {
-                                for (var pi = 0; pi < root.nodeData.characters.length; ++pi) {
-                                    var cn = root.nodeData.characters[pi];
-                                    if (cn && cn.name === root.contentData.speaker && cn.position) { s = cn.position; break; }
-                                }
-                            }
-                        } catch (e) {}
-                    }
-                }
-            }
-            return s;
-        }
-
-        // 根据 speakerPosition 调整水平锚点
-        Component.onCompleted: adjustPosition();
-        onVisibleChanged: adjustPosition();
-        function adjustPosition() {
-            // clear anchors
-            anchors.left = undefined; anchors.right = undefined; anchors.horizontalCenter = undefined;
-            var pos = speakerPosition;
-            if (pos === "left") {
-                anchors.left = parent.left; anchors.leftMargin = parent.width * 0.15
-            } else if (pos === "right") {
-                anchors.right = parent.right; anchors.rightMargin = parent.width * 0.15
-            } else {
-                anchors.horizontalCenter = parent.horizontalCenter
-            }
-        }
-
-        Text {
-            id: nameText
-            anchors.centerIn: parent
-            color: "#FFFFFF"
-            font.bold: true
-            font.pixelSize: 16
-            text: getSpeakerDisplayName(root.contentData)
-            horizontalAlignment: Text.AlignHCenter
-            verticalAlignment: Text.AlignVCenter
-            z: 85
-        }
-    }
+    // NOTE: nameBadge removed. Speaker name is displayed inside the text box now.
 
     // 居中大标题（用于章节标题画面）
     Item {

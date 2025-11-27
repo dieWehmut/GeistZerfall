@@ -24,8 +24,9 @@ Item {
         if (fullText && fullText.length > 0) {
             typing = true;
             // compute milliseconds per character from global seconds setting (window.__textSpeed)
-            var seconds = (typeof window !== 'undefined' && window.__textSpeed) ? Number(window.__textSpeed) : 0.03;
-            var iv = Math.max(8, Math.round(seconds * 1000));
+            var seconds = (typeof window !== 'undefined' && window.__textSpeed) ? Number(window.__textSpeed) : 0.008;
+            var iv = Math.round(seconds * 1000);
+            if (iv < 1) iv = 1; if (iv > 15) iv = 15;
             typingTimer.interval = iv;
             typingTimer.start();
         } else {
@@ -37,9 +38,10 @@ Item {
 
     // Use per-character interval so each character is displayed for window.__textSpeed seconds
     function _calcCharIntervalMs() {
-        var seconds = (typeof window !== 'undefined' && window.__textSpeed) ? Number(window.__textSpeed) : 0.03;
+        var seconds = (typeof window !== 'undefined' && window.__textSpeed) ? Number(window.__textSpeed) : 0.008;
         var ms = Math.round(seconds * 1000);
-        if (ms < 8) ms = 8;
+        if (ms < 1) ms = 1;
+        if (ms > 15) ms = 15;
         return ms;
     }
 

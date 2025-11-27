@@ -46,6 +46,10 @@ Item {
 	property int lastDx: 0
 	property int lastDy: 0
 	property bool moving: false
+	// 是否启用玩家自身自旋（默认开启）
+	property bool spinEnabled: true
+	// 自旋一圈所需毫秒，可调节自旋速度
+	property int spinDuration: 2000
 
 
 
@@ -108,6 +112,23 @@ Item {
 		id: playerImg
 		anchors.fill: parent
 		source: "qrc:/resource/image/entity/player.png"
+		// 将旋转原点设为中心以保证围绕自身旋转
+		transformOrigin: Item.Center
+		// 绑定到根元素以允许外部切换或修改速度
+		property bool spinEnabled: playerRoot.spinEnabled
+		property int spinDuration: playerRoot.spinDuration
+		// 当关闭自旋时清零旋转角度，避免停在中间角度
+		onSpinEnabledChanged: {
+			if (!spinEnabled) rotation = 0
+		}
+		// 连续自旋动画：0 -> 360，循环无限
+		NumberAnimation on rotation {
+			id: playerSpinAnim
+			from: 0; to: 360
+			duration: spinDuration
+			loops: Animation.Infinite
+			running: spinEnabled
+		}
 	}
 
 	// HUD bars displayed above player

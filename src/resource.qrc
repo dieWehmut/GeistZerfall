@@ -42,6 +42,22 @@
         <!-- Backgrounds - main / lore -->
         <file>resource/image/bg/mainmenu.png</file>
         <file>resource/image/bg/lore/shenLinGate.png</file>
+        <!-- Backgrounds - lore (wards, future, cemetery) -->
+        <file>resource/image/bg/lore/ward/ward1.png</file>
+        <file>resource/image/bg/lore/ward/ward1_ecy.png</file>
+        <file>resource/image/bg/lore/ward/ward1_gray.png</file>
+        <file>resource/image/bg/lore/ward/ward3_ecy.png</file>
+        <file>resource/image/bg/lore/ward/ward3.png</file>
+        <file>resource/image/bg/lore/ward/ward4_ecy.png</file>
+        <file>resource/image/bg/lore/ward/ward4_gray.png</file>
+        <file>resource/image/bg/lore/future/futureRoad_ecy.png</file>
+        <file>resource/image/bg/lore/future/futureRoad.png</file>
+        <!-- Previously 'future_ecy.png' is replaced by futureRoad_ecy.png -->
+        <file>resource/image/bg/lore/future/university1_ecy.png</file>
+        <file>resource/image/bg/lore/future/university2_ecy.png</file>
+        <file>resource/image/bg/lore/future/university3_ecy.png</file>
+        <file>resource/image/bg/lore/cemetery/cemetery1_ecy.jpg</file>
+        <file>resource/image/bg/lore/cemetery/cemetery1_gray.png</file>
         <!-- Backgrounds - lore/question (algorithm chapters 1-8) -->
         <file>resource/image/bg/lore/question/1_Question_Options.png</file>
         <file>resource/image/bg/lore/question/1_Question.png</file>
