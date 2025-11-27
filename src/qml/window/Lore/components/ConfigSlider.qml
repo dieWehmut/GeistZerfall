@@ -11,6 +11,10 @@ Item {
     property real minValue: 0
     property real maxValue: 100
     property real step: 1
+    // When true, layout aligns content to the left edge instead of centering.
+    property bool leftAligned: false
+    // Left margin to apply when leftAligned is true
+    property int leftMargin: 0
     // previous value for change detection
     property int _prevValue: value
     // flag when value recently changed (used to color the numeric display)
@@ -30,8 +34,13 @@ Item {
     }
 
     Row {
-        anchors.centerIn: parent
+        id: mainRow
         spacing: 15
+        anchors.verticalCenter: parent.verticalCenter
+        // conditional horizontal anchoring: left-aligned if requested, otherwise centered
+        anchors.left: root.leftAligned ? parent.left : undefined
+        anchors.leftMargin: root.leftAligned ? root.leftMargin : 0
+        anchors.horizontalCenter: root.leftAligned ? undefined : parent.horizontalCenter
         
         // Left Triangle button (rect with border + glyph)
         Rectangle {
@@ -68,18 +77,41 @@ Item {
             width: 150 // Fixed width for the track part within the component
             height: 20
             anchors.verticalCenter: parent.verticalCenter
+            // Hover state for the whole slider area
+            property bool hovered: false
             
             // Track Line
             // Track background (unfilled)
             Rectangle {
                 id: trackBg
                 width: parent.width
-                height: 2
-                color: "white"
+                height: 8
+                // Dim by default, brighten on hover
+                color: sliderTrack.hovered ? "#ffffff" : "#bdbdbd"
                 anchors.centerIn: parent
                 z: 0
+                Behavior on color { ColorAnimation { duration: 120 } }
             }
             
+            // Click area: clicking on the track sets the value to that position.
+            // Placed before the handle so clicks on the handle are handled by the handle's MouseArea.
+            MouseArea {
+                id: sliderClickMa
+                anchors.fill: parent
+                hoverEnabled: false
+                acceptedButtons: Qt.LeftButton
+                onClicked: function(mouse) {
+                    try {
+                        var px = Math.max(0, Math.min(parent.width, mouse.x));
+                        var percent = px / parent.width;
+                        var rawVal = root.minValue + percent * (root.maxValue - root.minValue);
+                        var newVal = Math.round(rawVal / root.step) * root.step;
+                        newVal = Math.max(root.minValue, Math.min(root.maxValue, newVal));
+                        root.value = newVal;
+                    } catch(e) { console.log('sliderClickMa error', e); }
+                }
+            }
+
             // Handle (Circle)
             Rectangle {
                 id: handle
@@ -119,12 +151,23 @@ Item {
             Rectangle {
                 id: filledTrack
                 height: 2
-                color: "black"
+                color: sliderTrack.hovered ? "#000000" : "#4a4a4a"
                 anchors.left: sliderTrack.left
                 anchors.verticalCenter: sliderTrack.verticalCenter
                 z: 1
                 // width follows handle center; clamp to [0, sliderTrack.width]
                 width: Math.max(0, Math.min(sliderTrack.width, handle.x + handle.width/2))
+                Behavior on color { ColorAnimation { duration: 120 } }
+            }
+
+            // Hover-only MouseArea (doesn't accept clicks so it won't block drag on the handle)
+            MouseArea {
+                id: sliderHoverMa
+                anchors.fill: parent
+                hoverEnabled: true
+                acceptedButtons: Qt.NoButton
+                onEntered: { sliderTrack.hovered = true }
+                onExited: { sliderTrack.hovered = false }
             }
         }
 

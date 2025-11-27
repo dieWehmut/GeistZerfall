@@ -37,7 +37,10 @@ Window {
     // Persisted UI settings exposed on window for other components
     property real __autoModeWait: 3
     // __textSpeed now represents per-character display time (seconds)
-    property real __textSpeed: 0.03
+    // default moved to 0.008 (8ms per char) to fall within the new 0.001 - 0.015 range
+    property real __textSpeed: 0.008
+    // text box background opacity (0.0 - 1.0)
+    property real __textBoxOpacity: 1.0
     property string __aspectRatio: "16:9"
 
     Component.onCompleted: {
@@ -62,6 +65,7 @@ Window {
                     }
                     // text speed / auto mode wait are UI concerns, but store on window so other components can read
                     if (settings.textSpeed !== undefined) window.__textSpeed = settings.textSpeed;
+                    if (settings.textBoxOpacity !== undefined) window.__textBoxOpacity = Number(settings.textBoxOpacity);
                     if (settings.autoModeWait !== undefined) window.__autoModeWait = settings.autoModeWait; else window.__autoModeWait = 3; // default 3s
                     if (settings.aspectRatio !== undefined) window.__aspectRatio = settings.aspectRatio; else window.__aspectRatio = '16:9';
                     // Apply aspect ratio on startup when not fullscreen so window size matches stored preference
