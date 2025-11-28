@@ -36,6 +36,8 @@ Item {
     property string __skipMode: ""
     // 标记在显示选项时是否应在选择后继续快进
     property bool __ffPendingChoice: false
+    // 在某些场景（如进入 game over）需要禁止自动保存 snapshot
+    property bool suppressAutoSave: false
 
     Component.onCompleted: {
         // 优先从 WindowState 恢复进度
@@ -170,6 +172,10 @@ Item {
 
     function saveLoreAutoSnapshot() {
         try {
+            if (suppressAutoSave) {
+                console.log('LoreView: suppressed saveAuto because suppressAutoSave is true');
+                return;
+            }
             if (typeof SaveLoadManager === 'undefined' || !SaveLoadManager) return;
             try { SaveLoadManager.captureTemp(); } catch (eCap) { console.log('LoreView: captureTemp for auto failed', eCap); }
             SaveLoadManager.view = "lore";
@@ -670,6 +676,19 @@ Item {
                 try { persistLoreState(); } catch(e) { }
                 try { window.pageHistory = []; } catch(e) { }
                 try { if (window && typeof window.playMusic === 'function') window.playMusic("qrc:/resource/audio/bgm/mainmenu.mp3"); } catch(e) { }
+                // ensure any auto save and temporary preview is removed on game over
+                try {
+                    // Prevent the later destruction from re-saving auto.dat/temp.png
+                    suppressAutoSave = true;
+                    if (typeof SaveLoadManager !== 'undefined' && SaveLoadManager && typeof SaveLoadManager.removeAuto === 'function') {
+                        var success = SaveLoadManager.removeAuto("save");
+                        console.log('LoreView: removeAuto returned', success);
+                        var autoExists = false;
+                        try { autoExists = SaveLoadManager.hasAuto("save"); } catch(eH) { }
+                        console.log('LoreView: after removeAuto, hasAuto =', autoExists);
+                        if (!success || autoExists) console.log('LoreView: WARNING auto.dat/temp.png may still exist after removeAuto');
+                    }
+                } catch (eRem) { console.log('LoreView: removeAuto failed', eRem); }
                 try {
                     if (window && window.replaceSource) window.replaceSource("qml/window/MainMenu.qml"); else if (window && window.pushSource) window.pushSource("qml/window/MainMenu.qml");
                 } catch (eNav) { console.log('LoreView: gameOver navigation failed', eNav); }

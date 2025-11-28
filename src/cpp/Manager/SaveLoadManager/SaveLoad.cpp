@@ -862,17 +862,36 @@ bool SaveLoad::removeAuto(const QString &folderPath) {
     QString filePath = dirPath + "/auto.dat";
     QFile f(filePath);
     bool existed = f.exists();
+    qDebug() << "SaveLoad: removeAuto called for" << filePath << "exists:" << existed;
     if (existed) {
         if (!f.remove()) {
             qWarning() << "SaveLoad: failed to remove auto file" << filePath;
             return false;
         }
+        qDebug() << "SaveLoad: removed auto file" << filePath;
+    }
+    // Also remove any temporary preview image (temp.png) in the save folder for consistency
+    QString tempPng = QDir::cleanPath(QCoreApplication::applicationDirPath() + "/" + folderPath + "/temp.png");
+    QFile tp(tempPng);
+    if (tp.exists()) {
+        if (!tp.remove()) {
+            qWarning() << "SaveLoad: failed to remove temp preview" << tempPng;
+            // don't treat this as fatal; continue removing auto and update state
+        } else {
+            qDebug() << "SaveLoad: removed temp preview" << tempPng;
+        }
+    } else {
+        qDebug() << "SaveLoad: temp preview not present at" << tempPng;
     }
     bool prev = m_autoExists;
     m_autoExists = false;
     if (m_watcher) {
         // remove file path from watcher if present
         if (m_watcher->files().contains(filePath)) m_watcher->removePath(filePath);
+    }
+    // Also ensure the directory watcher no longer lists temp if it was added
+    if (m_watcher) {
+        if (m_watcher->files().contains(tempPng)) m_watcher->removePath(tempPng);
     }
     if (m_autoExists != prev) emit autoExistsChanged();
     return true;
