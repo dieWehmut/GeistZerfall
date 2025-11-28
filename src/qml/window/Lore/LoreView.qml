@@ -491,8 +491,8 @@ Item {
                 // 记录对应的 node id 与内容索引，以及音乐指令，供历史跳转使用
                 historyPanel.addHistory(currentMode, speaker, text, currentChapter, currentNode, currentContentIndex,
                                         content.music, content.musicLoops, content.stopMusic);
-                // 标记为已读（用于支持仅对已读文本启用快进）
-                try { markContentRead(currentChapter, currentNode, currentContentIndex); } catch (e) { }
+                // NOTE: 不在此处立即标记为已读 —— 否则按显示就会被认为已读，导致“仅已读跳过”失效。
+                // 已读标记将在玩家实际前进（nextContent）或历史重建时设置。
             }
         }
 
@@ -571,6 +571,12 @@ Item {
         } else {
             scheduleAutoAdvance();
         }
+        // ensure auto and skip are mutually exclusive
+        try {
+            if (enabled && controlBarLoader && controlBarLoader.item) controlBarLoader.item.skipActive = false;
+            if (!enabled && controlBarLoader && controlBarLoader.item) controlBarLoader.item.skipActive = false; // keep consistent
+            if (controlBarLoader && controlBarLoader.item) controlBarLoader.item.autoEnabled = autoModeEnabled;
+        } catch(e) {}
     }
 
     function scheduleAutoAdvance() {
@@ -602,6 +608,8 @@ Item {
 
     // 前进到下一个内容
     function nextContent() {
+        // 在实际前进前，将当前展示的内容标为已读（用户已看到或跳过它）
+        try { markContentRead(currentChapter, currentNode, currentContentIndex); } catch(e) { }
         autoAdvanceTimer.stop();
         titleAutoAdvanceTimer.stop();
         if (!chapterData || !chapterData.nodes) {
@@ -623,7 +631,7 @@ Item {
             // If we're fast-forwarding and user prefers 'read' skipping, stop when new content is UNREAD
             try {
                 var isFF = (fastForwardTimer && fastForwardTimer.running) ? true : false;
-                var skipMode = (root.__skipMode !== undefined) ? root.__skipMode : (function(){ try { var s = (typeof SaveLoadManager !== 'undefined' && SaveLoadManager) ? SaveLoadManager.loadSystem() : {}; return (s && s.textSkip) ? s.textSkip : 'read'; } catch(e){ return 'read'; } })();
+                var skipMode = (root.__skipMode !== undefined && root.__skipMode !== "") ? root.__skipMode : (function(){ try { var s = (typeof SaveLoadManager !== 'undefined' && SaveLoadManager) ? SaveLoadManager.loadSystem() : {}; return (s && s.textSkip) ? s.textSkip : 'read'; } catch(e){ return 'read'; } })();
                 if (isFF && skipMode === 'read') {
                     // current content is at currentContentIndex
                     var curNode = chapterData.nodes[currentNode];
@@ -707,7 +715,7 @@ Item {
             // If fast-forwarding, check whether first content is unread and stop if so
             try {
                 if (fastForwardTimer && fastForwardTimer.running) {
-                    var skipModeNN = (root.__skipMode !== undefined) ? root.__skipMode : (function(){ try { var s = (typeof SaveLoadManager !== 'undefined' && SaveLoadManager) ? SaveLoadManager.loadSystem() : {}; return (s && s.textSkip) ? s.textSkip : 'read'; } catch(e){ return 'read'; } })();
+                    var skipModeNN = (root.__skipMode !== undefined && root.__skipMode !== "") ? root.__skipMode : (function(){ try { var s = (typeof SaveLoadManager !== 'undefined' && SaveLoadManager) ? SaveLoadManager.loadSystem() : {}; return (s && s.textSkip) ? s.textSkip : 'read'; } catch(e){ return 'read'; } })();
                     var nnContent = chapterData.nodes[currentNode] && chapterData.nodes[currentNode].contents ? chapterData.nodes[currentNode].contents[0] : null;
                     if (skipModeNN === 'read') {
                         var alreadyNN = !!(readProgress && readProgress[currentChapter] && readProgress[currentChapter][currentNode] !== undefined && readProgress[currentChapter][currentNode] >= 0);
@@ -733,7 +741,7 @@ Item {
             // After loading, check fast-forward stopping condition similarly
             try {
                 if (fastForwardTimer && fastForwardTimer.running) {
-                    var skipModeNC = (root.__skipMode !== undefined) ? root.__skipMode : (function(){ try { var s = (typeof SaveLoadManager !== 'undefined' && SaveLoadManager) ? SaveLoadManager.loadSystem() : {}; return (s && s.textSkip) ? s.textSkip : 'read'; } catch(e){ return 'read'; } })();
+                    var skipModeNC = (root.__skipMode !== undefined && root.__skipMode !== "") ? root.__skipMode : (function(){ try { var s = (typeof SaveLoadManager !== 'undefined' && SaveLoadManager) ? SaveLoadManager.loadSystem() : {}; return (s && s.textSkip) ? s.textSkip : 'read'; } catch(e){ return 'read'; } })();
                     var firstNodeKey;
                     for (var k in chapterData.nodes) { firstNodeKey = k; break; }
                     var firstContent = (firstNodeKey && chapterData.nodes[firstNodeKey] && chapterData.nodes[firstNodeKey].contents) ? chapterData.nodes[firstNodeKey].contents[0] : null;
@@ -799,6 +807,7 @@ Item {
             console.log("LoreView: controlBarLoader onLoaded size -> w:", controlBarLoader.width, "h:", controlBarLoader.height, "itemExists:", !!controlBarLoader.item);
             updateControlBarPos();
             try { obj.autoEnabled = root.autoModeEnabled; } catch (e) { }
+            try { if (typeof fastForwardTimer !== 'undefined' && obj) obj.skipActive = fastForwardTimer.running; } catch (e) {}
 
             // connect signals
             try {
@@ -808,40 +817,59 @@ Item {
                 });
 
                 obj.autoToggled.connect(function(enabled) { setAutoMode(enabled); });
+                // when Auto toggled on -> ensure skip is disabled
+                obj.autoToggled.connect(function(enabled) {
+                    try { if (enabled) obj.skipActive = false; } catch (ee) {}
+                });
 
-                obj.skipClicked.connect(function() {
-                    titleAutoAdvanceTimer.stop();
-                    // If current text is typing, finish it immediately — otherwise advance
-                    try {
-                        var tcskip = getActiveTextComponent();
-                        if (tcskip && tcskip.typing) { tcskip.finishTyping(); return; }
-                        // mark next content to be shown instantly (ignore per-char speed)
-                        try { if (typeof window !== 'undefined') window.__skipInstantNext = true; } catch (e) {}
-                    } catch (e) { }
-                    // Start fast-forwarding until we hit an unread text (or user setting allows skipping all)
-                    try {
-                        // reload user preference at start
-                        var sys = (typeof SaveLoadManager !== 'undefined' && SaveLoadManager && typeof SaveLoadManager.loadSystem === 'function') ? SaveLoadManager.loadSystem() : {};
-                        root.__skipMode = (sys && sys.textSkip) ? sys.textSkip : 'read';
-                    } catch (e) {
-                        root.__skipMode = 'read';
+                obj.skipToggled.connect(function(enabled) {
+                    if (enabled) {
+                        // enabling skip should disable auto
+                        setAutoMode(false);
                     }
-                    // If current content is a text/title and user chose 'read' skip, do not start skipping now
-                    try {
-                        var curNodeObj = (chapterData && chapterData.nodes) ? chapterData.nodes[currentNode] : null;
-                        var curCont = (curNodeObj && curNodeObj.contents) ? curNodeObj.contents[currentContentIndex] : null;
-                        var curIsText = curCont && (curCont.type === 'text' || curCont.type === 'title');
-                        var isAlreadyRead = !!(readProgress && readProgress[currentChapter] && readProgress[currentChapter][currentNode] !== undefined && readProgress[currentChapter][currentNode] >= currentContentIndex);
-                        if (root.__skipMode === 'read' && curIsText && !isAlreadyRead) {
-                            // current is unread -> don't start skipping
-                        } else {
-                            fastForwardTimer.start();
+                    // handle as toggle: enabling => start fast-forward; disabling => stop
+                    if (enabled) {
+                        titleAutoAdvanceTimer.stop();
+                        try {
+                            var tcskip = getActiveTextComponent();
+                            if (tcskip && tcskip.typing) { tcskip.finishTyping(); return; }
+                            try { if (typeof window !== 'undefined') window.__skipInstantNext = true; } catch (e) {}
+                        } catch (e) {}
+                        try {
+                            var sys = (typeof SaveLoadManager !== 'undefined' && SaveLoadManager && typeof SaveLoadManager.loadSystem === 'function') ? SaveLoadManager.loadSystem() : {};
+                            root.__skipMode = (sys && sys.textSkip) ? sys.textSkip : 'read';
+                        } catch (e) {
+                            root.__skipMode = 'read';
                         }
-                    } catch (e2) {
-                        fastForwardTimer.start();
+                        try {
+                            var curNodeObj = (chapterData && chapterData.nodes) ? chapterData.nodes[currentNode] : null;
+                            var curCont = (curNodeObj && curNodeObj.contents) ? curNodeObj.contents[currentContentIndex] : null;
+                            var curIsText = curCont && (curCont.type === 'text' || curCont.type === 'title');
+                            var isAlreadyRead = !!(readProgress && readProgress[currentChapter] && readProgress[currentChapter][currentNode] !== undefined && readProgress[currentChapter][currentNode] >= currentContentIndex);
+                            if (root.__skipMode === 'read' && curIsText && !isAlreadyRead) {
+                                // current is unread -> don't start skipping
+                            } else {
+                                fastForwardTimer.start();
+                            }
+                        } catch (e2) { fastForwardTimer.start(); }
+                        persistLoreState();
+                    } else {
+                        // disable fast-forward
+                        try { fastForwardTimer.stop(); } catch (e) {}
+                        persistLoreState();
                     }
-                    // persist current state so save knows we started skip
-                    persistLoreState();
+                });
+
+                // For compatibility: older code may still emit skipClicked. Map it to a toggle-on event.
+                obj.skipClicked.connect(function() {
+                    try {
+                        // legacy behavior: ensure skip toggled on
+                        if (typeof obj.skipActive !== 'undefined') {
+                            if (!obj.skipActive) obj.skipToggled(true);
+                        } else {
+                            obj.skipToggled(true);
+                        }
+                    } catch (e) { try { obj.skipToggled(true); } catch (ee) {} }
                 });
 
                 obj.historyClicked.connect(function() { autoAdvanceTimer.stop(); historyPanel.open(); persistLoreState(); });
@@ -889,6 +917,17 @@ Item {
         onVisibleChanged: updateControlBarPos()
         onWidthChanged: updateControlBarPos()
         onHeightChanged: updateControlBarPos()
+    }
+
+    // Keep the control bar skipActive in sync with the fastForwardTimer
+    Connections {
+        target: fastForwardTimer
+        function onRunningChanged() {
+            try {
+                if (controlBarLoader && controlBarLoader.item) controlBarLoader.item.skipActive = fastForwardTimer.running;
+                if (fastForwardTimer.running) setAutoMode(false); // ensure auto mode off when skip starts
+            } catch (e) {}
+        }
     }
 
     Binding {

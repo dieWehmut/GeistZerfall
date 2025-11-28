@@ -4,18 +4,32 @@ import QtQuick
 Item {
     id: root
     property bool autoEnabled: false
+    property bool skipActive: false
 
     onAutoEnabledChanged: {
         if (autoButton.checked !== autoEnabled) {
             autoButton.checked = autoEnabled;
         }
+        if (autoEnabled) {
+            skipActive = false;
+        }
+    }
+    onSkipActiveChanged: {
+        if (skipButton && skipButton.checked !== skipActive) skipButton.checked = skipActive;
+        if (skipActive) {
+            autoEnabled = false;
+        }
     }
 
-    Component.onCompleted: autoButton.checked = autoEnabled
+    Component.onCompleted: {
+        autoButton.checked = autoEnabled
+        if (skipButton) skipButton.checked = skipActive
+    }
 
     signal settingsClicked()
     signal autoToggled(bool enabled)
     signal skipClicked()
+    signal skipToggled(bool enabled)
     signal historyClicked()
     signal saveClicked()
     signal loadClicked()
@@ -49,9 +63,15 @@ Item {
         }
 
         LoreControlButton {
+            id: skipButton
             iconText: "\u25B6\u25B6"
             text: "SKIP"
-            onClicked: root.skipClicked()
+            checkable: true
+            checked: root.skipActive
+            onClicked: {
+                root.skipActive = !!skipButton.checked;
+                root.skipToggled(root.skipActive);
+            }
         }
 
         LoreControlButton {
@@ -79,6 +99,16 @@ Item {
             iconScale: 1.08
             text: "TITLE"
             onClicked: root.titleClicked()
+        }
+
+        Text {
+            id: modeStatusText
+            verticalAlignment: Text.AlignVCenter
+            color: "#000000"
+            font.bold: true
+            font.pixelSize: 16
+            text: root.skipActive ? "Skip..." : (root.autoEnabled ? "Auto..." : "")
+            visible: (root.skipActive || root.autoEnabled) && text !== ""
         }
     }
 }
