@@ -431,7 +431,7 @@ Item {
 				spacing: 6
 
 				// 主音量
-				Column { spacing: 3
+				Column { spacing: 2
 					Text { text: "主音量"; font.pixelSize: 28; color: "white"; font.bold: true; style: Text.Outline; styleColor: "black";
 						anchors.left: parent.left; anchors.leftMargin: contentRoot.controlLeftMargin }
 					ConfigSlider { id: masterSlider; leftAligned: true; leftMargin: contentRoot.controlLeftMargin; Component.onCompleted: value = Math.round((typeof window !== 'undefined' ? window.masterVolume : 1.0) * 100); onValueChanged: { if (typeof window !== 'undefined') window.masterVolume = value / 100.0; persistSystemSettings(); } }
@@ -446,7 +446,7 @@ Item {
 				}
 
 				// 背景音乐
-				Column { spacing: 3
+				Column { spacing: 2
 					Text { text: "BGM(背景音乐)"; font.pixelSize: 28; color: "white"; font.bold: true; style: Text.Outline; styleColor: "black"; anchors.left: parent.left; anchors.leftMargin: contentRoot.controlLeftMargin }
 					ConfigSlider { id: bgmSlider; leftAligned: true; leftMargin: contentRoot.controlLeftMargin; Component.onCompleted: value = Math.round((typeof window !== 'undefined' ? window.bgmVolume : 1.0) * 100); onValueChanged: { if (typeof window !== 'undefined') window.bgmVolume = value / 100.0; persistSystemSettings(); } }
 					Row { anchors.left: parent.left; anchors.leftMargin: contentRoot.controlLeftMargin; spacing: 10
@@ -456,7 +456,7 @@ Item {
 				}
 
 				// 音效
-				Column { spacing: 3
+				Column { spacing: 2
 					Text { text: "SE(游戏效果音)"; font.pixelSize: 28; color: "white"; font.bold: true; style: Text.Outline; styleColor: "black"; anchors.left: parent.left; anchors.leftMargin: contentRoot.controlLeftMargin }
 					ConfigSlider { id: sfxSlider; leftAligned: true; leftMargin: contentRoot.controlLeftMargin; Component.onCompleted: value = Math.round((typeof window !== 'undefined' ? window.sfxVolume : 1.0) * 100); onValueChanged: { if (typeof window !== 'undefined') window.sfxVolume = value / 100.0; persistSystemSettings(); } }
 					Row { anchors.left: parent.left; anchors.leftMargin: contentRoot.controlLeftMargin; spacing: 8
@@ -465,15 +465,15 @@ Item {
 						}
 					}
 
-					// 系统音效（用于 UI 按钮悬浮/点击）
-					Column { spacing: 3
-						Text { text: "SE(系统效果音)"; font.pixelSize: 28; color: "white"; font.bold: true; style: Text.Outline; styleColor: "black"; anchors.left: parent.left; anchors.leftMargin: contentRoot.controlLeftMargin }
-						ConfigSlider { id: sysSfxSlider; leftAligned: true; leftMargin: contentRoot.controlLeftMargin; Component.onCompleted: value = Math.round((typeof window !== 'undefined' ? window.sysSfxVolume : 1.0) * 100); onValueChanged: { if (typeof window !== 'undefined') window.sysSfxVolume = value / 100.0; persistSystemSettings(); } }
-						Row { anchors.left: parent.left; anchors.leftMargin: contentRoot.controlLeftMargin; spacing: 8
-							AppButton { id: sysSfxOnBtn; text: "ON"; width: 100; height: 40; fontPixelSize: 18; checkable: true; checked: (typeof window !== 'undefined' ? window.sysSfxVolume > 0.0 : true); onClicked: { if (typeof window !== 'undefined') { window.sysSfxVolume = 1.0; sysSfxOnBtn.checked = true; sysSfxOffBtn.checked = false; sysSfxSlider.value = Math.round(window.sysSfxVolume * 100); } persistSystemSettings(); } }
-							AppButton { id: sysSfxOffBtn; text: "OFF"; width: 100; height: 40; fontPixelSize: 18; checkable: true; checked: (typeof window !== 'undefined' ? window.sysSfxVolume === 0.0 : false); onClicked: { if (typeof window !== 'undefined') { window.sysSfxVolume = 0.0; sysSfxOffBtn.checked = true; sysSfxOnBtn.checked = false; sysSfxSlider.value = Math.round(window.sysSfxVolume * 100); } persistSystemSettings(); } }
-							}
+				
+				Column { spacing: 2
+					Text { text: "SE(系统效果音)"; font.pixelSize: 28; color: "white"; font.bold: true; style: Text.Outline; styleColor: "black"; anchors.left: parent.left; anchors.leftMargin: contentRoot.controlLeftMargin }
+					ConfigSlider { id: sysSfxSlider; leftAligned: true; leftMargin: contentRoot.controlLeftMargin; Component.onCompleted: value = Math.round((typeof window !== 'undefined' ? window.sysSfxVolume : 1.0) * 100); onValueChanged: { if (typeof window !== 'undefined') window.sysSfxVolume = value / 100.0; persistSystemSettings(); } }
+					Row { anchors.left: parent.left; anchors.leftMargin: contentRoot.controlLeftMargin; spacing: 8
+						AppButton { id: sysSfxOnBtn; text: "ON"; width: 100; height: 40; fontPixelSize: 18; checkable: true; checked: (typeof window !== 'undefined' ? window.sysSfxVolume > 0.0 : true); onClicked: { if (typeof window !== 'undefined') { window.sysSfxVolume = 1.0; sysSfxOnBtn.checked = true; sysSfxOffBtn.checked = false; sysSfxSlider.value = Math.round(window.sysSfxVolume * 100); } persistSystemSettings(); } }
+						AppButton { id: sysSfxOffBtn; text: "OFF"; width: 100; height: 40; fontPixelSize: 18; checkable: true; checked: (typeof window !== 'undefined' ? window.sysSfxVolume === 0.0 : false); onClicked: { if (typeof window !== 'undefined') { window.sysSfxVolume = 0.0; sysSfxOffBtn.checked = true; sysSfxOnBtn.checked = false; sysSfxSlider.value = Math.round(window.sysSfxVolume * 100); } persistSystemSettings(); } }
 						}
+					}
 
 			}
 

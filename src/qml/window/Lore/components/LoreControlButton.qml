@@ -23,6 +23,20 @@ Item {
 
     readonly property bool __active: pressArea.pressed || (checkable && checked)
 
+    // 白色发光效果，悬浮/按下时显示
+    DropShadow {
+        anchors.fill: buttonRow
+        source: buttonRow
+        color: "white"
+        radius: (pressArea.containsMouse || __active) ? 18 : 0
+        samples: 24
+        transparentBorder: true
+        spread: 0.35
+        opacity: (pressArea.containsMouse || __active) ? 0.7 : 0.0
+        z: 1
+        Behavior on opacity { NumberAnimation { duration: 120 } }
+        Behavior on radius { NumberAnimation { duration: 120 } }
+    }
     Rectangle {
         id: background
         anchors.fill: parent
@@ -61,7 +75,9 @@ Item {
             anchors.bottom: buttonRow.bottom
             height: buttonRow.height
             verticalAlignment: Text.AlignVCenter
-            font.pixelSize: Math.round(buttonRow.height * 0.58)
+            property real targetFontSize: (pressArea.containsMouse || root.__active) ? Math.round(buttonRow.height * 0.98) : Math.round(buttonRow.height * 0.58)
+            font.pixelSize: targetFontSize
+            Behavior on font.pixelSize { NumberAnimation { duration: 120; easing.type: Easing.OutQuad } }
             // 固定图标颜色（禁用时偏灰，正常时深色）
             color: !root.enabled ? "#8a8a8a" : "#303030"
             font.bold: true
@@ -76,7 +92,9 @@ Item {
             anchors.bottom: buttonRow.bottom
             height: buttonRow.height
             verticalAlignment: Text.AlignVCenter
-            font.pixelSize: Math.round(buttonRow.height * 0.58)
+            property real targetFontSize: (pressArea.containsMouse || root.__active) ? Math.round(buttonRow.height * 0.68) : Math.round(buttonRow.height * 0.58)
+            font.pixelSize: targetFontSize
+            Behavior on font.pixelSize { NumberAnimation { duration: 120; easing.type: Easing.OutQuad } }
             // 固定文字颜色（禁用时偏灰，正常时深色）
             color: !root.enabled ? "#8a8a8a" : "#303030"
             font.bold: true
