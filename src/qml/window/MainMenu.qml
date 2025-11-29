@@ -13,7 +13,7 @@ Item {
         // 背景图
         Image {
             anchors.fill: parent
-            source: "qrc:/resource/image/bg/mainmenu.png"
+            source: "qrc:/resource/image/bg/system/mainmenu.png"
             fillMode: Image.PreserveAspectCrop
         }
         // Global input helpers: right-click = BACK, Esc = exit fullscreen

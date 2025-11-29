@@ -808,7 +808,9 @@ Item {
 
     Loader {
         id: controlBarLoader
-        source: "qrc:/qml/components/LoreControlBar.qml"
+        // Instantiate the control bar directly from the imported components module
+        // This avoids any QRC/resource path issues and ensures the type is created.
+        sourceComponent: Component { LoreControlBar { } }
         // 采用手动坐标定位，避免宽高为0时锚点失效导致左上角位置
         // Elevate the control bar above the choice dialog so it remains clickable
         z: (choiceDialog && choiceDialog.visible) ? 3400 : 1500
@@ -932,6 +934,10 @@ Item {
         }
         onStatusChanged: {
             console.log("LoreView: controlBarLoader status=", status, "source=", source)
+            // If loader failed, attempt to log any engine errors visible to console
+            if (status === 3) {
+                console.log("LoreView: controlBarLoader failed to load. Check QML resource path and resource registration.");
+            }
         }
         onVisibleChanged: updateControlBarPos()
         onWidthChanged: updateControlBarPos()
@@ -981,7 +987,7 @@ Item {
                 var pt = tb.mapToItem(root, 0, 0);
                 controlBarLoader.x = pt.x + (tb.width - desiredWidth)/2;
                 controlBarLoader.y = pt.y + tb.height - desiredHeight - 12; // 12px 上留白
-                console.log("LoreView: updateControlBarPos -> anchored to textBox at", controlBarLoader.x, controlBarLoader.y);
+                console.log("LoreView: updateControlBarPos -> anchored to textBox at", controlBarLoader.x, controlBarLoader.y, "tb.w", tb.width, "tb.h", tb.height, "pt", pt.x, pt.y, "desiredW/H", desiredWidth, desiredHeight, "loaderItemExists", !!controlBarLoader.item);
             } catch (ePos) {
                 console.log("LoreView: updateControlBarPos textBox mapToItem failed", ePos);
                 // fallback to bottom center
