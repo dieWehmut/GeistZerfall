@@ -19,6 +19,12 @@ Window {
         // loops 可以由调用方覆盖；默认情况下无限循环
         loops: MediaPlayer.Infinite
         audioOutput: bgmOutput
+        onPlaybackStateChanged: {
+            console.log("bgmGlobal: playbackState ->", bgmGlobal.playbackState);
+        }
+        onErrorChanged: {
+            try { console.log("bgmGlobal: error ->", bgmGlobal.error, bgmGlobal.errorString); } catch(e) { console.log("bgmGlobal: error (unknown)"); }
+        }
     }
 
     AudioOutput {
@@ -41,6 +47,8 @@ Window {
     property real __textSpeed: 0.008
     // text box background opacity (0.0 - 1.0)
     property real __textBoxOpacity: 1.0
+    // expose text skip behaviour (values: 'read' or 'all') so components may read/write safely
+    property string __textSkip: "read"
     property string __aspectRatio: "16:9"
 
     Component.onCompleted: {
@@ -90,6 +98,7 @@ Window {
     function playMusic(source, loops) {
         if (!source) return;
         try {
+            console.log("playMusic requested:", source, "loops:", loops);
             // 如果是相同音乐，且正在播放则什么都不做；
             // 如果是相同音乐但处于暂停/停止状态，则直接恢复播放（不重新设置 source）以保留进度。
             if (window.currentMusic === source) {
@@ -106,10 +115,12 @@ Window {
             // 不同音乐：停掉当前（如果有）并切换到新 source
             bgmGlobal.stop();
             bgmGlobal.source = source;
+            console.log("bgmGlobal.source set to:", bgmGlobal.source);
             if (typeof loops !== 'undefined') bgmGlobal.loops = loops;
             else bgmGlobal.loops = MediaPlayer.Infinite;
             bgmGlobal.play();
             window.currentMusic = source;
+            console.log("playMusic: window.currentMusic set to", window.currentMusic);
         } catch (e) {
             console.log("playMusic error:", e);
         }

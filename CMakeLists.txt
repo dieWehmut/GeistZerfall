@@ -8,7 +8,8 @@ find_package(Qt6 REQUIRED COMPONENTS Quick Multimedia Core Qml)
 
 qt_standard_project_setup(REQUIRES 6.8)
 
-qt_add_resources(RESOURCES src/resource.qrc)
+file(GLOB QRC_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "src/resources_qrc/*.qrc")
+qt_add_resources(RESOURCES ${QRC_FILES})
 
 qt_add_executable(GeistZerfall
     src/main.cpp

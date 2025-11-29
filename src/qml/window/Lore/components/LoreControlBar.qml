@@ -24,6 +24,10 @@ Item {
     Component.onCompleted: {
         autoButton.checked = autoEnabled
         if (skipButton) skipButton.checked = skipActive
+        // Debug: report sizes so LoreView can position correctly
+        try {
+            console.log("LoreControlBar: completed -> width:", root.width, "height:", root.height, "implicitW:", controlRow.implicitWidth, "implicitH:", controlRow.implicitHeight, "childrenRectW:", controlRow.childrenRect ? controlRow.childrenRect.width : 0, "childrenRectH:", controlRow.childrenRect ? controlRow.childrenRect.height : 0);
+        } catch(e) {}
     }
 
     signal settingsClicked()
@@ -38,6 +42,7 @@ Item {
     width: controlRow.implicitWidth
     height: controlRow.implicitHeight
     visible: true
+
 
     Row {
         id: controlRow

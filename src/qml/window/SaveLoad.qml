@@ -24,7 +24,7 @@ Item {
 	property real scaleFactor: Math.min(width / baseWidth, height / baseHeight)		// 背景
 		Image {
 			anchors.fill: parent
-			source: "qrc:/resource/image/bg/mainmenu.png"
+		source: "qrc:/resource/image/bg/system/saveLoad.png"
 			fillMode: Image.PreserveAspectCrop
 		}
 

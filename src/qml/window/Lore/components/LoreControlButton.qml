@@ -23,31 +23,12 @@ Item {
 
     readonly property bool __active: pressArea.pressed || (checkable && checked)
 
-    // 白色发光效果，悬浮/按下时显示
-    DropShadow {
-        anchors.fill: buttonRow
-        source: buttonRow
-        color: "white"
-        radius: (pressArea.containsMouse || __active) ? 18 : 0
-        samples: 24
-        transparentBorder: true
-        spread: 0.35
-        opacity: (pressArea.containsMouse || __active) ? 0.7 : 0.0
-        z: 1
-        Behavior on opacity { NumberAnimation { duration: 120 } }
-        Behavior on radius { NumberAnimation { duration: 120 } }
-    }
     Rectangle {
         id: background
         anchors.fill: parent
-        // 默认透明背景，带白色边框；悬浮/按下时变为白底黑边
-        property color targetColor: (pressArea.containsMouse || __active) ? "white" : "transparent"
-        property color targetBorderColor: (pressArea.containsMouse || __active) ? "#000000" : "#FFFFFF"
-        color: targetColor
-        border.width: 2
-        border.color: targetBorderColor
+        // 始终透明背景（去掉 hover 填充），达到“无框”视觉效果
+        color: "transparent"
         Behavior on color { ColorAnimation { duration: 120 } }
-        Behavior on border.color { ColorAnimation { duration: 120 } }
     }
 
     Row {
@@ -57,10 +38,10 @@ Item {
         // 强制和 root 同高，便于子元素顶底对齐
         height: parent.height
         transformOrigin: Item.Center
-        // 悬浮时略微放大以增加交互反馈
-        property real hoverScale: (pressArea.containsMouse || __active) ? 1.06 : 1.0
+        // 悬浮时略微放大以增加交互反馈（改为更小的缩放，避免显著放大）
+        property real hoverScale: (pressArea.containsMouse || __active) ? 1.02 : 1.0
         scale: hoverScale
-        Behavior on scale { NumberAnimation { duration: 140; easing.type: Easing.OutQuad } }
+        Behavior on scale { NumberAnimation { duration: 100; easing.type: Easing.OutQuad } }
 
         Text {
             id: iconLabel
@@ -108,11 +89,10 @@ Item {
         width: buttonRow.width + 18
         height: buttonRow.height + 14
         radius: Math.max(8, (height/2))
-        color: "#00000022"
+        color: "#00000000"
         z: -2
-        opacity: (pressArea.containsMouse || __active) ? 1 : 0
-        Behavior on opacity { NumberAnimation { duration: 120 } }
-        visible: opacity > 0
+        opacity: 0
+        visible: false
     }
 
     Rectangle {
@@ -121,11 +101,10 @@ Item {
         width: buttonRow.width + 8
         height: buttonRow.height + 6
         radius: Math.max(6, (height/2))
-        color: "#00000014"
+        color: "#00000000"
         z: -1
-        opacity: (pressArea.containsMouse || __active) ? 1 : 0
-        Behavior on opacity { NumberAnimation { duration: 120 } }
-        visible: opacity > 0
+        opacity: 0
+        visible: false
     }
 
     MouseArea {

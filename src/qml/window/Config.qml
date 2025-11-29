@@ -114,10 +114,10 @@ Item {
 		}
 	}
 
-	// 背景图（放在根节点，始终充满窗口）
+	// 背景图（放在根节点，始终充满窗口）：使用 system 目录下的配置背景
 	Image {
 		anchors.fill: parent
-		source: "qrc:/resource/image/bg/mainmenu.png"
+		source: "qrc:/resource/image/bg/system/config.png"
 		fillMode: Image.PreserveAspectCrop
 		smooth: true
 		cache: true
@@ -185,7 +185,7 @@ Item {
 			styleColor: "black"
 		}
 
-		// 右上角：恢复默认 按钮
+
 		AppButton {
 			id: resetDefaultsBtn
 			text: "恢复默认"
@@ -535,8 +535,8 @@ Item {
 						}
 						// local state for typing test: cycle two long paragraphs for auto-mode testing
 						property var testParagraphs: [
-							"这是测试的第一段示例文本，用来验证逐字显示。",
-							"这是第二段测试文本，用于在第一段播放完成后自动切换并继续播放，以便测试连续段落的自动模式和延迟处理。第二段也应足够长，从而验证段落间的停顿与循环重播逻辑。"
+							"2025年南京大学智能科学与技术专业程设实训大作业。这是测试的第一段示例文本，用来验证逐字显示。",
+							"这是第二段测试文本，用于在第一段播放完成后自动切换并继续播放，以便测试连续段落的自动模式和延迟处理。"
 						]
 						property int testParagraphIndex: 0
 						property string testFull: testParagraphs.length > 0 ? testParagraphs[0] : ""
@@ -625,5 +625,6 @@ Item {
 				Qt.quit()
 			}
 		}
+
 	}
 }
