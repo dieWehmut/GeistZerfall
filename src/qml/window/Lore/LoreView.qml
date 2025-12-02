@@ -447,6 +447,28 @@ Item {
                                 }
                             }
                         } catch (ea) { }
+
+                        // case C: the previous node has a choice pointing to a battle
+                        if (nobj.choices && Array.isArray(nobj.choices)) {
+                            var battleChoiceId = null;
+                            for (var ci=0; ci<nobj.choices.length; ++ci) {
+                                var cnext = nobj.choices[ci].next;
+                                if (cnext && typeof cnext === 'string' && cnext.startsWith("battle")) {
+                                    battleChoiceId = cnext;
+                                    break;
+                                }
+                            }
+                            if (battleChoiceId) {
+                                // Check if currentNode is a target of this node (via other paths)
+                                var isTarget = false;
+                                if (nobj.next === currentNode) isTarget = true;
+                                if (nobj.nextNode === currentNode) isTarget = true;
+                                for (var cj=0; cj<nobj.choices.length; ++cj) {
+                                    if (nobj.choices[cj].next === currentNode) isTarget = true;
+                                }
+                                if (isTarget) prevNodeId = battleChoiceId;
+                            }
+                        }
                     }
                 }
             if (prevNodeId) {
