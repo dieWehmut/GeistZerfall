@@ -697,7 +697,7 @@ Item {
                 // End the game and return to main menu
                 try { persistLoreState(); } catch(e) { }
                 try { window.pageHistory = []; } catch(e) { }
-                try { if (window && typeof window.playMusic === 'function') window.playMusic("qrc:/resource/audio/bgm/mainmenu.mp3"); } catch(e) { }
+                try { if (window && typeof window.playMusic === 'function') window.playMusic("resource/audio/bgm/mainmenu.mp3"); } catch(e) { }
                 // ensure any auto save and temporary preview is removed on game over
                 try {
                     // Prevent the later destruction from re-saving auto.dat/temp.png
@@ -1484,8 +1484,8 @@ Item {
             // 保留当前状态（已经在 persistLoreState 中），然后回主菜单
             persistLoreState();
             try { window.pageHistory = []; } catch (e) { }
-            // 切换主菜单音乐
-            try { if (window && typeof window.playMusic === 'function') window.playMusic("qrc:/resource/audio/bgm/mainmenu.mp3"); } catch (em) { console.log("LoreView: play mainmenu music error", em); }
+            // 切换主菜单音乐（相对路径）
+            try { if (window && typeof window.playMusic === 'function') window.playMusic("resource/audio/bgm/mainmenu.mp3"); } catch (em) { console.log("LoreView: play mainmenu music error", em); }
             if (window && window.replaceSource) window.replaceSource("qml/window/MainMenu.qml");
             else if (window && window.pushSource) window.pushSource("qml/window/MainMenu.qml");
         }

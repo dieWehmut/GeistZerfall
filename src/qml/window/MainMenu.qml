@@ -86,7 +86,8 @@ Item {
                 console.log("MainMenu: Component.onCompleted, initial autoExists=", (typeof SaveLoadManager !== 'undefined' && SaveLoadManager) ? SaveLoadManager.autoExists : false);
             } catch (e) { console.log("MainMenu: init continueEnabled error", e); }
             if (typeof window.playMusic === 'function') {
-                window.playMusic("qrc:/resource/audio/bgm/mainmenu.mp3");
+                // 使用相对路径，不使用绝对路径或 qrc
+                window.playMusic("resource/audio/bgm/mainmenu.mp3");
             }
             // trigger title entrance a moment after component completed
             Qt.callLater(function() { titleEntered = true; });
@@ -217,7 +218,7 @@ Item {
                                             } else if (loreMusic && typeof window.playMusic === 'function') {
                                                 window.playMusic(loreMusic, (loreLoops !== undefined && loreLoops !== null) ? loreLoops : undefined);
                                             } else if (typeof window.playMusic === 'function') {
-                                                window.playMusic("qrc:/resource/audio/bgm/mainmenu.mp3");
+                                                window.playMusic("resource/audio/bgm/mainmenu.mp3");
                                             }
                                         }
                                     } catch (em) {}
@@ -239,9 +240,9 @@ Item {
                                 } else {
                                     // 默认回到 GameView，并切换游戏音乐（失败回退主菜单）
                                     try {
-                                        if (window && typeof window.playMusic === 'function') window.playMusic("qrc:/resource/audio/bgm/fight.mp3");
+                                        if (window && typeof window.playMusic === 'function') window.playMusic("resource/audio/bgm/fight.mp3");
                                     } catch (em2) {
-                                        try { if (window && typeof window.playMusic === 'function') window.playMusic("qrc:/resource/audio/bgm/mainmenu.mp3"); } catch (ePM) {}
+                                        try { if (window && typeof window.playMusic === 'function') window.playMusic("resource/audio/bgm/mainmenu.mp3"); } catch (ePM) {}
                                     }
                                     if (window && window.replaceSource) window.replaceSource("qml/window/Game/GameView.qml");
                                     else if (window && window.pushSource) window.pushSource("qml/window/Game/GameView.qml");

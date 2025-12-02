@@ -94,19 +94,49 @@ Window {
     property string currentMusic: ""
 
     // 切换音乐：如果 source 与当前相同且正在播放则不重复操作
-    // 参数：source (string), loops (MediaPlayer.Loops 或数字，可选)
+    // 参数：source (string)，应传相对路径（如 "resource/audio/bgm/mainmenu.mp3"）；
+    // 不使用 qrc，不在代码里写死绝对路径，统一基于可执行所在目录构造 file:/// URL 播放。
     function playMusic(source, loops) {
         if (!source) return;
         try {
-            console.log("playMusic requested:", source, "loops:", loops);
+            // 规范化为相对路径，基于 Main.qml 所在目录（src/）
+            function normalizeBgmSource(s) {
+                try {
+                    var str = (s || "").toString();
+                    // 统一分隔符
+                    str = str.replace(/\\/g, "/");
+                    // qrc 到普通相对路径（去掉 schema，并截到 resource/ 开始）
+                    if (str.indexOf("qrc:/") === 0) {
+                        var qi = str.indexOf("/resource/");
+                        str = (qi >= 0) ? str.substring(qi + 1) : str.replace("qrc:/", "");
+                    }
+                    // file:// 绝对路径：截到 resource/ 开始
+                    if (str.indexOf("file:/") === 0) {
+                        var fi = str.indexOf("/resource/");
+                        if (fi >= 0) str = str.substring(fi + 1);
+                    }
+                    // 含有 resource/audio/bgm/ 的，保留自 resource/ 起
+                    var ri = str.indexOf("resource/audio/bgm/");
+                    if (ri > 0) str = str.substring(ri);
+                    // 去掉前置的 ../
+                    while (str.indexOf("../") === 0) str = str.substring(3);
+                    // 允许传 audio/bgm/ 开头
+                    if (str.indexOf("audio/bgm/") === 0) str = "resource/" + str;
+                    // 仅传文件名时补全前缀
+                    if (str.indexOf('/') === -1) str = "resource/audio/bgm/" + str;
+                    return str;
+                } catch (eN) { return s; }
+            }
+
+            var norm = normalizeBgmSource(source);
+            console.log("playMusic requested:", source, "=>", norm, "loops:", loops);
+
             // 如果是相同音乐，且正在播放则什么都不做；
             // 如果是相同音乐但处于暂停/停止状态，则直接恢复播放（不重新设置 source）以保留进度。
-            if (window.currentMusic === source) {
+            if (window.currentMusic === norm) {
                 if (bgmGlobal.playbackState === MediaPlayer.Playing) {
-                    // 相同音乐且正在播放，无需切换
                     return;
                 } else {
-                    // 相同音乐但未播放，尝试恢复
                     bgmGlobal.play();
                     return;
                 }
@@ -114,12 +144,38 @@ Window {
 
             // 不同音乐：停掉当前（如果有）并切换到新 source
             bgmGlobal.stop();
-            bgmGlobal.source = source;
+
+            // 基于可执行路径推导目录，避免 qrc 与相对 URL 歧义
+            var baseDir = "";
+            try {
+                if (Qt.application && Qt.application.arguments && Qt.application.arguments.length > 0) {
+                    var exe = (Qt.application.arguments[0] || "").toString().replace(/\\/g, "/");
+                    var p = exe.lastIndexOf("/");
+                    if (p > 0) baseDir = exe.substring(0, p);
+                }
+            } catch (eDir) {}
+            if (!baseDir || baseDir.length === 0) baseDir = "."; // 回退到当前工作目录
+
+            var fsPath = baseDir + "/" + norm;
+            fsPath = fsPath.replace(/\\/g, "/");
+            // 去掉前置 "./"
+            if (fsPath.indexOf("./") === 0)
+                fsPath = fsPath.substring(2);
+
+            // 显式构造 file:/// 绝对 URL，彻底避免被当作 qrc 解析
+            var url;
+            if (fsPath.match(/^[a-zA-Z]:\//)) {
+                url = "file:///" + fsPath; // Windows 盘符
+            } else if (fsPath.indexOf("/") === 0) {
+                url = "file://" + fsPath;  // 已是绝对类 Unix 路径
+            } else {
+                url = "file:///" + fsPath; // 其它情况按相对当前目录处理
+            }
+            bgmGlobal.source = url;
             console.log("bgmGlobal.source set to:", bgmGlobal.source);
-            if (typeof loops !== 'undefined') bgmGlobal.loops = loops;
-            else bgmGlobal.loops = MediaPlayer.Infinite;
+            if (typeof loops !== 'undefined') bgmGlobal.loops = loops; else bgmGlobal.loops = MediaPlayer.Infinite;
             bgmGlobal.play();
-            window.currentMusic = source;
+            window.currentMusic = norm;
             console.log("playMusic: window.currentMusic set to", window.currentMusic);
         } catch (e) {
             console.log("playMusic error:", e);

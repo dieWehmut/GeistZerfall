@@ -318,7 +318,7 @@ Item {
 														} else if (loreMusic && typeof window.playMusic === 'function') {
 															window.playMusic(loreMusic, (loreLoops !== undefined && loreLoops !== null) ? loreLoops : undefined);
 														} else if (typeof window.playMusic === 'function') {
-															window.playMusic("qrc:/resource/audio/bgm/mainmenu.mp3");
+															window.playMusic("resource/audio/bgm/mainmenu.mp3");
 														}
 													}
 												} catch (em) { console.log('SaveLoad: play lore music failed', em); }

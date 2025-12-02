@@ -300,7 +300,8 @@ Item {
 			if (battleData.meta && battleData.meta.bgm) {
 				if (typeof window !== 'undefined' && typeof window.playMusic === 'function') {
 					try {
-						window.playMusic("qrc:/resource/audio/bgm/" + battleData.meta.bgm);
+						// 传入相对路径，避免使用绝对路径或 qrc
+						window.playMusic("resource/audio/bgm/" + battleData.meta.bgm);
 					} catch (e) { console.log('播放BGM失败', e); }
 				}
 			}
@@ -314,6 +315,8 @@ Item {
 	property var enemyVisuals: []
 	property var enemySpawnCenters: []
 	property var enemyTypes: []
+	// 标记是否已经执行过生成流程（即使生成了0个敌人）
+	property bool enemiesSpawned: false
 
 	function isEnemyDead(backend) {
 		if (!backend) return true;
@@ -579,7 +582,7 @@ Item {
 					var b = enemyBackends[i];
 					if (!isEnemyDead(b)) { aliveCount++; break; }
 				}
-				if (aliveCount === 0 && enemyBackends.length > 0) {
+				if (aliveCount === 0 && (enemyBackends.length > 0 || enemiesSpawned)) {
 					applyBattleResult('win');
 				}
 			} catch(e2) { console.log('check enemies failed', e2); }
@@ -761,6 +764,7 @@ Item {
 	
 
 	function clearEnemies() {
+		enemiesSpawned = false;
 		for (var i = 0; i < enemyVisuals.length; ++i) { try { enemyVisuals[i].destroy(); } catch(e){} }
 		enemyVisuals = [];
 		for (var j = 0; j < enemyBackends.length; ++j) { try { enemyBackends[j].deleteLater(); } catch(e){} }
@@ -809,7 +813,7 @@ Item {
 			for (var i = 0; i < enemyBackends.length; ++i) {
 				if (!isEnemyDead(enemyBackends[i])) { anyAlive = true; break; }
 			}
-			if (!anyAlive && enemyBackends.length > 0) {
+			if (!anyAlive && (enemyBackends.length > 0 || enemiesSpawned)) {
 				console.log('checkVictoryNow: no alive enemies -> applying win');
 				applyBattleResult('win');
 			}
@@ -1238,10 +1242,11 @@ Item {
 				}
 			} catch (eTL) { console.log('restore saved timeLeftSeconds failed', eTL); }
 		}
-		console.log("spawnEnemiesFromMap: total enemies", enemyBackends.length);
 		// Explicitly update TeleportOverlay's enemy list reference to ensure it sees the populated array
 		if (teleportOverlay) teleportOverlay.enemyBackends = enemyBackends;
 		
+		enemiesSpawned = true;
+
 		// after spawning, check if victory condition already met (e.g., enemies restored as dead)
 		Qt.callLater(function(){ checkVictoryNow(); });
 		// refresh global snapshot of enemies for SaveLoad UI via WindowState
