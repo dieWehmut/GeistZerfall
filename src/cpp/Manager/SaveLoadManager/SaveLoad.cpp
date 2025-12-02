@@ -769,6 +769,7 @@ bool SaveLoad::hasUnlockedBattle(const QString &battleId, const QString &folderP
             // Cases that denote a `battle` is triggered:
             // 1) This node is an explicit battle node (id startsWith battle), and defines next/nextNode/choices that point to the post-battle node
             // 2) This node is a regular node that has action==startBattle with actionParams.battleId matching the target battle; in that case the node's own next/nextNode defines the post-battle node
+            // 3) This node has a choice that points to the target battleId
             bool isBattleNode = nodeId.startsWith("battle");
             bool isStartBattleAction = false;
             if (nodeObj.contains("action") && nodeObj.value("action").isString() && nodeObj.value("action").toString() == "startBattle") {
@@ -778,7 +779,18 @@ bool SaveLoad::hasUnlockedBattle(const QString &battleId, const QString &folderP
                     if (bid == battleId) isStartBattleAction = true;
                 }
             }
-            if (!isBattleNode && !isStartBattleAction) continue;
+            bool isChoiceBattle = false;
+            if (nodeObj.contains("choices") && nodeObj.value("choices").isArray()) {
+                QJsonArray choices = nodeObj.value("choices").toArray();
+                for (const QJsonValue &cv : choices) {
+                    if (cv.isObject() && cv.toObject().value("next").toString() == battleId) {
+                        isChoiceBattle = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!isBattleNode && !isStartBattleAction && !isChoiceBattle) continue;
 
             // Enumerate target nodes that represent the node after this battle
             QStringList targets;
