@@ -1,8 +1,11 @@
 import QtQuick 2.15
+import GeistZerfall 1.0
 import GeistZerfall.Game 1.0
 
 Item {
     id: enemy6Root
+    GameUiScale { id: gameUiScale }
+    property real uiScale: gameUiScale.uiScale
     property int baseSize: 128  // 敌人尺寸：128*128
     width: baseSize * tileScaleRef
     height: baseSize * tileScaleRef
@@ -20,7 +23,7 @@ Item {
     property real impactScale: 1.0
     // speed up pulsating animation
     property int pulsateDuration: 800
-    scale: pulsateScale * impactScale
+    scale: uiScale * pulsateScale * impactScale
 
     Image {
         id: sprite

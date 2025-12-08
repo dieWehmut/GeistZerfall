@@ -1,9 +1,15 @@
 import QtQuick
+// 使用 UiScale 组件实例来获取缩放值
 import QtQuick.Controls
 import "../../../components"
 
 // HistoryPanel.qml - 历史回顾窗口组件
 Item {
+    UiScale { id: uiScaleHelper }
+    property real uiScale: uiScaleHelper.uiScale
+    // Android 模式下历史窗需要充满全屏，避免整体缩小
+    property bool isAndroid: (Qt.platform && Qt.platform.os ? (Qt.platform.os.toLowerCase() === 'android') : false)
+    scale: isAndroid ? 1.0 : uiScale
     id: root
     anchors.fill: parent
     visible: false
@@ -40,9 +46,10 @@ Item {
     // 主面板容器（使用 container 包裹以便给主面板添加 DropShadow）
     Item {
         id: panelContainer
+        // Android 充满全屏；桌面维持居中与百分比尺寸
         anchors.centerIn: parent
-        width: parent.width * 0.8
-        height: parent.height * 0.85
+        width: isAndroid ? parent.width : parent.width * 0.8
+        height: isAndroid ? parent.height : parent.height * 0.85
 
         Rectangle {
             id: mainPanel
@@ -73,7 +80,8 @@ Item {
                     left: parent.left
                     right: parent.right
                     bottom: buttonArea.top
-                    margins: 40  // 增加左右上下内边距，保证对称留白
+                    // Android 全屏时缩小边距以提升可视面积
+                    margins: isAndroid ? 12 : 40
                 }
                 color: "transparent"
 
@@ -95,7 +103,7 @@ Item {
                         
                         delegate: Item {
                             width: historyListView.width - 5
-                            height: Math.max(60, contentRow.height + 30)  // 最小高度60，更高
+                            height: Math.max(60, contentRow.height + (isAndroid ? 16 : 30))  // Android 更紧凑
                             
                             Rectangle {
                                 id: entryBg
@@ -112,14 +120,14 @@ Item {
                                     left: parent.left
                                     right: parent.right
                                     top: parent.top
-                                    margins: 30  // 增加内边距，左右对称留白
-                                    topMargin: 15
+                                    margins: isAndroid ? 12 : 30  // Android 更小的内边距
+                                    topMargin: isAndroid ? 8 : 15
                                 }
-                                spacing: 20  // 人名和文本之间的间距
+                                spacing: isAndroid ? 10 : 20  // Android 更紧凑的间距
 
                                 // 人名区域（始终占据120px，保证文本起始位置一致）
                                 Item {
-                                    width: 120  // 固定宽度，始终占位
+                                    width: isAndroid ? 96 : 120  // Android 缩小人名占位宽度
                                     height: parent.height
 
                                     Text {
@@ -147,7 +155,7 @@ Item {
                                     anchors {
                                         top: parent.top
                                     }
-                                    width: contentRow.width - 200  // 留出跳转按钮空间
+                                    width: contentRow.width - (isAndroid ? 160 : 200)  // Android 更紧凑，留出图标空间
                                     text: modelData.text || ""
                                     font.pixelSize: 20
                                     color: "#FFFFFF" // 白色文本，确保在黑色遮罩上可读
@@ -158,12 +166,12 @@ Item {
                                 // 跳转按钮（图标）
                                 AppButton {
                                     id: jumpButton
-                                    width: 40
-                                    height: 40
+                                    width: isAndroid ? 36 : 40
+                                    height: isAndroid ? 36 : 40
                                     text: "⤴"
-                                    fontPixelSize: 18
+                                    fontPixelSize: isAndroid ? 16 : 18
                                     anchors.top: parent.top
-                                    anchors.topMargin: 6
+                                    anchors.topMargin: isAndroid ? 4 : 6
                                     onClicked: {
                                         // modelData 应包含 node 与 index，且现在可能包含 branch
                                         if (modelData.node !== undefined && modelData.index !== undefined) {
@@ -196,9 +204,9 @@ Item {
                     left: parent.left
                     right: parent.right
                     bottom: parent.bottom
-                    margins: 15
+                    margins: isAndroid ? 8 : 15
                 }
-                height: 50
+                height: isAndroid ? 44 : 50
 
                 AppButton {
                     id: backButton
@@ -206,10 +214,10 @@ Item {
                         right: parent.right
                         verticalCenter: parent.verticalCenter
                     }
-                    width: 120
-                    height: 40
+                    width: isAndroid ? 100 : 120
+                    height: isAndroid ? 36 : 40
                     text: "Back"
-                    fontPixelSize: 22
+                    fontPixelSize: isAndroid ? 18 : 22
                     
                     onClicked: {
                         console.log("HistoryPanel: Back button clicked");

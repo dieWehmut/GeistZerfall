@@ -1,5 +1,6 @@
 import QtQuick 2.15
 import QtMultimedia 6.5
+import GeistZerfall 1.0
 
 Item {
     id: root
@@ -9,7 +10,9 @@ Item {
     transformOrigin: Item.Center
     property real pulsateScale: 1.0
     property int pulsateDuration: 100
-    scale: pulsateScale
+    GameUiScale { id: gameUiScale }
+    property real uiScale: gameUiScale.uiScale
+    scale: pulsateScale * uiScale
     property var backend: null
     property var playerItemRef: null
     property var playerObjRef: null
@@ -50,9 +53,9 @@ Item {
 
     onTileScaleRefChanged: updateScreenPos()
 
-    // 简单碰撞检测：AABB 与玩家矩形
+    // 简单碰撞检测：AABB 与玩家矩形（降低频率至约30FPS）
     Timer {
-        interval: 16; running: true; repeat: true
+        interval: 33; running: true; repeat: true
         onTriggered: {
             if (!backend || !playerItemRef || !playerObjRef) return;
             var bx = root.x + (mapWrapperRef ? mapWrapperRef.x : 0);

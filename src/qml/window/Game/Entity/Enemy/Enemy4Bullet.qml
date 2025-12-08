@@ -1,15 +1,18 @@
 import QtQuick 2.15
+import GeistZerfall 1.0
 import QtMultimedia 6.5
 
 Item {
     id: root
+    GameUiScale { id: gameUiScale }
+    property real uiScale: gameUiScale.uiScale
     property int baseSize: 64  // 子弹尺寸：64*64
     width: baseSize * tileScaleRef
     height: baseSize * tileScaleRef
     transformOrigin: Item.Center
     property real pulsateScale: 1.0
     property int pulsateDuration: 600
-    scale: pulsateScale
+    scale: pulsateScale * uiScale
     property var backend: null
     property var playerItemRef: null
     property var playerObjRef: null
@@ -70,7 +73,7 @@ Item {
 
     // 简单碰撞检测：AABB 与玩家矩形
     Timer {
-        interval: 16
+            interval: 33
         running: true
         repeat: true
         onTriggered: {

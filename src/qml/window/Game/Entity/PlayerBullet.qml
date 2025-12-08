@@ -1,8 +1,11 @@
 import QtQuick 2.15
 import QtMultimedia 6.5
+import GeistZerfall 1.0
 
 Item {
 	id: bulletRoot
+	GameUiScale { id: gameUiScale }
+	property real uiScale: gameUiScale.uiScale
 	property int baseSize: 64
 	property var backend: null
 	property var playerObjRef: null
@@ -22,7 +25,8 @@ Item {
 	property real pulsateScale: 1.0
 	// make bullet pulse faster
 	property int pulsateDuration: 600
-	scale: pulsateScale
+	// 子弹整体缩放（Android 缩小）
+	scale: pulsateScale * uiScale
 
 	function updateScreenPos() {
 		if (!backend || !backend.pos) return;
@@ -67,7 +71,7 @@ Item {
 
 	function handleBackendAssigned() {
 		updateScreenPos();
-		console.log('PlayerBullet: handleBackendAssigned backend:', backend, 'playerObjRef:', playerObjRef, 'playerItemRef:', playerItemRef);
+		// 移除高频日志，保留关键错误日志
 		try { backend.posChanged.connect(updateScreenPos); } catch(e){}
 		try {
 			backend.destroyed.connect(function() {
@@ -100,7 +104,8 @@ Item {
 
 	Timer {
 		id: collisionTimer
-		interval: 16
+		// 降低碰撞检测频率以减轻负载（约30FPS）
+		interval: 33
 		repeat: true
 		running: false
 		onTriggered: checkCollision()

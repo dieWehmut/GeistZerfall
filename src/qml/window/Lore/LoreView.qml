@@ -1477,6 +1477,10 @@ Item {
         id: confirmTitleDialog
         anchors.centerIn: parent
         z: 3500
+        // 在 Android 上按统一比例缩小弹窗
+        // 引用 Lore/components 里的 UiScale 以与其它组件一致
+        UiScale { id: __uiScaleHelper }
+        scale: __uiScaleHelper.uiScale
         title: "返回主界面?"
         yesText: "是"
         noText: "否"

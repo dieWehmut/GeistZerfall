@@ -95,20 +95,16 @@ Item {
 			sx = Number(sx); sy = Number(sy); ex = Number(ex); ey = Number(ey);
 			if (!isFinite(sx) || !isFinite(sy) || !isFinite(ex) || !isFinite(ey)) return;
 
-			// stronger glow: more layers, larger widths and higher alpha
-			// base glow color - deeper blue (#3399CC) for stronger contrast
-			var baseColor = '51,153,204'; // rgb for #3399CC
-			// slightly reduce intensity for outer beams using spreadIndex
-			var alphaMul = 1.0 - Math.min(0.7, Math.abs(spreadIndex) * 0.18);
-			// increase layers and make inner layers brighter
-			var glowLayers = 14;
+			// 优化绘制：减少发光层数并限制线宽，降低 Canvas 负载
+			var baseColor = '51,153,204';
+			var alphaMul = 1.0 - Math.min(0.6, Math.abs(spreadIndex) * 0.18);
+			var glowLayers = 8;
 			for (var i = glowLayers; i >= 1; --i) {
 				ctx.beginPath();
-				// stronger alpha for inner layers and scale with i
-				var a = 0.03 * (i + 2) * alphaMul;
+				var a = 0.028 * (i + 2) * alphaMul;
 				ctx.strokeStyle = 'rgba(' + baseColor + ',' + Math.min(a, 0.95).toFixed(3) + ')';
-				// thickness is in world units; convert to screen pixels
-				ctx.lineWidth = (thickness * tileScaleRef) * (i * 0.6);
+				// thickness is in world units; convert to screen pixels, 加上上限
+				ctx.lineWidth = Math.min(18, (thickness * tileScaleRef) * (i * 0.5));
 				ctx.lineCap = 'round';
 				ctx.moveTo(sx, sy);
 				ctx.lineTo(ex, ey);
@@ -120,7 +116,7 @@ Item {
 			// brighten the core for center beam; dim slightly for outer beams
 			var coreAlpha = 1.0 * alphaMul;
 			ctx.strokeStyle = 'rgba(234,255,255,' + coreAlpha.toFixed(3) + ')';
-			ctx.lineWidth = Math.max(3, (thickness * tileScaleRef) * 0.6);
+			ctx.lineWidth = Math.max(3, Math.min(14, (thickness * tileScaleRef) * 0.5));
 			ctx.lineCap = 'round';
 			ctx.moveTo(sx, sy);
 			ctx.lineTo(ex, ey);
@@ -139,8 +135,8 @@ Item {
 
 			// endpoint glow: larger, brighter radial gradient to mark the hit point
 			try {
-				// endpoint radius in screen pixels
-				var r = Math.max(16, (thickness * tileScaleRef) * 1.2);
+				// endpoint radius in screen pixels（减小半径以减少填充面积）
+				var r = Math.max(12, (thickness * tileScaleRef) * 0.8);
 				var grad = ctx.createRadialGradient(ex, ey, 0, ex, ey, r * 3);
 				grad.addColorStop(0.0, 'rgba(255,255,255,1.0)');
 				grad.addColorStop(0.12, 'rgba(200,240,255,0.95)');
@@ -167,12 +163,12 @@ Item {
 	Behavior on beamOpacity { NumberAnimation { duration: 80 } }
 
 	function start(dirx, diry) {
-		console.log('PlayerLaser.start called, dir:', dirx, diry, 'backend?', backend);
+		// 移除高频日志
 		try {
-			console.log('PlayerLaser: attempting to play laserSfx');
+			// 移除高频日志
 			// 只有在 sound 未被静音时才播放
 			if (!laserSfx.muted) laserSfx.play();
-			console.log('PlayerLaser: laserSfx.play() returned');
+			// 移除高频日志
 		} catch (e) { console.log('laserSfx play failed', e); }
 		// trigger a short pulse to make the beam pop when fired
 		try { if (typeof pulsate === 'function') pulsate(); } catch(e) { console.log('pulsate failed', e); }

@@ -1,15 +1,18 @@
 import QtQuick 2.15
+import GeistZerfall 1.0
 import QtMultimedia 6.5
 
 Item {
 	id: root
+	GameUiScale { id: gameUiScale }
+	property real uiScale: gameUiScale.uiScale
 	property int baseSize: 128
 	width: baseSize * tileScaleRef
 	height: baseSize * tileScaleRef
 	transformOrigin: Item.Center
 	property real pulsateScale: 1.0
 	property int pulsateDuration: 600
-	scale: pulsateScale
+	scale: pulsateScale * uiScale
 	property var backend: null
 	property var playerItemRef: null
 	property var playerObjRef: null

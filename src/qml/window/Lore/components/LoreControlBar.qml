@@ -1,7 +1,11 @@
 import QtQuick
+// 实例化 UiScale 获取缩放比例
 
 // LoreControlBar.qml - 剧情界面底部按钮栏
 Item {
+    UiScale { id: uiScaleHelper }
+    property real uiScale: uiScaleHelper.uiScale
+    scale: uiScale
     id: root
     property bool autoEnabled: false
     property bool skipActive: false
@@ -47,7 +51,7 @@ Item {
     Row {
         id: controlRow
         anchors.centerIn: parent
-        spacing: 18
+        spacing: 0
 
         LoreControlButton {
             iconText: "\u2630"
