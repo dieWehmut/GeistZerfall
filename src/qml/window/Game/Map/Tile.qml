@@ -1,11 +1,17 @@
 import QtQuick 2.15
+import GeistZerfall 1.0
 
 Item {
+    // 统一游戏内 UI 缩放（Android 缩小以适配手机屏幕）
+    GameUiScale { id: gameUiScale }
+    property real uiScale: gameUiScale.uiScale
     property int tileSize: 512  
     id: tileRoot
     property int tileType: 0
     width: tileSize
     height: tileSize
+    // 地图单元整体缩放（跟随全局）
+    scale: uiScale
 
     Image {
         anchors.fill: parent

@@ -215,7 +215,7 @@ Item {
 
 				// 画面尺寸
 				Column {
-					spacing: 8
+					spacing: 2
 					Text {
 						text: "画面尺寸"
 						anchors.left: parent.left
@@ -272,7 +272,7 @@ Item {
 
 				// 画面比例
 				Column {
-					spacing: 8
+					spacing: 2
 					Text {
 						text: "画面比例"
 						anchors.left: parent.left
@@ -316,7 +316,7 @@ Item {
 
 				// 文本跳过
 				Column {
-					spacing: 8
+					spacing: 2
 					Text {
 						text: "可快进文本"
 						anchors.left: parent.left
@@ -353,7 +353,7 @@ Item {
 
 				// 选项后快进
 				Column {
-					spacing: 8
+					spacing: 2
 					Text {
 						text: "选项后继续快进"
 						anchors.left: parent.left
@@ -390,7 +390,7 @@ Item {
 
 				// 选项后继续自动模式
 				Column {
-					spacing: 8
+					spacing: 2
 					Text {
 						text: "选项后继续自动模式"
 						anchors.left: parent.left

@@ -1,15 +1,19 @@
 import QtQuick 2.15
 import QtMultimedia 6.5
+import GeistZerfall 1.0
 
 Item {
 	id: root
+	GameUiScale { id: gameUiScale }
+	property real uiScale: gameUiScale.uiScale
 	property int baseSize: 96
 	width: baseSize * tileScaleRef
 	height: baseSize * tileScaleRef
 	transformOrigin: Item.Center
 	property real pulsateScale: 1.0
 	property int pulsateDuration: 600
-	scale: pulsateScale
+	// 敌人子弹整体缩放（Android 缩小）
+	scale: pulsateScale * uiScale
 	property var backend: null
 	property var playerItemRef: null
 	property var playerObjRef: null
@@ -53,9 +57,9 @@ Item {
 
 	onTileScaleRefChanged: updateScreenPos()
 
-	// 碰撞检测：AABB 与玩家矩形
+	// 碰撞检测：AABB 与玩家矩形（降低频率至约30FPS）
 	Timer {
-		interval: 16; running: true; repeat: true
+		interval: 33; running: true; repeat: true
 		onTriggered: {
 			if (!backend || !playerItemRef || !playerObjRef) return;
 			var bulletRect = root.mapRectToItem ? root.mapRectToItem(null, Qt.rect(0, 0, root.width, root.height))

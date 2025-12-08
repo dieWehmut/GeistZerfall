@@ -5,6 +5,7 @@ build
 CMakeLists.txt.user
 *.user
 cmake-build-*/
+android
 src/resources_qrc
 src/resource.qrc
 src/qml/window/Game/battles/

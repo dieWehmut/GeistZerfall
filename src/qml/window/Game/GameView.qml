@@ -12,9 +12,14 @@ import "../../components"
 
 Item {
     id: gameViewRoot
+	// 统一游戏内 UI 缩放（Android 缩小以适配手机屏幕）
+	GameUiScale { id: gameUiScale }
+	property real uiScale: gameUiScale.uiScale
 	// 是否显示屏幕触控（左下摇杆 + 右下操作按钮）
 	// 默认 NO（显示控件）
 	property bool controlsVisible: true
+	// 平台判断：Android 上隐藏“Hide Controls”和“Aim Mode”相关内容
+	property bool isAndroid: Qt.platform.os === "android"
 	// 通过context property注入playerObj
 	// Backward-compatible global aim coordinates (fallback to avoid ReferenceError from legacy code)
 	property real aimX: 0
@@ -184,6 +189,8 @@ Item {
 		anchors.topMargin: 12
 		anchors.leftMargin: 12
 		z: 3000
+		// 左上角信息整体缩放
+		scale: uiScale
 		Rectangle {
 			id: hpBg
 			anchors.top: parent.top
@@ -624,6 +631,8 @@ Item {
 		// leave a little gap to the right edge (增加一点以避免按钮被裁切)
 		anchors.rightMargin: 36
 		z: 3000
+		// 右上角控制面板整体缩放
+		scale: uiScale
 
 		Rectangle {
 			id: trBg
@@ -651,7 +660,7 @@ Item {
 				anchors.rightMargin: 12
 				AppButton {
 					id: cfgBtn
-					iconText: "\u2630" // ☰ (menu) — matches LoreView
+					iconText: "\u2261" // ≡ (identical sign) 作为设置按钮图标
 					text: "Settings"
 					height: 44
 					fontPixelSize: 18
@@ -681,6 +690,7 @@ Item {
 				anchors.leftMargin: 12
 				anchors.rightMargin: 12
 				horizontalAlignment: Text.AlignHCenter
+				visible: !gameViewRoot.isAndroid
 			}
 
 			Row {
@@ -689,6 +699,7 @@ Item {
 				width: cfgBtn.width
 				anchors.horizontalCenter: cfgBtn.horizontalCenter
 				spacing: 6
+				visible: !gameViewRoot.isAndroid
 				// YES button (按用户要求：YES 模式隐藏控件)
 				AppButton {
 					id: btnYes
@@ -724,12 +735,14 @@ Item {
 				anchors.leftMargin: 12
 				anchors.rightMargin: 12
 				horizontalAlignment: Text.AlignHCenter
+				visible: !gameViewRoot.isAndroid
 			}
 
 			Item {
 				width: cfgBtn.width
 				height: 44
 				anchors.horizontalCenter: cfgBtn.horizontalCenter
+				visible: !gameViewRoot.isAndroid
 				AppButton {
 					id: mouseAimBtn
 					anchors.fill: parent
@@ -745,6 +758,7 @@ Item {
 				width: cfgBtn.width
 				height: 44
 				anchors.horizontalCenter: cfgBtn.horizontalCenter
+				visible: !gameViewRoot.isAndroid
 				AppButton {
 					id: moveAimBtn
 					anchors.fill: parent
@@ -2413,6 +2427,8 @@ Item {
 			id: joystick
 			visible: gameViewRoot.controlsVisible
 			width: 200; height: 200
+			// 左下角摇杆整体缩放（Android 按比例缩小）
+			scale: uiScale
 				anchors.bottom: parent.bottom
 				anchors.left: parent.left
 				anchors.leftMargin: 8
@@ -2521,6 +2537,8 @@ Item {
 		Item {
 			id: actionButtons
 			width: 250; height: 250
+			// 右下角操作按钮整体缩放（Android 按比例缩小）
+			scale: uiScale
 				anchors.bottom: parent.bottom
 				anchors.right: parent.right
 				anchors.rightMargin: 8

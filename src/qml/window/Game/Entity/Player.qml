@@ -1,11 +1,17 @@
 import QtQuick
+import GeistZerfall 1.0
 
 Item {
 	id: playerRoot
+	// 统一游戏内 UI 缩放（Android 缩小以适配手机屏幕）
+	GameUiScale { id: gameUiScale }
+	property real uiScale: gameUiScale.uiScale
 	// Signals emitted to let external UI react to key-down/up events
 	signal keyDown(int key)
 	signal keyUp(int key)
 	width: 96; height: 96
+	// 实体整体缩放
+	scale: uiScale
 	property var playerObj: null
 
 	onPlayerObjChanged: {

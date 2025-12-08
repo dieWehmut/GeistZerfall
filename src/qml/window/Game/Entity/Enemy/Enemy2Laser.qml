@@ -27,9 +27,25 @@ Item {
             var sy = height / 2;
             var ex = sx + backend.maxDist * backend.dirx * tileScaleRef;
             var ey = sy + backend.maxDist * backend.diry * tileScaleRef;
-            ctx.strokeStyle = '#ff2222';
-            ctx.lineWidth = 15 * tileScaleRef;
+
+            // 优化绘制：少层次发光 + 线宽上限
+            var baseColor = '255,34,34'; // red
+            var glowLayers = 6;
+            for (var i = glowLayers; i >= 1; --i) {
+                ctx.beginPath();
+                var a = 0.028 * (i + 2);
+                ctx.strokeStyle = 'rgba(' + baseColor + ',' + Math.min(a, 0.9).toFixed(3) + ')';
+                ctx.lineWidth = Math.min(16, (12 * tileScaleRef) * (i * 0.45));
+                ctx.lineCap = 'round';
+                ctx.moveTo(sx, sy);
+                ctx.lineTo(ex, ey);
+                ctx.stroke();
+            }
+            // 核心线
             ctx.beginPath();
+            ctx.strokeStyle = 'rgba(255,255,255,0.95)';
+            ctx.lineWidth = Math.max(3, Math.min(12, (10 * tileScaleRef)));
+            ctx.lineCap = 'round';
             ctx.moveTo(sx, sy);
             ctx.lineTo(ex, ey);
             ctx.stroke();
@@ -75,7 +91,7 @@ Item {
             if (t < 0) t = 0; else if (t > 1) t = 1;
             var cx = sx + t*dx; var cy = sy + t*dy;
             var dist = Math.sqrt((px - cx)*(px - cx) + (py - cy)*(py - cy));
-            var beamHalfWidth = (18 * tileScaleRef)/2;
+            var beamHalfWidth = Math.min(18, (18 * tileScaleRef))/2;
             if (dist <= beamHalfWidth) {
                 try { if (typeof playerObjRef.receiveDamage === 'function') playerObjRef.receiveDamage(damage); hitSfx.play(); } catch(e){}
             }

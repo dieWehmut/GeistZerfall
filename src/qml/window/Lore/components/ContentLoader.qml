@@ -1,7 +1,11 @@
 import QtQuick
+// 使用组件实例而非 import 目录
 
 // ContentLoader.qml - 内容加载器
 Item {
+    UiScale { id: uiScaleHelper }
+    property real uiScale: uiScaleHelper.uiScale
+    scale: uiScale
     id: root
 
     property var contentData: null

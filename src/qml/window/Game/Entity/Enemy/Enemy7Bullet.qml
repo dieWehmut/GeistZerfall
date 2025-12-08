@@ -1,28 +1,28 @@
 import QtQuick 2.15
 import QtMultimedia 6.5
-import GeistZerfall.Game 1.0
+import GeistZerfall 1.0
 
 Item {
     id: root
+    GameUiScale { id: gameUiScale }
+    property real uiScale: gameUiScale.uiScale
     property int baseSize: 64
     width: baseSize * tileScaleRef
     height: baseSize * tileScaleRef
-    property BackendEnemy7Bullet backend: null
-    property var playerObjRef: null
+    transformOrigin: Item.Center
+    property real pulsateScale: 1.0
+    property int pulsateDuration: 600
+    scale: pulsateScale * uiScale
+    property var backend: null
     property var playerItemRef: null
+    property var playerObjRef: null
     property var mapWrapperRef: null
     property real tileScaleRef: 1.0
     property int damage: 12
     property real collisionRadius: baseSize * 0.35
     z: 130
-    visible: backend !== null
-    transformOrigin: Item.Center
-    property real pulsateScale: 1.0
-    property int pulsateDuration: 600
-    scale: pulsateScale
 
     Image {
-        id: sprite
         anchors.centerIn: parent
         source: "qrc:/resource/image/entity/enemy7Bullet.png"
         width: parent.width
@@ -61,9 +61,10 @@ Item {
 
     onTileScaleRefChanged: updateScreenPos()
 
+    // 简单碰撞检测：AABB 与玩家矩形（降低频率至约30FPS）
     Timer {
-        interval: 16
-        running: backend !== null
+        interval: 33
+        running: true
         repeat: true
         onTriggered: {
             if (!backend || !playerItemRef || !playerObjRef) return;

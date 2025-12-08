@@ -1,8 +1,12 @@
 import QtQuick 2.15
-import GeistZerfall.Game 1.0
+import GeistZerfall 1.0
 
 Item {
 	id: enemy1Root
+	// 平台检测（用于在 Android 上禁用警告叠层以降低负载）
+	property bool isAndroid: (Qt.platform && Qt.platform.os ? (Qt.platform.os.toLowerCase() === 'android') : false)
+	GameUiScale { id: gameUiScale }
+	property real uiScale: gameUiScale.uiScale
 	property int baseSize: 128
 	width: baseSize * tileScaleRef
 	height: baseSize * tileScaleRef
@@ -17,7 +21,8 @@ Item {
 	property real impactScale: 1.0
 	// shorten the pulsate cycle to make pulsing faster
 	property int pulsateDuration: 400
-	scale: pulsateScale * impactScale
+	// 敌人整体缩放（Android 缩小）
+	scale: uiScale * pulsateScale * impactScale
 
 	Image {
 		id: sprite
@@ -161,17 +166,16 @@ Item {
 	function createWarnOverlay() {
 		try {
 			if (!mapWrapperRef) return null;
+			// Android 上禁用警告叠层，减少 Canvas 重绘开销
+			if (isAndroid) return null;
 			// remove any existing overlay
 			if (warnOverlay) { try { warnOverlay.destroy(); } catch(e) {} warnOverlay = null; }
-			var qml = "import QtQuick 2.15\nCanvas { anchors.fill: parent; z: 3000; property var backendProp: null; property var playerItemProp: null; property var mapWrapperProp: null; property real tileScaleProp: 1.0; visible: true; onPaint: { var ctx = getContext('2d'); ctx.clearRect(0,0,width,height); try { if (!backendProp || !playerItemProp || !mapWrapperProp) { console.log('warnOverlay: missing props'); return; } var sx = mapWrapperProp.x + backendProp.pos.x * tileScaleProp; var sy = mapWrapperProp.y + backendProp.pos.y * tileScaleProp; var tx = playerItemProp.x + (playerItemProp.width * 0.5); var ty = playerItemProp.y + (playerItemProp.height * 0.5); console.log('warnOverlay: drawing from', sx, sy, 'to', tx, ty); // debug endpoints: draw small solid circles at endpoints
-				ctx.beginPath(); ctx.fillStyle = 'rgba(255,0,0,0.9)'; ctx.arc(sx, sy, 8, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.fillStyle = 'rgba(0,255,0,0.9)'; ctx.arc(tx, ty, 8, 0, Math.PI*2); ctx.fill();
-				// debug banner
-				ctx.beginPath(); ctx.fillStyle = 'rgba(255,0,0,0.2)'; ctx.fillRect(10,10,110,28); ctx.fillStyle = '#ffffff'; ctx.font = '18px sans-serif'; ctx.fillText('ENEMY1 WARN', 16, 30);
-				// glow layers
-				for (var g = 6; g >= 1; --g) { ctx.beginPath(); ctx.strokeStyle = 'rgba(255,200,50,' + (0.10 * g).toFixed(3) + ')'; ctx.lineWidth = 3 * g; ctx.lineCap = 'round'; ctx.moveTo(sx, sy); ctx.lineTo(tx, ty); ctx.stroke(); }
+			var qml = "import QtQuick 2.15\nCanvas { anchors.fill: parent; z: 3000; property var backendProp: null; property var playerItemProp: null; property var mapWrapperProp: null; property real tileScaleProp: 1.0; visible: true; onPaint: { var ctx = getContext('2d'); ctx.clearRect(0,0,width,height); try { if (!backendProp || !playerItemProp || !mapWrapperProp) { return; } var sx = mapWrapperProp.x + backendProp.pos.x * tileScaleProp; var sy = mapWrapperProp.y + backendProp.pos.y * tileScaleProp; var tx = playerItemProp.x + (playerItemProp.width * 0.5); var ty = playerItemProp.y + (playerItemProp.height * 0.5); 
+				// glow layers（减少层数与线宽）
+				for (var g = 4; g >= 1; --g) { ctx.beginPath(); ctx.strokeStyle = 'rgba(255,200,50,' + (0.10 * g).toFixed(3) + ')'; ctx.lineWidth = Math.min(12, 3 * g); ctx.lineCap = 'round'; ctx.moveTo(sx, sy); ctx.lineTo(tx, ty); ctx.stroke(); }
 				// solid core
-				ctx.beginPath(); ctx.strokeStyle = 'rgba(255,255,0,1.0)'; ctx.lineWidth = 8; ctx.lineCap = 'round'; ctx.moveTo(sx, sy); ctx.lineTo(tx, ty); ctx.stroke(); } catch(e){ console.log('warnOverlay paint error:', e); } } 
-				Timer { id: __painter; interval: 50; repeat: true; running: true; onTriggered: requestPaint(); }
+				ctx.beginPath(); ctx.strokeStyle = 'rgba(255,255,0,1.0)'; ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.moveTo(sx, sy); ctx.lineTo(tx, ty); ctx.stroke(); } catch(e){ } } 
+				Timer { id: __painter; interval: 80; repeat: true; running: true; onTriggered: requestPaint(); }
 			}";
 			var obj = Qt.createQmlObject(qml, mapWrapperRef.parent, "enemyWarnOverlay");
 			if (!obj) { console.log('createWarnOverlay: failed to create object'); return null; }
