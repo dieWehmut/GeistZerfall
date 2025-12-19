@@ -200,7 +200,7 @@ Item {
             visible: !!(root.contentData && (root.contentData.speakerName || root.contentData.speaker !== undefined))
             color: "#333333"
             // 缩小说话者姓名字号以匹配更紧凑的正文
-            font.pixelSize: Math.max(14, textBox.height * 0.08)
+            font.pixelSize: (Qt.platform.os === "android" ? Math.max(14, textBox.height * 0.08) : Math.max(22, textBox.height * 0.13))
             font.bold: true
             anchors.left: parent.left
             z: 3
@@ -228,7 +228,7 @@ Item {
             verticalAlignment: Text.AlignTop
             color: "#222222"
             // 进一步减小字号与行距，让文本更紧凑
-            font.pixelSize: Math.max(12, parent.height * 0.075)
+            font.pixelSize: (Qt.platform.os === "android" ? Math.max(12, parent.height * 0.075) : Math.max(20, parent.height * 0.12))
             lineHeight: 0.8
             text: displayedText
             z: 2

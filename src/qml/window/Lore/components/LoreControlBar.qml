@@ -51,7 +51,8 @@ Item {
     Row {
         id: controlRow
         anchors.centerIn: parent
-        spacing: 0
+        // 电脑版 spacing 加大，Android 保持 0
+        spacing: (Qt.platform && Qt.platform.os && Qt.platform.os.toLowerCase() === 'android') ? 0 : 18
 
         LoreControlButton {
             iconText: "\u2630"
