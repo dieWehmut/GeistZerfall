@@ -19,6 +19,12 @@ Window {
         // loops 可以由调用方覆盖；默认情况下无限循环
         loops: MediaPlayer.Infinite
         audioOutput: bgmOutput
+        onPlaybackStateChanged: {
+            console.log("bgmGlobal: playbackState ->", bgmGlobal.playbackState);
+        }
+        onErrorChanged: {
+            try { console.log("bgmGlobal: error ->", bgmGlobal.error, bgmGlobal.errorString); } catch(e) { console.log("bgmGlobal: error (unknown)"); }
+        }
     }
 
     AudioOutput {
@@ -41,6 +47,8 @@ Window {
     property real __textSpeed: 0.008
     // text box background opacity (0.0 - 1.0)
     property real __textBoxOpacity: 1.0
+    // expose text skip behaviour (values: 'read' or 'all') so components may read/write safely
+    property string __textSkip: "read"
     property string __aspectRatio: "16:9"
 
     Component.onCompleted: {
@@ -86,18 +94,48 @@ Window {
     property string currentMusic: ""
 
     // 切换音乐：如果 source 与当前相同且正在播放则不重复操作
-    // 参数：source (string), loops (MediaPlayer.Loops 或数字，可选)
+    // 参数：source (string)，应传相对路径（如 "resource/audio/bgm/mainmenu.mp3"）；
+    // 不使用 qrc，不在代码里写死绝对路径，统一基于可执行所在目录构造 file:/// URL 播放。
     function playMusic(source, loops) {
         if (!source) return;
         try {
+            // 规范化为相对路径，基于 Main.qml 所在目录（src/）
+            function normalizeBgmSource(s) {
+                try {
+                    var input = (s || "").toString().replace(/\\/g, "/");
+                    // 如果已是绝对 schema，直接返回
+                    if (input.indexOf("qrc:/") === 0 || input.indexOf("assets:/") === 0 || input.indexOf("file:/") === 0) {
+                        return input;
+                    }
+                    // 统一成 resource/audio/bgm/<file>
+                    var str = input;
+                    var ri = str.indexOf("resource/audio/bgm/");
+                    if (ri > 0) str = str.substring(ri);
+                    while (str.indexOf("../") === 0) str = str.substring(3);
+                    if (str.indexOf("audio/bgm/") === 0) str = "resource/" + str;
+                    if (str.indexOf('/') === -1) str = "resource/audio/bgm/" + str;
+
+                    // 平台差异：Android 使用 assets:/bgm/<file>；桌面使用 file:///（由后续逻辑构造）
+                    var isAndroid = (Qt.platform && Qt.platform.os ? (Qt.platform.os.toLowerCase() === 'android') : false);
+                    if (isAndroid) {
+                        // 取文件名
+                        var parts = str.split('/');
+                        var fileName = parts[parts.length - 1];
+                        return "assets:/bgm/" + fileName;
+                    }
+                    return str;
+                } catch (eN) { return s; }
+            }
+
+            var norm = normalizeBgmSource(source);
+            console.log("playMusic requested:", source, "=>", norm, "loops:", loops);
+
             // 如果是相同音乐，且正在播放则什么都不做；
             // 如果是相同音乐但处于暂停/停止状态，则直接恢复播放（不重新设置 source）以保留进度。
-            if (window.currentMusic === source) {
+            if (window.currentMusic === norm) {
                 if (bgmGlobal.playbackState === MediaPlayer.Playing) {
-                    // 相同音乐且正在播放，无需切换
                     return;
                 } else {
-                    // 相同音乐但未播放，尝试恢复
                     bgmGlobal.play();
                     return;
                 }
@@ -105,11 +143,63 @@ Window {
 
             // 不同音乐：停掉当前（如果有）并切换到新 source
             bgmGlobal.stop();
-            bgmGlobal.source = source;
-            if (typeof loops !== 'undefined') bgmGlobal.loops = loops;
-            else bgmGlobal.loops = MediaPlayer.Infinite;
+
+            var isAndroid = (Qt.platform && Qt.platform.os ? (Qt.platform.os.toLowerCase() === 'android') : false);
+            var url = "";
+
+            if (isAndroid) {
+                // Android: 先把 assets:/ 或 qrc:/ 抽到真实文件，再用 file:/// 播放
+                var assetUrl = norm;
+                if (assetUrl.indexOf("assets:/") !== 0 && assetUrl.indexOf("qrc:/") !== 0) {
+                    // 非 schema 的情况（例如 resource/audio/bgm/xxx），退化为 qrc:/ 尝试
+                    assetUrl = "qrc:/" + assetUrl;
+                }
+                var localPath = "";
+                try {
+                    if (typeof fileReader !== 'undefined' && fileReader && fileReader.ensureAssetFile) {
+                        localPath = fileReader.ensureAssetFile(assetUrl);
+                    }
+                } catch (eEnsure) {
+                    console.log("playMusic: ensureAssetFile failed", eEnsure);
+                }
+                if (localPath && localPath.length > 0) {
+                    var fixed = localPath.replace(/\\/g, "/");
+                    if (fixed.indexOf("/") === 0 || fixed.match(/^[a-zA-Z]:\//)) {
+                        url = "file:///" + fixed;
+                    } else {
+                        url = "file:///" + fixed;
+                    }
+                } else {
+                    // 回退：仍然尝试直接使用 norm，让日志能暴露问题
+                    url = norm;
+                }
+            } else {
+                // 桌面：将相对路径解析成 file:/// 绝对路径
+                // url = Qt.resolvedUrl(norm);
+                // 改为使用 fileReader 获取 exe 所在目录，拼接 resource 路径
+                var appDir = "";
+                try {
+                    if (typeof fileReader !== 'undefined' && fileReader && fileReader.getApplicationDirPath) {
+                        appDir = fileReader.getApplicationDirPath();
+                    }
+                } catch(eAppDir) { console.log("playMusic: getApplicationDirPath failed", eAppDir); }
+
+                if (appDir) {
+                    // 简单拼接：file:///<appDir>/<norm>
+                    // norm 如 "resource/audio/bgm/mainmenu.mp3"
+                    url = "file:///" + appDir + "/" + norm;
+                } else {
+                    // 回退
+                    url = Qt.resolvedUrl(norm);
+                }
+            }
+
+            bgmGlobal.source = url;
+            console.log("bgmGlobal.source set to:", bgmGlobal.source, "(isAndroid=", isAndroid, ")");
+            if (typeof loops !== 'undefined') bgmGlobal.loops = loops; else bgmGlobal.loops = MediaPlayer.Infinite;
             bgmGlobal.play();
-            window.currentMusic = source;
+            window.currentMusic = norm;
+            console.log("playMusic: window.currentMusic set to", window.currentMusic);
         } catch (e) {
             console.log("playMusic error:", e);
         }
@@ -163,6 +253,13 @@ Window {
                 var s = SaveLoadManager.loadSystem() || {};
                 s.aspectRatio = aspect;
                 SaveLoadManager.saveSystem(s);
+            }
+
+            // Android 上忽略宽高比设置，始终充满屏幕
+            var isAndroid = (Qt.platform && Qt.platform.os ? (Qt.platform.os.toLowerCase() === 'android') : false);
+            if (isAndroid) {
+                try { updateViewport(); } catch(e) {}
+                return;
             }
 
             // update content base so chosen aspect applies (letterbox in fullscreen)
@@ -257,6 +354,17 @@ Window {
     property int contentBaseH: (window.__aspectRatio === '4:3' ? 960 : 720)
     function updateViewport() {
         try {
+            // Android：直接铺满全屏（不保持宽高比，按屏幕尺寸拉伸）
+            var isAndroid = (Qt.platform && Qt.platform.os ? (Qt.platform.os.toLowerCase() === 'android') : false);
+            if (isAndroid) {
+                mainLoader.width = window.width;
+                mainLoader.height = window.height;
+                mainLoader.x = 0;
+                mainLoader.y = 0;
+                return;
+            }
+
+            // 桌面平台：保持设定的宽高比，居中显示（等比缩放）
             var baseW = window.contentBaseW;
             var baseH = window.contentBaseH;
             // compute scale to fit within actual window size

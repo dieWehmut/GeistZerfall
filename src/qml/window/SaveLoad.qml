@@ -24,7 +24,7 @@ Item {
 	property real scaleFactor: Math.min(width / baseWidth, height / baseHeight)		// 背景
 		Image {
 			anchors.fill: parent
-			source: "qrc:/resource/image/bg/mainmenu.png"
+		source: "qrc:/resource/image/bg/system/saveLoad.png"
 			fillMode: Image.PreserveAspectCrop
 		}
 
@@ -318,7 +318,7 @@ Item {
 														} else if (loreMusic && typeof window.playMusic === 'function') {
 															window.playMusic(loreMusic, (loreLoops !== undefined && loreLoops !== null) ? loreLoops : undefined);
 														} else if (typeof window.playMusic === 'function') {
-															window.playMusic("qrc:/resource/audio/bgm/mainmenu.mp3");
+															window.playMusic("resource/audio/bgm/mainmenu.mp3");
 														}
 													}
 												} catch (em) { console.log('SaveLoad: play lore music failed', em); }

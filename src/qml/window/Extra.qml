@@ -12,7 +12,7 @@ Item {
 
     Image {
         anchors.fill: parent
-        source: "qrc:/resource/image/bg/mainmenu.png"
+        source: "qrc:/resource/image/bg/system/extra.png"
         fillMode: Image.PreserveAspectCrop
         smooth: true
         cache: true

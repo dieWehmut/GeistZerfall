@@ -16,6 +16,8 @@ public:
     
     Q_INVOKABLE QString readTextFile(const QString& filePath);
     Q_INVOKABLE QJsonObject readJsonFile(const QString& filePath);
+    Q_INVOKABLE QString ensureAssetFile(const QString& assetOrPath);
+    Q_INVOKABLE QString getApplicationDirPath();
 };
 
 #endif // FILEREADER_H

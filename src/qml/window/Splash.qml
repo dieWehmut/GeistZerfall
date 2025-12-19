@@ -32,7 +32,7 @@ Item {
             Text {
                 id: blackWarning
                 text: "WARNING"
-                font.pixelSize: 48
+                font.pixelSize: Math.round(48 * scaleFactor)
                 scale: 1
                 transformOrigin: Item.Center
                 color: "white"
@@ -53,7 +53,7 @@ Item {
                 "以及孕妇或对类似内容易受影响的玩家。\n\n" +
                 "若在游玩过程中出现头晕、心悸、视力模糊、焦虑等不适，请立即停止并寻求医疗或照护者协助。"
                 wrapMode: Text.WordWrap
-                font.pixelSize: 22
+                font.pixelSize: Math.round(22 * scaleFactor)
                 scale: 1
                 transformOrigin: Item.Center
                 color: "white"
@@ -78,7 +78,7 @@ Item {
             Text {
                 id: midTitle
                 text: "本游戏纯属虚构"
-                font.pixelSize: 36
+                font.pixelSize: Math.round(36 * scaleFactor)
                 scale: 1
                 transformOrigin: Item.Center
                 color: "white"
@@ -91,7 +91,7 @@ Item {
                 id: midBody
                 text: "游戏中的人物、地点、事件均为虚构，如有雷同，纯属巧合。"
                 wrapMode: Text.WordWrap
-                font.pixelSize: 20
+                font.pixelSize: Math.round(20 * scaleFactor)
                 scale: 1
                 transformOrigin: Item.Center
                 color: "white"
@@ -114,7 +114,7 @@ Item {
             id: whiteTitle
             text: "GeistZerfall"
             anchors.centerIn: parent
-            font.pixelSize: 56
+            font.pixelSize: Math.round(56 * scaleFactor)
             scale: 1
             transformOrigin: Item.Center
             color: "black"

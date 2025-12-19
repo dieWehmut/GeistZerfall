@@ -1,7 +1,11 @@
 import QtQuick
+// 实例化 UiScale 获取缩放比例
 
 // LoreControlBar.qml - 剧情界面底部按钮栏
 Item {
+    UiScale { id: uiScaleHelper }
+    property real uiScale: uiScaleHelper.uiScale
+    scale: uiScale
     id: root
     property bool autoEnabled: false
     property bool skipActive: false
@@ -24,6 +28,10 @@ Item {
     Component.onCompleted: {
         autoButton.checked = autoEnabled
         if (skipButton) skipButton.checked = skipActive
+        // Debug: report sizes so LoreView can position correctly
+        try {
+            console.log("LoreControlBar: completed -> width:", root.width, "height:", root.height, "implicitW:", controlRow.implicitWidth, "implicitH:", controlRow.implicitHeight, "childrenRectW:", controlRow.childrenRect ? controlRow.childrenRect.width : 0, "childrenRectH:", controlRow.childrenRect ? controlRow.childrenRect.height : 0);
+        } catch(e) {}
     }
 
     signal settingsClicked()
@@ -39,10 +47,12 @@ Item {
     height: controlRow.implicitHeight
     visible: true
 
+
     Row {
         id: controlRow
         anchors.centerIn: parent
-        spacing: 18
+        // 电脑版 spacing 加大，Android 保持 0
+        spacing: (Qt.platform && Qt.platform.os && Qt.platform.os.toLowerCase() === 'android') ? 0 : 18
 
         LoreControlButton {
             iconText: "\u2630"

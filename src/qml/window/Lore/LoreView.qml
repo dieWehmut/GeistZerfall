@@ -447,6 +447,28 @@ Item {
                                 }
                             }
                         } catch (ea) { }
+
+                        // case C: the previous node has a choice pointing to a battle
+                        if (nobj.choices && Array.isArray(nobj.choices)) {
+                            var battleChoiceId = null;
+                            for (var ci=0; ci<nobj.choices.length; ++ci) {
+                                var cnext = nobj.choices[ci].next;
+                                if (cnext && typeof cnext === 'string' && cnext.startsWith("battle")) {
+                                    battleChoiceId = cnext;
+                                    break;
+                                }
+                            }
+                            if (battleChoiceId) {
+                                // Check if currentNode is a target of this node (via other paths)
+                                var isTarget = false;
+                                if (nobj.next === currentNode) isTarget = true;
+                                if (nobj.nextNode === currentNode) isTarget = true;
+                                for (var cj=0; cj<nobj.choices.length; ++cj) {
+                                    if (nobj.choices[cj].next === currentNode) isTarget = true;
+                                }
+                                if (isTarget) prevNodeId = battleChoiceId;
+                            }
+                        }
                     }
                 }
             if (prevNodeId) {
@@ -675,7 +697,7 @@ Item {
                 // End the game and return to main menu
                 try { persistLoreState(); } catch(e) { }
                 try { window.pageHistory = []; } catch(e) { }
-                try { if (window && typeof window.playMusic === 'function') window.playMusic("qrc:/resource/audio/bgm/mainmenu.mp3"); } catch(e) { }
+                try { if (window && typeof window.playMusic === 'function') window.playMusic("resource/audio/bgm/mainmenu.mp3"); } catch(e) { }
                 // ensure any auto save and temporary preview is removed on game over
                 try {
                     // Prevent the later destruction from re-saving auto.dat/temp.png
@@ -808,7 +830,9 @@ Item {
 
     Loader {
         id: controlBarLoader
-        source: "qrc:/qml/components/LoreControlBar.qml"
+        // Instantiate the control bar directly from the imported components module
+        // This avoids any QRC/resource path issues and ensures the type is created.
+        sourceComponent: Component { LoreControlBar { } }
         // 采用手动坐标定位，避免宽高为0时锚点失效导致左上角位置
         // Elevate the control bar above the choice dialog so it remains clickable
         z: (choiceDialog && choiceDialog.visible) ? 3400 : 1500
@@ -932,6 +956,10 @@ Item {
         }
         onStatusChanged: {
             console.log("LoreView: controlBarLoader status=", status, "source=", source)
+            // If loader failed, attempt to log any engine errors visible to console
+            if (status === 3) {
+                console.log("LoreView: controlBarLoader failed to load. Check QML resource path and resource registration.");
+            }
         }
         onVisibleChanged: updateControlBarPos()
         onWidthChanged: updateControlBarPos()
@@ -981,7 +1009,7 @@ Item {
                 var pt = tb.mapToItem(root, 0, 0);
                 controlBarLoader.x = pt.x + (tb.width - desiredWidth)/2;
                 controlBarLoader.y = pt.y + tb.height - desiredHeight - 12; // 12px 上留白
-                console.log("LoreView: updateControlBarPos -> anchored to textBox at", controlBarLoader.x, controlBarLoader.y);
+                console.log("LoreView: updateControlBarPos -> anchored to textBox at", controlBarLoader.x, controlBarLoader.y, "tb.w", tb.width, "tb.h", tb.height, "pt", pt.x, pt.y, "desiredW/H", desiredWidth, desiredHeight, "loaderItemExists", !!controlBarLoader.item);
             } catch (ePos) {
                 console.log("LoreView: updateControlBarPos textBox mapToItem failed", ePos);
                 // fallback to bottom center
@@ -1449,6 +1477,10 @@ Item {
         id: confirmTitleDialog
         anchors.centerIn: parent
         z: 3500
+        // 在 Android 上按统一比例缩小弹窗
+        // 引用 Lore/components 里的 UiScale 以与其它组件一致
+        UiScale { id: __uiScaleHelper }
+        scale: __uiScaleHelper.uiScale
         title: "返回主界面?"
         yesText: "是"
         noText: "否"
@@ -1456,8 +1488,8 @@ Item {
             // 保留当前状态（已经在 persistLoreState 中），然后回主菜单
             persistLoreState();
             try { window.pageHistory = []; } catch (e) { }
-            // 切换主菜单音乐
-            try { if (window && typeof window.playMusic === 'function') window.playMusic("qrc:/resource/audio/bgm/mainmenu.mp3"); } catch (em) { console.log("LoreView: play mainmenu music error", em); }
+            // 切换主菜单音乐（相对路径）
+            try { if (window && typeof window.playMusic === 'function') window.playMusic("resource/audio/bgm/mainmenu.mp3"); } catch (em) { console.log("LoreView: play mainmenu music error", em); }
             if (window && window.replaceSource) window.replaceSource("qml/window/MainMenu.qml");
             else if (window && window.pushSource) window.pushSource("qml/window/MainMenu.qml");
         }

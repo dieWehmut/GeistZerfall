@@ -4,10 +4,14 @@ import QtMultimedia 6.5
 
 Item {
     id: root
-    // Default size, can be overridden
-    width: 300
-    height: 40
-    
+    // 默认尺寸（会根据平台缩放），可被父级覆盖
+    // 在 Android 上整体缩小，避免使用固定像素导致过大
+    property bool isAndroid: (Qt.platform && Qt.platform.os ? (Qt.platform.os.toLowerCase() === 'android') : false)
+    // 全局 UI 缩放因子：Android 上缩小到 0.8，可按需调整
+    property real uiScale: isAndroid ? 0.8 : 1.0
+    // 组件外框尺寸按比例缩放，不用硬编码像素
+    width: 300 * uiScale
+    height: 40 * uiScale
     property real value: 50
     property real minValue: 0
     property real maxValue: 100
@@ -36,7 +40,7 @@ Item {
 
     Row {
         id: mainRow
-        spacing: 15
+            spacing: 15 * uiScale
         anchors.verticalCenter: parent.verticalCenter
         // conditional horizontal anchoring: left-aligned if requested, otherwise centered
         anchors.left: root.leftAligned ? parent.left : undefined
@@ -46,8 +50,8 @@ Item {
         // Left Triangle button (rect with border + glyph)
         Rectangle {
             id: leftBtn
-            width: 34; height: 34
-            radius: 6
+                width: 34 * uiScale; height: 34 * uiScale
+                radius: 6 * uiScale
             anchors.verticalCenter: parent.verticalCenter
             // hovered or pressed -> black fill, white border; otherwise white fill, black border
             border.width: 2
@@ -57,7 +61,7 @@ Item {
             Text {
                 text: "\u25C4" // ◄
                 anchors.centerIn: parent
-                font.pixelSize: 18
+                    font.pixelSize: Math.round(18 * uiScale)
                 color: (leftMa.containsMouse || leftMa.pressed) ? "white" : "black"
             }
 
@@ -89,8 +93,9 @@ Item {
         // Slider Area
         Item {
             id: sliderTrack
-            width: 150 // Fixed width for the track part within the component
-            height: 20
+                // 轨道宽度相对于组件宽度（避免固定像素），Android 会随 uiScale 缩小
+                width: Math.max(100 * uiScale, root.width * 0.5)
+                height: 20 * uiScale
             anchors.verticalCenter: parent.verticalCenter
             // Hover state for the whole slider area
             property bool hovered: false
@@ -100,7 +105,7 @@ Item {
             Rectangle {
                 id: trackBg
                 width: parent.width
-                height: 8
+                    height: 8 * uiScale
                 // Dim by default, brighten on hover
                 color: sliderTrack.hovered ? "#ffffff" : "#bdbdbd"
                 anchors.centerIn: parent
@@ -130,9 +135,9 @@ Item {
             // Handle (Circle)
             Rectangle {
                 id: handle
-                width: 16
-                height: 16
-                radius: 8
+                    width: 16 * uiScale
+                    height: 16 * uiScale
+                    radius: 8 * uiScale
                 color: "black"
                 anchors.verticalCenter: parent.verticalCenter
                 
@@ -165,7 +170,7 @@ Item {
             // Filled portion of the track (left side up to the center of the handle)
             Rectangle {
                 id: filledTrack
-                height: 2
+                    height: Math.max(2, Math.round(2 * uiScale))
                 color: sliderTrack.hovered ? "#000000" : "#4a4a4a"
                 anchors.left: sliderTrack.left
                 anchors.verticalCenter: sliderTrack.verticalCenter
@@ -189,8 +194,8 @@ Item {
         // Right Triangle button (rect with border + glyph)
         Rectangle {
             id: rightBtn
-            width: 34; height: 34
-            radius: 6
+                width: 34 * uiScale; height: 34 * uiScale
+                radius: 6 * uiScale
             anchors.verticalCenter: parent.verticalCenter
             border.width: 2
             border.color: (rightMa.containsMouse || rightMa.pressed) ? "white" : "black"
@@ -199,7 +204,7 @@ Item {
             Text {
                 text: "\u25BA" // ►
                 anchors.centerIn: parent
-                font.pixelSize: 18
+                    font.pixelSize: Math.round(18 * uiScale)
                 color: (rightMa.containsMouse || rightMa.pressed) ? "white" : "black"
             }
 
@@ -232,9 +237,9 @@ Item {
         Text {
             id: valueText
             text: (root.step < 1) ? Number(root.value).toFixed(3) : Math.round(root.value)
-            font.pixelSize: 24
+                font.pixelSize: Math.round(24 * uiScale)
             color: root._valueIsRecent ? "black" : "white"
-            width: 60
+                width: Math.round(60 * uiScale)
             horizontalAlignment: Text.AlignRight
             anchors.verticalCenter: parent.verticalCenter
         }

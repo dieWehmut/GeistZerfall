@@ -24,9 +24,18 @@
 #include <QCoreApplication>
 #include <QVariant>
 
+// Resolve the writable app data directory for saves, with desktop fallback
+static QString resolveSaveDir(const QString &folderPath) {
+    QString base = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    if (base.isEmpty()) {
+        base = QCoreApplication::applicationDirPath();
+    }
+    return QDir::cleanPath(base + "/" + folderPath);
+}
+
 SaveLoad::SaveLoad(QObject *parent) : QObject(parent) {
-    // initialize autoExists based on the current file
-    QString dirPath = QDir::cleanPath(QCoreApplication::applicationDirPath() + "/" + QString("save"));
+    // initialize autoExists based on the current file under AppDataLocation
+    QString dirPath = resolveSaveDir(QString("save"));
     QString filePath = dirPath + "/auto.dat";
     QFile f(filePath);
     m_autoExists = f.exists();
@@ -45,7 +54,7 @@ SaveLoad::SaveLoad(QObject *parent) : QObject(parent) {
         Q_UNUSED(path)
         // recompute existence
         bool prev = m_autoExists;
-        QString dirPathLocal = QDir::cleanPath(QCoreApplication::applicationDirPath() + "/" + QString("save"));
+        QString dirPathLocal = resolveSaveDir(QString("save"));
         QString filePathLocal = dirPathLocal + "/auto.dat";
         QFile ff(filePathLocal);
         m_autoExists = ff.exists();
@@ -54,7 +63,7 @@ SaveLoad::SaveLoad(QObject *parent) : QObject(parent) {
     connect(m_watcher, &QFileSystemWatcher::directoryChanged, this, [this](const QString &path){
         Q_UNUSED(path)
         bool prev = m_autoExists;
-        QString dirPathLocal = QDir::cleanPath(QCoreApplication::applicationDirPath() + "/" + QString("save"));
+        QString dirPathLocal = resolveSaveDir(QString("save"));
         QString filePathLocal = dirPathLocal + "/auto.dat";
         QFile ff(filePathLocal);
         m_autoExists = ff.exists();
@@ -63,7 +72,7 @@ SaveLoad::SaveLoad(QObject *parent) : QObject(parent) {
 }
 
 bool SaveLoad::saveSystem(const QVariantMap &settings, const QString &folderPath) {
-    QString dirPath = QDir::cleanPath(QCoreApplication::applicationDirPath() + "/" + folderPath);
+    QString dirPath = QDir::cleanPath(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/" + folderPath);
     QDir dir;
     if (!dir.exists(dirPath)) {
         if (!dir.mkpath(dirPath)) {
@@ -87,7 +96,9 @@ bool SaveLoad::saveSystem(const QVariantMap &settings, const QString &folderPath
 
 QVariantMap SaveLoad::loadSystem(const QString &folderPath) {
     QVariantMap out;
-    QString dirPath = QDir::cleanPath(QCoreApplication::applicationDirPath() + "/" + folderPath);
+    QString base = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    if (base.isEmpty()) base = QCoreApplication::applicationDirPath();
+    QString dirPath = QDir::cleanPath(base + "/" + folderPath);
     QString filePath = dirPath + "/system.dat";
     QFile f(filePath);
     if (!f.exists()) return out;
@@ -109,7 +120,7 @@ QVariantMap SaveLoad::loadSystem(const QString &folderPath) {
 }
 
 bool SaveLoad::saveProgress(const QVariantMap &progress, const QString &folderPath) {
-    QString dirPath = QDir::cleanPath(QCoreApplication::applicationDirPath() + "/" + folderPath);
+    QString dirPath = QDir::cleanPath(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/" + folderPath);
     QDir dir;
     if (!dir.exists(dirPath)) {
         if (!dir.mkpath(dirPath)) {
@@ -173,7 +184,9 @@ QVariantMap SaveLoad::loadProgress(const QString &folderPath) {
         out["extraUnlocked"] = extras;
         // Persist initial structure so future reads clearly indicate default values
         try {
-            QString dirPath = QDir::cleanPath(QCoreApplication::applicationDirPath() + "/" + folderPath);
+            QString base = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+            if (base.isEmpty()) base = QCoreApplication::applicationDirPath();
+            QString dirPath = QDir::cleanPath(base + "/" + folderPath);
             QString filePath = dirPath + "/progress.dat";
             QFile f(filePath);
             if (f.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
@@ -233,19 +246,23 @@ bool SaveLoad::savePlayer(const QString &folderPath) {
 static QString slotDatPath(const QString &folderPath, int slot) {
     // Map UI slot index (0..7) to human-friendly filenames save1..save8 (previously slotN)
     int human = slot + 1;
-    QString dirPath = QDir::cleanPath(QCoreApplication::applicationDirPath() + "/" + folderPath);
+    QString base = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    if (base.isEmpty()) base = QCoreApplication::applicationDirPath();
+    QString dirPath = QDir::cleanPath(base + "/" + folderPath);
     return dirPath + QString("/save%1.dat").arg(human);
 }
 
 static QString slotPngPath(const QString &folderPath, int slot) {
     int human = slot + 1;
-    QString dirPath = QDir::cleanPath(QCoreApplication::applicationDirPath() + "/" + folderPath);
+    QString base = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    if (base.isEmpty()) base = QCoreApplication::applicationDirPath();
+    QString dirPath = QDir::cleanPath(base + "/" + folderPath);
     return dirPath + QString("/save%1.png").arg(human);
 }
 
 bool SaveLoad::saveSlot(int slot, const QString &folderPath) {
     if (slot < 0 || slot > 7) return false;
-    QString dirPath = QDir::cleanPath(QCoreApplication::applicationDirPath() + "/" + folderPath);
+    QString dirPath = QDir::cleanPath(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/" + folderPath);
     QDir dir;
     if (!dir.exists(dirPath)) {
         if (!dir.mkpath(dirPath)) {
@@ -270,7 +287,7 @@ bool SaveLoad::saveSlot(int slot, const QString &folderPath) {
 
     // try to capture a screenshot of the main window if available
     // If a temporary preview exists (temp.png), use it and overwrite slot preview; otherwise fall back to grabbing window
-    QString tempPng = QDir::cleanPath(QCoreApplication::applicationDirPath() + "/" + folderPath + "/temp.png");
+    QString tempPng = QDir::cleanPath(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/" + folderPath + "/temp.png");
     QString slotPng = slotPngPath(folderPath, slot);
     QFileInfo tempInfo(tempPng);
     if (tempInfo.exists() && tempInfo.isFile()) {
@@ -308,7 +325,7 @@ bool SaveLoad::saveSlot(int slot, const QString &folderPath) {
 }
 
 bool SaveLoad::captureTemp(const QString &folderPath) {
-    QString dirPath = QDir::cleanPath(QCoreApplication::applicationDirPath() + "/" + folderPath);
+    QString dirPath = QDir::cleanPath(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/" + folderPath);
     QDir dir;
     if (!dir.exists(dirPath)) {
         if (!dir.mkpath(dirPath)) {
@@ -492,7 +509,9 @@ QString SaveLoad::savePreviewUrl(int slot, const QString &folderPath) {
 }
 
 bool SaveLoad::loadPlayer(const QString &folderPath) {
-    QString dirPath = QDir::cleanPath(QCoreApplication::applicationDirPath() + "/" + folderPath);
+    QString base = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    if (base.isEmpty()) base = QCoreApplication::applicationDirPath();
+    QString dirPath = QDir::cleanPath(base + "/" + folderPath);
     QString filePath = dirPath + "/auto.dat";
     QFile f(filePath);
     if (!f.exists()) {
@@ -582,7 +601,9 @@ bool SaveLoad::loadPlayer(const QString &folderPath) {
 }
 
 bool SaveLoad::hasAuto(const QString &folderPath) {
-    QString dirPath = QDir::cleanPath(QCoreApplication::applicationDirPath() + "/" + folderPath);
+    QString base = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    if (base.isEmpty()) base = QCoreApplication::applicationDirPath();
+    QString dirPath = QDir::cleanPath(base + "/" + folderPath);
     QString filePath = dirPath + "/auto.dat";
     QFile f(filePath);
     return f.exists();
@@ -608,7 +629,9 @@ bool SaveLoad::loadLatest(const QString &folderPath) {
 
     // Check auto.dat
     {
-        QString dirPath = QDir::cleanPath(QCoreApplication::applicationDirPath() + "/" + folderPath);
+        QString base = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+        if (base.isEmpty()) base = QCoreApplication::applicationDirPath();
+        QString dirPath = QDir::cleanPath(base + "/" + folderPath);
         QString autoPath = dirPath + "/auto.dat";
         QFileInfo ai(autoPath);
         if (ai.exists()) {
@@ -769,6 +792,7 @@ bool SaveLoad::hasUnlockedBattle(const QString &battleId, const QString &folderP
             // Cases that denote a `battle` is triggered:
             // 1) This node is an explicit battle node (id startsWith battle), and defines next/nextNode/choices that point to the post-battle node
             // 2) This node is a regular node that has action==startBattle with actionParams.battleId matching the target battle; in that case the node's own next/nextNode defines the post-battle node
+            // 3) This node has a choice that points to the target battleId
             bool isBattleNode = nodeId.startsWith("battle");
             bool isStartBattleAction = false;
             if (nodeObj.contains("action") && nodeObj.value("action").isString() && nodeObj.value("action").toString() == "startBattle") {
@@ -778,7 +802,18 @@ bool SaveLoad::hasUnlockedBattle(const QString &battleId, const QString &folderP
                     if (bid == battleId) isStartBattleAction = true;
                 }
             }
-            if (!isBattleNode && !isStartBattleAction) continue;
+            bool isChoiceBattle = false;
+            if (nodeObj.contains("choices") && nodeObj.value("choices").isArray()) {
+                QJsonArray choices = nodeObj.value("choices").toArray();
+                for (const QJsonValue &cv : choices) {
+                    if (cv.isObject() && cv.toObject().value("next").toString() == battleId) {
+                        isChoiceBattle = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!isBattleNode && !isStartBattleAction && !isChoiceBattle) continue;
 
             // Enumerate target nodes that represent the node after this battle
             QStringList targets;
@@ -826,7 +861,9 @@ bool SaveLoad::hasUnlockedBattle(const QString &battleId, const QString &folderP
     }
 
     // Fallback: check binary save files (auto.dat and save1..save8.dat) for game saves that reference this battle
-    QString dirPath = QDir::cleanPath(QCoreApplication::applicationDirPath() + "/" + folderPath);
+    QString base = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    if (base.isEmpty()) base = QCoreApplication::applicationDirPath();
+    QString dirPath = QDir::cleanPath(base + "/" + folderPath);
     QString autoPath = dirPath + "/auto.dat";
     QFile fa(autoPath);
     if (fa.exists() && fa.open(QIODevice::ReadOnly)) {
@@ -858,7 +895,9 @@ bool SaveLoad::hasUnlockedBattle(const QString &battleId, const QString &folderP
 
 
 bool SaveLoad::removeAuto(const QString &folderPath) {
-    QString dirPath = QDir::cleanPath(QCoreApplication::applicationDirPath() + "/" + folderPath);
+    QString base = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    if (base.isEmpty()) base = QCoreApplication::applicationDirPath();
+    QString dirPath = QDir::cleanPath(base + "/" + folderPath);
     QString filePath = dirPath + "/auto.dat";
     QFile f(filePath);
     bool existed = f.exists();
@@ -871,7 +910,7 @@ bool SaveLoad::removeAuto(const QString &folderPath) {
         qDebug() << "SaveLoad: removed auto file" << filePath;
     }
     // Also remove any temporary preview image (temp.png) in the save folder for consistency
-    QString tempPng = QDir::cleanPath(QCoreApplication::applicationDirPath() + "/" + folderPath + "/temp.png");
+    QString tempPng = QDir::cleanPath(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/" + folderPath + "/temp.png");
     QFile tp(tempPng);
     if (tp.exists()) {
         if (!tp.remove()) {

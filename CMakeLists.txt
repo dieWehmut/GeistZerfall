@@ -8,7 +8,8 @@ find_package(Qt6 REQUIRED COMPONENTS Quick Multimedia Core Qml)
 
 qt_standard_project_setup(REQUIRES 6.8)
 
-qt_add_resources(RESOURCES src/resource.qrc)
+file(GLOB QRC_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "src/resources_qrc/*.qrc")
+qt_add_resources(RESOURCES ${QRC_FILES})
 
 qt_add_executable(GeistZerfall
     src/main.cpp
@@ -46,7 +47,8 @@ qt_add_qml_module(GeistZerfall
         src/qml/window/Splash.qml
         src/qml/window/windowState.js
         src/qml/window/Game/GameView.qml
-        
+        src/qml/window/Game/GameUiScale.qml
+        src/qml/window/Lore/components/UiScale.qml
         src/qml/window/Game/Map/Tile.qml
         
         src/qml/window/Game/Entity/Player.qml
@@ -143,6 +145,7 @@ qt_add_qml_module(GeistZerfall
         src/cpp/Manager/EventManager/SeparationManager.h
         src/cpp/Manager/FileReader.cpp
         src/cpp/Manager/FileReader.h
+        RESOURCES android/AndroidManifest.xml android/build.gradle android/res/values/libs.xml android/res/xml/qtprovider_paths.xml android/gradle/wrapper/gradle-wrapper.jar android/gradle/wrapper/gradle-wrapper.properties android/gradle.properties android/gradlew android/gradlew.bat
 )
 
 set_target_properties(GeistZerfall PROPERTIES
@@ -158,8 +161,17 @@ target_link_libraries(GeistZerfall
     Qt6::Core
     Qt6::Qml
 )
-
+set_property(TARGET GeistZerfall PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/android")
 target_include_directories(GeistZerfall PRIVATE src/cpp)
+
+# Copy BGM assets into android/assets for packaging
+# Note: source assets live under src/resource/audio/bgm
+add_custom_target(copy_bgm_assets ALL
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_SOURCE_DIR}/android/assets/bgm
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/src/resource/audio/bgm ${CMAKE_CURRENT_SOURCE_DIR}/android/assets/bgm
+    COMMENT "Copying BGM assets to android/assets/bgm"
+)
+add_dependencies(GeistZerfall copy_bgm_assets)
 
 include(GNUInstallDirs)
 install(TARGETS GeistZerfall

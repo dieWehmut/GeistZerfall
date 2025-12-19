@@ -1,9 +1,12 @@
 import QtQuick 2.15
+import GeistZerfall 1.0
 import QtMultimedia 6.5
 import GeistZerfall.Game 1.0
 
 Item {
     id: root
+    GameUiScale { id: gameUiScale }
+    property real uiScale: gameUiScale.uiScale
     property int baseSize: 64
     width: baseSize * tileScaleRef
     height: baseSize * tileScaleRef
@@ -18,7 +21,7 @@ Item {
     transformOrigin: Item.Center
     property real pulsateScale: 1.0
     property int pulsateDuration: 400
-    scale: pulsateScale
+    scale: pulsateScale * uiScale
     visible: backend !== null
 
     Image {
@@ -65,9 +68,9 @@ Item {
         interval: 16
         running: backend !== null
         repeat: true
-        onTriggered: {
-            if (!backend || !playerItemRef || !playerObjRef) return;
-            var offsetX = mapWrapperRef ? mapWrapperRef.x : 0;
+            onTriggered: {
+                if (!backend || !playerItemRef || !playerObjRef) return;
+                var offsetX = mapWrapperRef ? mapWrapperRef.x : 0;
             var offsetY = mapWrapperRef ? mapWrapperRef.y : 0;
             var bx = root.x + offsetX;
             var by = root.y + offsetY;

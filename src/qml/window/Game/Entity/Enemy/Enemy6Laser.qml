@@ -28,14 +28,13 @@ Item {
 
     // 定期更新traveledDist
     Timer {
-        interval: 16
+        // 降低更新频率，减少重绘
+        interval: 33
         running: backend !== null
         repeat: true
         onTriggered: {
             if (backend) {
                 traveledDist = backend.traveledDist || 0.0;
-                // debug
-                console.log('Enemy6Laser.qml Timer: pos=', backend.pos ? (backend.pos.x + ',' + backend.pos.y) : 'null', 'dir=', backend.dirx, backend.diry, 'waveTime=', backend.waveTime, 'traveled=', traveledDist);
             }
         }
     }
@@ -47,8 +46,7 @@ Item {
         onPaint: {
             if (!backend)
                 return;
-            // debug: ensure we have required backend values
-            console.log('Enemy6Laser.qml paint: origin=', originX, originY, 'end=', backend.pos.x, backend.pos.y, 'dir=', dirX, dirY, 'waveTime=', waveTime, 'traveledDist=', traveledDist);
+            // 移除高频日志
 
             var ctx = getContext('2d');
             ctx.clearRect(0, 0, width, height);
@@ -78,8 +76,8 @@ Item {
             // 绘制底层粗线（明显可见）——调试/增强可视性
             try {
                 ctx.save();
-                ctx.strokeStyle = 'rgba(220,40,200,0.95)';
-                ctx.lineWidth = Math.max(12, 32 * tileScaleRef);
+                ctx.strokeStyle = 'rgba(220,40,200,0.85)';
+                ctx.lineWidth = Math.min(18, Math.max(8, 24 * tileScaleRef));
                 ctx.lineCap = 'round';
                 ctx.beginPath();
                 ctx.moveTo(canvasStartX, canvasStartY);
@@ -90,7 +88,7 @@ Item {
 
             // 绘制波形路径
             ctx.strokeStyle = '#9b59b6';  // 紫色
-            ctx.lineWidth = 8 * tileScaleRef;
+            ctx.lineWidth = Math.min(12, 8 * tileScaleRef);
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
 
@@ -105,7 +103,7 @@ Item {
 
             // 沿着主方向绘制波形路径
             // 使用足够的步数来绘制平滑的波形
-            var steps = Math.max(100, Math.floor(dist / 3));
+            var steps = Math.max(70, Math.floor(dist / 4));
             for (var i = 0; i <= steps; i++) {
                 var t = i / steps;
 
@@ -139,15 +137,15 @@ Item {
             ctx.stroke();
 
             // 添加发光效果（外圈）
-            ctx.strokeStyle = 'rgba(155, 89, 182, 0.3)';
-            ctx.lineWidth = 16 * tileScaleRef;
+            ctx.strokeStyle = 'rgba(155, 89, 182, 0.25)';
+            ctx.lineWidth = Math.min(18, 14 * tileScaleRef);
             ctx.stroke();
 
             // debug: draw endpoint marker
             try {
                 ctx.beginPath();
-                ctx.fillStyle = 'rgba(255,40,40,0.95)';
-                ctx.arc(canvasEndX, canvasEndY, Math.max(3, 6 * tileScaleRef), 0, Math.PI*2);
+                ctx.fillStyle = 'rgba(255,40,40,0.85)';
+                ctx.arc(canvasEndX, canvasEndY, Math.max(3, Math.min(8, 6 * tileScaleRef)), 0, Math.PI*2);
                 ctx.fill();
             } catch(e) {}
         }
@@ -230,7 +228,7 @@ Item {
 
     // 碰撞检测：检测玩家是否与波形路径相交
     Timer {
-        interval: 16
+        interval: 33
         running: true
         repeat: true
         onTriggered: {

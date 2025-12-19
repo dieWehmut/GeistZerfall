@@ -1,4 +1,5 @@
 import QtQuick
+// 全屏组件不参与 Android 缩放（保持充满屏幕）
 import "characterImageMap.js" as CharMap
 
 // VisualScene.qml - 背景 + 立绘 + 底部文字框
@@ -198,7 +199,8 @@ Item {
             text: getSpeakerDisplayName(root.contentData)
             visible: !!(root.contentData && (root.contentData.speakerName || root.contentData.speaker !== undefined))
             color: "#333333"
-            font.pixelSize: 20
+            // 缩小说话者姓名字号以匹配更紧凑的正文
+            font.pixelSize: (Qt.platform.os === "android" ? Math.max(14, textBox.height * 0.08) : Math.max(22, textBox.height * 0.13))
             font.bold: true
             anchors.left: parent.left
             z: 3
@@ -219,14 +221,15 @@ Item {
             anchors.leftMargin: textBox.effectiveLeftMargin
             anchors.rightMargin: 24
             // increase vertical gap between speaker name and first text line slightly
-            anchors.topMargin: (speakerNameText.visible ? (speakerNameText.height + 16) : 24)
-            anchors.bottomMargin: Math.max(root.bottomReservedHeight, 24)
+            anchors.topMargin: (speakerNameText.visible ? (speakerNameText.height + 8) : 16)
+            anchors.bottomMargin: Math.max(root.bottomReservedHeight, 16)
             wrapMode: Text.Wrap
             horizontalAlignment: Text.AlignLeft
             verticalAlignment: Text.AlignTop
             color: "#222222"
-            font.pixelSize: Math.max(20, parent.height * 0.11)
-            lineHeight: 1.3
+            // 进一步减小字号与行距，让文本更紧凑
+            font.pixelSize: (Qt.platform.os === "android" ? Math.max(12, parent.height * 0.075) : Math.max(20, parent.height * 0.12))
+            lineHeight: 0.8
             text: displayedText
             z: 2
         }
@@ -244,7 +247,7 @@ Item {
             y: textContent.y
             z: 4
             // position one character left of the main text start
-            x: textContent.x - (textContent.font.pixelSize || 20)
+            x: textContent.x - (textContent.font.pixelSize || 14)
         }
     }
 

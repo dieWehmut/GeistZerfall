@@ -1,7 +1,9 @@
 import QtQuick
+// 全屏视觉组件：不应用缩放，保持充满屏幕
 
 // DynamicCircle.qml - 动态圆圈组件（圈外黑色，圈内白色）
 Item {
+    // 不缩放以避免影响全屏呈现
     id: root
     anchors.fill: parent
 

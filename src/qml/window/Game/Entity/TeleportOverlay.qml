@@ -73,9 +73,10 @@ Item {
 
     function playerCenterWorld() {
         if (!playerObj || !playerObj.pos) return Qt.point(0, 0);
-        // 直接用视觉像素，无需再除以 tileScale
-        var widthWorld = (playerVisualWidth && playerVisualWidth > 0) ? playerVisualWidth : playerSpriteSize;
-        var heightWorld = (playerVisualHeight && playerVisualHeight > 0) ? playerVisualHeight : playerSpriteSize;
+        // 修正：必须除以 tileScale 还原回世界尺寸，因为 playerVisualWidth 是屏幕像素大小
+        var scale = Math.max(0.0001, tileScale);
+        var widthWorld = (playerVisualWidth && playerVisualWidth > 0) ? (playerVisualWidth / scale) : playerSpriteSize;
+        var heightWorld = (playerVisualHeight && playerVisualHeight > 0) ? (playerVisualHeight / scale) : playerSpriteSize;
         return Qt.point(playerObj.pos.x + widthWorld / 2, playerObj.pos.y + heightWorld / 2);
     }
 
