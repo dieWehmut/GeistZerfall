@@ -30,6 +30,15 @@ static QString resolveSaveDir(const QString &folderPath) {
     if (base.isEmpty()) {
         base = QCoreApplication::applicationDirPath();
     }
+    // Normalize duplicate trailing components: if base ends with .../X/X, collapse to .../X
+    QFileInfo baseInfo(base);
+    QString leaf = baseInfo.fileName();
+    QString parentPath = baseInfo.dir().absolutePath();
+    QString parentLeaf;
+    if (!parentPath.isEmpty()) parentLeaf = QFileInfo(parentPath).fileName();
+    if (!leaf.isEmpty() && leaf == parentLeaf) {
+        base = QDir::cleanPath(parentPath);
+    }
     return QDir::cleanPath(base + "/" + folderPath);
 }
 
@@ -155,7 +164,7 @@ bool SaveLoad::saveProgress(const QVariantMap &progress, const QString &folderPa
 
 QVariantMap SaveLoad::loadProgress(const QString &folderPath) {
     QVariantMap out;
-    QString dirPath = QDir::cleanPath(QCoreApplication::applicationDirPath() + "/" + folderPath);
+    QString dirPath = QDir::cleanPath(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/" + folderPath);
     QString filePath = dirPath + "/progress.dat";
     QFile f(filePath);
     if (!f.exists()) return out;
@@ -210,7 +219,11 @@ bool SaveLoad::loadAuto(const QString &folderPath) {
 }
 
 bool SaveLoad::savePlayer(const QString &folderPath) {
-    QString dirPath = QDir::cleanPath(QCoreApplication::applicationDirPath() + "/" + folderPath);
+    QString base = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    if (base.isEmpty()) base = QCoreApplication::applicationDirPath();
+    QString dirPath = QDir::cleanPath(base + "/" + folderPath);
+    QString filePath = dirPath + "/auto.dat"; // compute early for logging
+    qDebug() << "SaveLoad::savePlayer base=" << base << "dirPath=" << dirPath << "filePath=" << filePath;
     QDir dir;
     if (!dir.exists(dirPath)) {
         if (!dir.mkpath(dirPath)) {
@@ -218,7 +231,7 @@ bool SaveLoad::savePlayer(const QString &folderPath) {
             return false;
         }
     }
-    QString filePath = dirPath + "/auto.dat"; // currently using auto.dat for player auto-save
+    
     QFile f(filePath);
     if (!f.open(QIODevice::WriteOnly)) {
         qWarning() << "SaveLoad: cannot open file for write:" << filePath;
