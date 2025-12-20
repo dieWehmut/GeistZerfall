@@ -71,6 +71,17 @@ Item {
                 // only show if portrait explicitly allowed and an image source is available
                 visible: showPortrait && source !== ""
 
+                // Debug: log image source and loading status to help diagnose missing portraits
+                onStatusChanged: {
+                    console.log("character image status:", modelData ? modelData.name : modelData, "source=", source, "status=", status, "visible=", visible, "showPortrait=", showPortrait);
+                    if (status === Image.Error) {
+                        console.log("character image failed to load:", source, "modelData:", modelData);
+                    }
+                }
+                onSourceChanged: {
+                    console.log("character image source changed:", source, "modelData:", modelData);
+                }
+
                 // 位置：left/center/right（可用 x/y 覆盖）
                 anchors.horizontalCenter: undefined
                 anchors.left: undefined
@@ -110,6 +121,25 @@ Item {
                     if (root.characterInstances) root.characterInstances[index] = null;
                 }
             }
+
+            // Placeholder shown when portrait not available or failed to load
+            Rectangle {
+                id: chPlaceholder
+                anchors.bottom: parent.bottom
+                anchors.horizontalCenter: parent.horizontalCenter
+                height: parent.height * 0.8
+                width: parent.width * 0.4
+                color: "#202020"
+                visible: showPortrait && (ch.source === "" || ch.status === Image.Error)
+                opacity: 0.6
+                radius: 6
+                Text {
+                    anchors.centerIn: parent
+                    text: (modelData && modelData.name) ? modelData.name : "?"
+                    color: "#FFFFFF"
+                    font.pixelSize: Math.max(12, parent.height * 0.05)
+                }
+            }
         }
     }
 
@@ -120,8 +150,35 @@ Item {
 
     // 根据角色定义获取图片路径（支持仅用 name 或完整定义），使用共享 characterImageMap.js
     function getCharacterImage(charData) {
-        // charData is usually an object from nodeData.characters, but some places pass just the name string
-        return CharMap.getCharacterImageFor(charData);
+        try {
+            console.log("getCharacterImage input type:", typeof charData);
+            try { console.log("getCharacterImage input (json):", JSON.stringify(charData)); } catch(_) { /* ignore stringify errors */ }
+            console.log("CharMap.getCharacterImageFor typeof:", typeof CharMap.getCharacterImageFor);
+            if (typeof CharMap.getCharacterImageFor === 'function') {
+                var src = CharMap.getCharacterImageFor(charData);
+                console.log("getCharacterImage:", charData, "->", src);
+                return src;
+            }
+            // fallback: if only legacy name-based finder exists
+            if (typeof CharMap.findCharacterImageFromName === 'function') {
+                var n = (charData && charData.name) ? charData.name : String(charData);
+                var s2 = CharMap.findCharacterImageFromName(n);
+                console.log("getCharacterImage fallback to findCharacterImageFromName:", n, "->", s2);
+                return s2 || "";
+            }
+            // If CharMap missing helper, log available keys
+            try {
+                var keys = [];
+                for (var k in CharMap) if (CharMap.hasOwnProperty(k)) keys.push(k);
+                console.log("CharMap keys:", keys);
+            } catch(_) {}
+            console.log("getCharacterImage: CharMap helper missing");
+            return "";
+        } catch(e) {
+            try { console.log("getCharacterImage error", e, "type=", typeof charData, "charData=", JSON.stringify(charData)); }
+            catch(_) { console.log("getCharacterImage error (non-serializable charData)", e); }
+            return "";
+        }
     }
 
     // Resolve a display name for a content's speaker which can be index number or string
