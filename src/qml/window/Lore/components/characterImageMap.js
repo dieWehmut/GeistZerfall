@@ -39,8 +39,166 @@ var characterImageMap = (function() {
         };
         return rawMap;
     }
-    // fallback: empty map
-    return {};
+    // fallback: embed the JSON directly if loading fails
+    console.log("characterImageMap: using embedded fallback map");
+    var embeddedMap = {
+        "南雲 時": {
+            "0": "qrc:/resource/image/characters/NagumoToki.png",
+            "black": "qrc:/resource/image/characters/NagumoToki_black.png",
+            "gray": "qrc:/resource/image/characters/NagumoToki_gray.png",
+            "red": "qrc:/resource/image/characters/NagumoToki_red.png"
+        },
+        "南雲 枫": {
+            "0": "qrc:/resource/image/characters/NagumoKaede.png",
+            "black": "qrc:/resource/image/characters/NagumoKaede_black.png",
+            "gray": "qrc:/resource/image/characters/NagumoKaede_gray.png",
+            "red": "qrc:/resource/image/characters/NagumoKaede_red.png"
+        },
+        "東堂 陽葵": {
+            "0": "qrc:/resource/image/characters/TodoHimari.png",
+            "black": "qrc:/resource/image/characters/TodoHimari_black.png",
+            "gray": "qrc:/resource/image/characters/TodoHimari_gray.png",
+            "red": "qrc:/resource/image/characters/TodoHimari_red.png",
+            "child": "qrc:/resource/image/characters/TodoHimari_Child.png",
+            "child_black": "qrc:/resource/image/characters/TodoHimari_Child_black.png",
+            "child_gray": "qrc:/resource/image/characters/TodoHimari_Child_gray.png",
+            "child_red": "qrc:/resource/image/characters/TodoHimari_Child_red.png"
+        },
+        "藤田 旦治": {
+            "0": "qrc:/resource/image/characters/FujitaTanji_black.png",
+            "black": "qrc:/resource/image/characters/FujitaTanji_black.png",
+            "red": "qrc:/resource/image/characters/FujitaTanji_red.png"
+        },
+        "常夏 航": {
+            "0": "qrc:/resource/image/characters/TokonatsuWataru_black.png",
+            "black": "qrc:/resource/image/characters/TokonatsuWataru_black.png",
+            "red": "qrc:/resource/image/characters/TokonatsuWataru_red.png"
+        },
+        "折原 蓮": {
+            "0": "qrc:/resource/image/characters/OriharaRen.png",
+            "black": "qrc:/resource/image/characters/OriharaRen_black.png",
+            "gray": "qrc:/resource/image/characters/OriharaRen_gray.png",
+            "red": "qrc:/resource/image/characters/OriharaRen_red.png"
+        },
+        "清原 凛": {
+            "0": "qrc:/resource/image/characters/KiyoharaRin.png",
+            "black": "qrc:/resource/image/characters/KiyoharaRin_black.png",
+            "gray": "qrc:/resource/image/characters/KiyoharaRin_gray.png",
+            "red": "qrc:/resource/image/characters/KiyoharaRin_red.png",
+            "child": "qrc:/resource/image/characters/KiyoharaRin_Child_gray.png",
+            "child_gray": "qrc:/resource/image/characters/KiyoharaRin_Child_gray.png",
+            "child_red": "qrc:/resource/image/characters/KiyoharaRin_Child_red.png"
+        },
+        "医生": {
+            "male": {
+                "0": "qrc:/resource/image/characters/MaleDoctor.png",
+                "black": "qrc:/resource/image/characters/MaleDoctor_black.png",
+                "gray": "qrc:/resource/image/characters/MaleDoctor_gray.png",
+                "red": "qrc:/resource/image/characters/MaleDoctor_red.png"
+            },
+            "female": {
+                "0": "qrc:/resource/image/characters/FemaleDoctor.png",
+                "black": "qrc:/resource/image/characters/FemaleDoctor_black.png",
+                "gray": "qrc:/resource/image/characters/FemaleDoctor_gray.png",
+                "red": "qrc:/resource/image/characters/FemaleDoctor_red.png"
+            }
+        },
+        "NagumoToki": {
+            "0": "qrc:/resource/image/characters/NagumoToki.png",
+            "black": "qrc:/resource/image/characters/NagumoToki_black.png",
+            "gray": "qrc:/resource/image/characters/NagumoToki_gray.png",
+            "red": "qrc:/resource/image/characters/NagumoToki_red.png"
+        },
+        "NagumoKaede": {
+            "0": "qrc:/resource/image/characters/NagumoKaede.png",
+            "black": "qrc:/resource/image/characters/NagumoKaede_black.png",
+            "gray": "qrc:/resource/image/characters/NagumoKaede_gray.png",
+            "red": "qrc:/resource/image/characters/NagumoKaede_red.png"
+        },
+        "TodoHimari": {
+            "0": "qrc:/resource/image/characters/TodoHimari.png",
+            "black": "qrc:/resource/image/characters/TodoHimari_black.png",
+            "gray": "qrc:/resource/image/characters/TodoHimari_gray.png",
+            "red": "qrc:/resource/image/characters/TodoHimari_red.png",
+            "child": "qrc:/resource/image/characters/TodoHimari_Child.png",
+            "child_black": "qrc:/resource/image/characters/TodoHimari_Child_black.png",
+            "child_gray": "qrc:/resource/image/characters/TodoHimari_Child_gray.png",
+            "child_red": "qrc:/resource/image/characters/TodoHimari_Child_red.png"
+        },
+        "FujitaTanji": {
+            "0": "qrc:/resource/image/characters/FujitaTanji_black.png",
+            "black": "qrc:/resource/image/characters/FujitaTanji_black.png",
+            "red": "qrc:/resource/image/characters/FujitaTanji_red.png"
+        },
+        "TokonatsuWataru": {
+            "0": "qrc:/resource/image/characters/TokonatsuWataru_black.png",
+            "black": "qrc:/resource/image/characters/TokonatsuWataru_black.png",
+            "red": "qrc:/resource/image/characters/TokonatsuWataru_red.png"
+        },
+        "OriharaRen": {
+            "0": "qrc:/resource/image/characters/OriharaRen.png",
+            "black": "qrc:/resource/image/characters/OriharaRen_black.png",
+            "gray": "qrc:/resource/image/characters/OriharaRen_gray.png",
+            "red": "qrc:/resource/image/characters/OriharaRen_red.png"
+        },
+        "KiyoharaRin": {
+            "0": "qrc:/resource/image/characters/KiyoharaRin.png",
+            "black": "qrc:/resource/image/characters/KiyoharaRin_black.png",
+            "gray": "qrc:/resource/image/characters/KiyoharaRin_gray.png",
+            "red": "qrc:/resource/image/characters/KiyoharaRin_red.png",
+            "child": "qrc:/resource/image/characters/KiyoharaRin_Child_gray.png",
+            "child_gray": "qrc:/resource/image/characters/KiyoharaRin_Child_gray.png",
+            "child_red": "qrc:/resource/image/characters/KiyoharaRin_Child_red.png"
+        },
+        "Doctor": {
+            "male": {
+                "0": "qrc:/resource/image/characters/MaleDoctor.png",
+                "black": "qrc:/resource/image/characters/MaleDoctor_black.png",
+                "gray": "qrc:/resource/image/characters/MaleDoctor_gray.png",
+                "red": "qrc:/resource/image/characters/MaleDoctor_red.png"
+            },
+            "female": {
+                "0": "qrc:/resource/image/characters/FemaleDoctor.png",
+                "black": "qrc:/resource/image/characters/FemaleDoctor_black.png",
+                "gray": "qrc:/resource/image/characters/FemaleDoctor_gray.png",
+                "red": "qrc:/resource/image/characters/FemaleDoctor_red.png"
+            }
+        },
+        "医生(男)": {
+            "0": "qrc:/resource/image/characters/MaleDoctor.png",
+            "black": "qrc:/resource/image/characters/MaleDoctor_black.png",
+            "gray": "qrc:/resource/image/characters/MaleDoctor_gray.png",
+            "red": "qrc:/resource/image/characters/MaleDoctor_red.png"
+        },
+        "医生(女)": {
+            "0": "qrc:/resource/image/characters/FemaleDoctor.png",
+            "black": "qrc:/resource/image/characters/FemaleDoctor_black.png",
+            "gray": "qrc:/resource/image/characters/FemaleDoctor_gray.png",
+            "red": "qrc:/resource/image/characters/FemaleDoctor_red.png"
+        }
+    };
+    embeddedMap.__meta__ = {
+        aliases: {
+            "NagumoToki": "南雲 時",
+            "NagumoKaede": "南雲 枫",
+            "TodoHimari": "東堂 陽葵",
+            "FujitaTanji": "藤田 旦治",
+            "TokonatsuWataru": "常夏 航",
+            "OriharaRen": "折原 蓮",
+            "KiyoharaRin": "清原 凛",
+            "Doctor": "医生",
+            "医生(男)": "医生.male",
+            "医生(女)": "医生.female"
+        },
+        numericStyleMap: {
+            "0": "0",
+            "1": "gray",
+            "2": "black",
+            "3": "red",
+            "4": "child"
+        }
+    };
+    return embeddedMap;
 })();
 
 // create aliases for transliterated keys -> point to the same object
@@ -94,70 +252,89 @@ var NUMERIC_STYLE_MAP = (characterImageMap.__meta__ && characterImageMap.__meta_
 // getCharacterImageFor: accepts either an object with { name, style, image }
 // or just a string name (deprecated). Style can be numeric or string.
 function getCharacterImageFor(charData) {
-    if (!charData) return "";
-    // If explicitly provided an image path, use it
-    if (typeof charData === 'string') {
-        // name-only; return default variant
-        var e = findCharacterEntry(charData);
-        if (!e) return "";
-        // if nested by gender -> default to male
-        if (e['male'] || e['female']) {
-            var genderDefault = 'male';
-            var gEntry = e[genderDefault] || e['female'];
-            if (gEntry && gEntry['0']) return gEntry['0'];
-            if (gEntry && gEntry['black']) return gEntry['black'];
-            if (gEntry && gEntry['gray']) return gEntry['gray'];
+    try {
+        if (!charData) { console.log("getCharacterImageFor: charData is falsy", charData); return ""; }
+        if (typeof charData === 'string') {
+            var e = findCharacterEntry(charData);
+            if (!e) { console.log("getCharacterImageFor: entry not found for string", charData); return ""; }
+            if (e['male'] || e['female']) {
+                var genderDefault = 'male';
+                var gEntry = e[genderDefault] || e['female'];
+                if (gEntry && gEntry['0']) return gEntry['0'];
+                if (gEntry && gEntry['black']) return gEntry['black'];
+                if (gEntry && gEntry['gray']) return gEntry['gray'];
+            }
+            if (e['0']) return e['0'];
+            for (var k in e) if (e.hasOwnProperty(k)) return e[k];
+            return "";
         }
-        // default: try key '0' or first available key
-        if (e['0']) return e['0'];
-        for (var k in e) if (e.hasOwnProperty(k)) return e[k];
+        if (typeof charData !== 'object' || charData === null) {
+            console.log("getCharacterImageFor: charData is not object", charData); return "";
+        }
+        if (charData.image) try { return charData.image; } catch(e) { console.log("getCharacterImageFor: error accessing image", e, charData); }
+        try {
+            if (charData.portrait) {
+                var p = charData.portrait;
+                if (typeof p === 'string') {
+                    if (p.indexOf('qrc:') === 0 || p.indexOf(':/') === 0 || p.indexOf('http') === 0) return p;
+                    if (p.indexOf('/') === -1) return 'qrc:/resource/image/characters/' + p;
+                    return 'qrc:/' + p.replace(/^\/+/, '');
+                }
+            }
+        } catch(e) { console.log("getCharacterImageFor: error accessing portrait", e, charData); }
+        var name = (charData.name !== undefined && charData.name !== null) ? String(charData.name) : null;
+        var styleKey = resolveStyleKey(charData.style);
+        console.log("getCharacterImageFor: name=", name, ", styleKey=", styleKey, ", gender=", charData.gender);
+        var entry = findCharacterEntry(name);
+        if (!entry) { console.log("getCharacterImageFor: entry not found for name", name); return ""; }
+        if (entry['male'] || entry['female']) {
+            var g = 'male';
+            try {
+                if (charData.gender) {
+                    var gstr = (typeof charData.gender === 'string') ? charData.gender.toLowerCase() : '';
+                    if (gstr === 'female' || gstr === 'f' || gstr === '女') g = 'female';
+                    else if (gstr === 'male' || gstr === 'm' || gstr === '男') g = 'male';
+                }
+            } catch(e) { console.log("getCharacterImageFor: error parsing gender", e, charData); }
+            if (entry[g]) {
+                entry = entry[g];
+                console.log("getCharacterImageFor: gender entry selected", g, entry);
+            } else {
+                entry = entry['male'] || entry['female'];
+                console.log("getCharacterImageFor: fallback gender entry", entry);
+            }
+        }
+        if (!entry) { console.log("getCharacterImageFor: entry is undefined after gender select", name, charData); return ""; }
+        if (styleKey) {
+            if (entry[styleKey]) { console.log("getCharacterImageFor: found styleKey", styleKey, entry[styleKey]); return entry[styleKey]; }
+            if (!isNaN(Number(styleKey))) {
+                var mapped = NUMERIC_STYLE_MAP[styleKey];
+                if (mapped && entry[mapped]) { console.log("getCharacterImageFor: mapped numeric styleKey", styleKey, "->", mapped, entry[mapped]); return entry[mapped]; }
+            }
+            if (Array.isArray(entry)) {
+                var idx = Number(styleKey);
+                if (!isNaN(idx) && entry.length > idx) { console.log("getCharacterImageFor: array styleKey", styleKey, entry[idx]); return entry[idx]; }
+            }
+            if (typeof styleKey === 'string' && styleKey.indexOf('.') !== -1) {
+                var f = styleKey;
+                if (f.indexOf('qrc:') === 0 || f.indexOf(':/') === 0 || f.indexOf('http') === 0) { console.log("getCharacterImageFor: styleKey is url", f); return f; }
+                if (f.indexOf('/') === -1) { console.log("getCharacterImageFor: styleKey is filename", f); return 'qrc:/resource/image/characters/' + f; }
+                console.log("getCharacterImageFor: styleKey is path", f); return 'qrc:/' + f.replace(/^\/+/, '');
+            }
+        }
+        if (entry['0']) { console.log("getCharacterImageFor: fallback '0'", entry['0']); return entry['0']; }
+        if (entry['black']) { console.log("getCharacterImageFor: fallback 'black'", entry['black']); return entry['black']; }
+        if (entry['gray']) { console.log("getCharacterImageFor: fallback 'gray'", entry['gray']); return entry['gray']; }
+        if (Array.isArray(entry) && entry.length > 0) { console.log("getCharacterImageFor: fallback array[0]", entry[0]); return entry[0]; }
+        for (var kk in entry) {
+            if (entry.hasOwnProperty(kk)) { console.log("getCharacterImageFor: fallback first key", kk, entry[kk]); return entry[kk]; }
+        }
+        console.log("getCharacterImageFor: no image found for", charData);
+        return "";
+    } catch(e) {
+        try { console.log("characterImageMap: getCharacterImageFor error", e, "charData:", (typeof charData), charData); } catch(_) { console.log("characterImageMap: getCharacterImageFor error (cannot stringify charData)", e); }
         return "";
     }
-    if (charData.image) return charData.image;
-    var name = charData.name;
-    var styleKey = resolveStyleKey(charData.style);
-    var entry = findCharacterEntry(name);
-    if (!entry) return "";
-    // if entry is gender-nested object, select based on charData.gender (defaults to male)
-    if (entry['male'] || entry['female']) {
-        var g = 'male';
-        if (charData.gender) {
-            var gstr = (typeof charData.gender === 'string') ? charData.gender.toLowerCase() : '';
-            if (gstr === 'female' || gstr === 'f' || gstr === '女' || gstr === 'female') g = 'female';
-            else if (gstr === 'male' || gstr === 'm' || gstr === '男') g = 'male';
-        }
-        if (entry[g]) entry = entry[g];
-        else entry = entry['male'] || entry['female'];
-    }
-    // If requested a specific style key
-    if (styleKey) {
-        // numeric index style as string '0'
-        if (entry[styleKey]) return entry[styleKey];
-        // map numeric string like '1','2' to known named style keys
-        if (!isNaN(Number(styleKey))) {
-            var mapped = NUMERIC_STYLE_MAP[styleKey];
-            if (mapped && entry[mapped]) return entry[mapped];
-        }
-        // if styleKey is a numeric string but entry might be array stored as 'variants'
-        if (Array.isArray(entry)) {
-            var idx = Number(styleKey);
-            if (!isNaN(idx) && entry.length > idx) return entry[idx];
-        }
-    }
-    // If no styleKey or requested style not present: fallback rules
-    // 1) If entry has '0' use it
-    if (entry['0']) return entry['0'];
-    // 1b) if entry has 'black' prefer that in absence of '0'
-    if (entry['black']) return entry['black'];
-    // 1c) legacy: if entry has 'gray' prefer that
-    if (entry['gray']) return entry['gray'];
-    // 2) If entry is an array -> return first
-    if (Array.isArray(entry) && entry.length > 0) return entry[0];
-    // 3) otherwise return first available property value
-    for (var kk in entry) {
-        if (entry.hasOwnProperty(kk)) return entry[kk];
-    }
-    return "";
 }
 
 // Helper: list variants for a character name (can help debugging/testing)
