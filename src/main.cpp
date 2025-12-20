@@ -32,6 +32,9 @@ int main(int argc, char *argv[])
 {
     qputenv("QT_IM_MODULE", QByteArray("qtvirtualkeyboard"));
     QGuiApplication app(argc, argv);
+    // Ensure AppDataLocation resolves to a predictable folder (e.g. Roaming/GeistZerfall)
+    app.setApplicationName("GeistZerfall");
+    app.setOrganizationName("GeistZerfall");
     app.setWindowIcon(QIcon(":/resource/image/PhantomGenesis.ico"));
     QQmlApplicationEngine engine;
     qmlRegisterType<TileManager>("GeistZerfall.Game", 1, 0, "TileManager");
