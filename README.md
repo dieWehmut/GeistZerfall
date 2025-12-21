@@ -1,5 +1,3 @@
-
-
 <div align="center">
     <h1>GeistZerfall</h1>
     <br/>
@@ -24,6 +22,8 @@
   - [编译步骤](#编译步骤)
 - [项目结构 (Project Structure)](#项目结构-project-structure)
   - [部分游戏界面](#部分游戏界面)
+    - [PC](#pc)
+    - [Android](#android)
 - [玩家操作说明 (Gameplay Manual)](#玩家操作说明-gameplay-manual)
   - [操作与界面示意](#操作与界面示意)
   - [基本操作（键盘/按键）](#基本操作键盘按键)
@@ -40,35 +40,36 @@
 
 
 ## 项目简介
-
+> **背景**: 2025年南京大学智能科学与技术专业程设实训大作业。
+> 
 **GeistZerfall** 是一款基于 **Qt 6 (C++/QML)** 开发的混合类型游戏，结合了 **俯视角射击 (Top-Down Shooter)** 与 **视觉小说 (Visual Novel)** 的元素。项目采用前后端分离架构，核心逻辑与数据管理由 C++ 实现，复杂的 UI 交互与视觉特效由 QML 完成。
 
-> **项目背景**: 2025年南京大学智能科学与技术专业程设实训大作业。
+>**b站演示视频**：https://www.bilibili.com/video/BV1W8UZBZED7/
+
 
 
 ## 技术栈 (Tech Stack)
 
-*   **编程语言**: C++17, QML, JavaScript
+*   **编程语言**: C++, QML等
 *   **核心框架**: Qt 6.9
     *   Qt Quick (2D 渲染与 UI)
     *   Qt Multimedia (音频管理)
     *   Qt Core (文件 I/O, JSON 处理, 核心逻辑)
-*   **构建系统**: CMake (3.16+)
-*   **支持平台**: Windows, Android, Linux, macOS
+*   **构建系统**: CMake
+*   **支持平台**: Windows, Android
 
 
 ## 构建与运行 (Build & Run)
 
 ### 环境要求
-*   Qt 6.8 或更高版本 (包含 Qt Quick, Multimedia 模块)
-*   支持 C++17 的编译器 (MSVC 2019+, GCC, Clang)
-*   CMake 3.16+
+*   Qt 6 或更高版本 (包含 Qt Quick, Multimedia 模块)
+*   支持 C++ 的编译器 (MSVC 2019+, GCC, Clang)
 
 ### 编译步骤
 
 1.  **克隆仓库**
     ```bash
-    git clone <repository_url>
+    git clone https://github.com/dieWehmut/GeistZerfall
     cd GeistZerfall
     ```
 
@@ -142,6 +143,8 @@ GeistZerfall/
 
 ```
 ### 部分游戏界面
+
+#### PC
 ![](docs/gameview/mainmenu.png)
 ![](docs/gameview/config.png)
 ![](docs/gameview/save.png)
@@ -150,13 +153,16 @@ GeistZerfall/
 ![](docs/gameview/loreView_circle.png)
 ![](docs/gameview/loreView_scene.png)
 
-
+#### Android
+![](docs/gameview/splash1.png)
+![](docs/gameview/splash2.png)
+![](docs/gameview/gameView.png)
 
 ## 玩家操作说明 (Gameplay Manual)
 
 ### 操作与界面示意
-![](docs/instructions/gameView.png)
 ![](docs/instructions/mouseAndKeyboard.png)
+![](docs/instructions/gameView.png)
 
 ### 基本操作（键盘/按键）
 *   **W / ↑**：向上移动
@@ -170,10 +176,10 @@ GeistZerfall/
 
 ### 界面与资源 (HUD) 说明
 *   **HP**：玩家生命值，UI 内用百分比显示（HP：xx%）。
-*   **MP1 (Bullet CD)**：表示普通射击资源条。
+*   **MP1**：表示普通射击资源条。
     *   每次射击消耗小量资源（默认示例：`shotCost = 10`，`bulletCdMax = 3000`，约 0.33%/发），只要 `bulletCd > 0` 即可继续射击。
     *   停止射击将触发子弹资源充能（Timer 驱动）。
-*   **MP2 (Laser CD)**：表示激光/技能资源条。
+*   **MP2**：表示激光/技能资源条。
     *   **狙击 (snipe)** 通常消耗全部 MP2（100%）。
     *   **波 (wave)** 消耗 50% MP2。
     *   **传送 (teleport)** 会消耗约 5% MP2（触发成功后客户端扣除）。
@@ -215,7 +221,6 @@ GeistZerfall/
 ## 敌人快速速查 (Enemy Guide)
 
 ### 敌人说明一览
-
 ![](docs/instructions/enemy1.png)
 ![](docs/instructions/enemy2.png)
 ![](docs/instructions/enemy3.png)
@@ -223,6 +228,7 @@ GeistZerfall/
 ![](docs/instructions/enemy5.png)
 ![](docs/instructions/enemy6.png)
 ![](docs/instructions/enemy7.png)
+
 
 | 敌人类型 | 特性描述 | 应对提示 |
 | :--- | :--- | :--- |
