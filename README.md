@@ -1,5 +1,6 @@
 <div align="center">
     <h1>GeistZerfall</h1>
+  <div style="font-size:0.9em;font-weight:bold;margin-bottom:0;line-height:1;">VN &amp;&amp; Top-Down Shooting Game</div>
     <br/>
     <div>
         <a href="https://www.qt.io/product/development-tools"><img src="https://img.shields.io/badge/Qt%20Creator-41CD52?logo=qt&logoColor=white&style=for-the-badge" alt="Qt Creator"></a>
