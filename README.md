@@ -46,10 +46,14 @@
 
 项目采用前后端分离架构，核心逻辑与数据管理由 C++ 实现，复杂的 UI 交互与视觉特效由 QML 完成。
 
->**b站演示视频**：https://www.bilibili.com/video/BV1W8UZBZED7/
-
+>**点击图片或链接观看演示视频**：https://www.bilibili.com/video/BV1W8UZBZED7/
+<!-- 这是一个伪装成播放器的图片链接 -->
 <div align="center">
-<iframe src="https://player.bilibili.com/player.html?bvid=BV1W8UZBZED7&page=1" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="allowfullscreen" width="720" height="405"></iframe>
+  <a href="https://www.bilibili.com/video/BV1W8UZBZED7/" target="_blank">
+    <img src="docs/gameview/mainmenu.png" width="600" alt="观看演示视频" />
+  </a>
+  <br>
+  </a>
 </div>
 
 ## 技术栈 (Tech Stack)
