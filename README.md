@@ -42,11 +42,15 @@
 ## 项目简介
 > **背景**: 2025年南京大学智能科学与技术专业程设实训大作业。
 > 
-**GeistZerfall** 是一款基于 **Qt 6 (C++/QML)** 开发的混合类型游戏，结合了 **俯视角射击 (Top-Down Shooter)** 与 **视觉小说 (Visual Novel)** 的元素。项目采用前后端分离架构，核心逻辑与数据管理由 C++ 实现，复杂的 UI 交互与视觉特效由 QML 完成。
+**GeistZerfall** 是一款基于 **Qt 6 (C++/QML)** 开发的混合类型游戏，结合了 **俯视角射击 (Top-Down Shooter)** 与 **视觉小说 (Visual Novel)** 的元素。
+
+项目采用前后端分离架构，核心逻辑与数据管理由 C++ 实现，复杂的 UI 交互与视觉特效由 QML 完成。
 
 >**b站演示视频**：https://www.bilibili.com/video/BV1W8UZBZED7/
 
-
+<div align="center">
+<iframe src="https://player.bilibili.com/player.html?bvid=BV1W8UZBZED7&page=1" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="allowfullscreen" width="720" height="405"></iframe>
+</div>
 
 ## 技术栈 (Tech Stack)
 
@@ -90,6 +94,9 @@
 ## 项目结构 (Project Structure)
 
 
+
+<details>
+<summary>架构</summary>
 
 项目遵循逻辑与视图分离的原则：
 
@@ -142,9 +149,15 @@ GeistZerfall/
 └── README.md
 
 ```
+
+</details>
+
 ### 部分游戏界面
 
 #### PC
+<details>
+<summary>查看 PC 界面截图</summary>
+
 ![](docs/gameview/mainmenu.png)
 ![](docs/gameview/config.png)
 ![](docs/gameview/save.png)
@@ -153,16 +166,28 @@ GeistZerfall/
 ![](docs/gameview/loreView_circle.png)
 ![](docs/gameview/loreView_scene.png)
 
+</details>
+
 #### Android
+<details>
+<summary>查看 Android 界面截图</summary>
+
 ![](docs/gameview/splash1.png)
 ![](docs/gameview/splash2.png)
 ![](docs/gameview/gameView.png)
 
+</details>
+
 ## 玩家操作说明 (Gameplay Manual)
 
 ### 操作与界面示意
+<details>
+<summary>查看操作与界面示意</summary>
+
 ![](docs/instructions/mouseAndKeyboard.png)
 ![](docs/instructions/gameView.png)
+
+</details>
 
 ### 基本操作（键盘/按键）
 *   **W / ↑**：向上移动
@@ -221,6 +246,9 @@ GeistZerfall/
 ## 敌人快速速查 (Enemy Guide)
 
 ### 敌人说明一览
+<details>
+<summary>查看敌人说明图</summary>
+
 ![](docs/instructions/enemy1.png)
 ![](docs/instructions/enemy2.png)
 ![](docs/instructions/enemy3.png)
@@ -228,6 +256,8 @@ GeistZerfall/
 ![](docs/instructions/enemy5.png)
 ![](docs/instructions/enemy6.png)
 ![](docs/instructions/enemy7.png)
+
+</details>
 
 
 | 敌人类型 | 特性描述 | 应对提示 |
