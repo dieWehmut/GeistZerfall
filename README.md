@@ -10,7 +10,7 @@
     <div>
         <a href="https://isocpp.org/"><img src="https://img.shields.io/badge/C++-00599C?logo=c%2B%2B&logoColor=white&style=for-the-badge" alt="C++"></a>
         <a href="https://doc.qt.io/qt-6/qmlapplications.html"><img src="https://img.shields.io/badge/QML-41CD52?logo=qt&logoColor=white&style=for-the-badge" alt="QML"></a>
-        <a href="./License"><img src="https://img.shields.io/badge/License-MIT-yellowgreen?logo=opensourceinitiative&logoColor=white&style=for-the-badge" alt="MIT License"></a>
+    <a href="./LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg?logo=apache&logoColor=white&style=for-the-badge" alt="Apache 2.0 License"></a>
     </div>
 </div>
 
@@ -41,13 +41,11 @@
 
 
 ## 项目简介
-> **背景**: 2025年南京大学智能科学与技术专业程设实训大作业。
 > 
 **GeistZerfall** 是一款基于 **Qt 6 (C++/QML)** 开发的混合类型游戏，结合了 **俯视角射击 (Top-Down Shooter)** 与 **视觉小说 (Visual Novel)** 的元素。
 
-项目采用前后端分离架构，核心逻辑与数据管理由 C++ 实现，复杂的 UI 交互与视觉特效由 QML 完成。
+前后端分离，核心逻辑与数据管理由 C++ 实现，复杂的 UI 交互与视觉特效由 QML 完成。
 
->**点击图片或链接观看演示视频**：https://www.bilibili.com/video/BV1W8UZBZED7/
 <!-- 这是一个伪装成播放器的图片链接 -->
 <div align="center">
   <a href="https://www.bilibili.com/video/BV1W8UZBZED7/" target="_blank">
@@ -59,7 +57,7 @@
 
 ## 技术栈 (Tech Stack)
 
-*   **编程语言**: C++, QML等
+*   **编程语言**: C++,QML,JavaScript
 *   **核心框架**: Qt 6.9
     *   Qt Quick (2D 渲染与 UI)
     *   Qt Multimedia (音频管理)
@@ -296,3 +294,7 @@ GeistZerfall/
 *   **截图预览**: 存档时会自动截取当前游戏画面作为存档预览图。
 *   **全局配置**: 音量、全屏设置等保存在 `system.dat`。
 *   **进度管理**: `progress.dat` 记录已解锁的剧情与画廊内容。
+
+本项目采用 **Apache License 2.0** 进行开源。
+
+- 源代码遵循[Apache License 2.0](LICENSE)。
